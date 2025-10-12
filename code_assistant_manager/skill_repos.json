@@ -1,0 +1,55 @@
+{
+  "ComposioHQ/awesome-claude-skills": {
+    "owner": "ComposioHQ",
+    "name": "awesome-claude-skills",
+    "branch": "main",
+    "enabled": true
+  },
+  "obra/superpowers": {
+    "owner": "obra",
+    "name": "superpowers",
+    "branch": "main",
+    "enabled": true,
+    "skillsPath": "skills"
+  },
+  "anthropics/skills": {
+    "owner": "anthropics",
+    "name": "skills",
+    "branch": "main",
+    "enabled": true,
+    "skillsPath": "/"
+  },
+  "diet103/claude-code-infrastructure-showcase": {
+    "owner": "diet103",
+    "name": "claude-code-infrastructure-showcase",
+    "branch": "main",
+    "enabled": true,
+    "skillsPath": ".claude/skills"
+  },
+  "jeremylongshore/claude-code-plugins-plus": {
+    "owner": "jeremylongshore",
+    "name": "claude-code-plugins-plus",
+    "branch": "main",
+    "enabled": true,
+    "skillsPath": "plugins"
+  },
+  "anthropics/claude-code": {
+    "owner": "anthropics",
+    "name": "claude-code",
+    "branch": "main",
+    "enabled": true,
+    "skillsPath": "plugins"
+  },
+  "mrgoonie/claudekit-skills": {
+    "owner": "mrgoonie",
+    "name": "claudekit-skills",
+    "branch": "main",
+    "enabled": true
+  },
+  "weipanux/seo-geo-blog-writer": {
+    "owner": "weipanux",
+    "name": "seo-geo-blog-writer",
+    "branch": "main",
+    "enabled": true
+  }
+}

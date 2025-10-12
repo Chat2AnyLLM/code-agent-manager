@@ -1,0 +1,527 @@
+"""Skill manager for Code Assistant Manager.
+
+This module provides the SkillManager class that orchestrates skill operations
+across different AI tool handlers.
+"""
+
+import json
+import logging
+import shutil
+from pathlib import Path
+from typing import Dict, List, Optional, Type
+
+from .base import BaseSkillHandler
+from .claude import ClaudeSkillHandler
+from .codebuddy import CodebuddySkillHandler
+from .codex import CodexSkillHandler
+from .droid import DroidSkillHandler
+from .gemini import GeminiSkillHandler
+from .models import Skill, SkillRepo
+
+logger = logging.getLogger(__name__)
+
+
+def _load_builtin_skill_repos() -> List[Dict]:
+    """Load built-in skill repos from the bundled skill_repos.json file."""
+    package_dir = Path(__file__).parent.parent
+    repos_file = package_dir / "skill_repos.json"
+
+    if repos_file.exists():
+        try:
+            with open(repos_file, "r", encoding="utf-8") as f:
+                repos_data = json.load(f)
+                return [
+                    {
+                        "owner": repo.get("owner"),
+                        "name": repo.get("name"),
+                        "branch": repo.get("branch", "main"),
+                        "enabled": repo.get("enabled", True),
+                        "skillsPath": repo.get("skillsPath"),
+                    }
+                    for repo in repos_data.values()
+                ]
+        except Exception as e:
+            logger.warning(f"Failed to load builtin skill repos: {e}")
+
+    # Fallback defaults
+    return [
+        {
+            "owner": "ComposioHQ",
+            "name": "awesome-claude-skills",
+            "branch": "main",
+            "enabled": True,
+            "skillsPath": None,
+        },
+        {
+            "owner": "obra",
+            "name": "superpowers",
+            "branch": "main",
+            "enabled": True,
+            "skillsPath": "skills",
+        },
+    ]
+
+
+DEFAULT_SKILL_REPOS = _load_builtin_skill_repos()
+
+# Registry of available handlers
+SKILL_HANDLERS: Dict[str, Type[BaseSkillHandler]] = {
+    "claude": ClaudeSkillHandler,
+    "codex": CodexSkillHandler,
+    "gemini": GeminiSkillHandler,
+    "droid": DroidSkillHandler,
+    "codebuddy": CodebuddySkillHandler,
+}
+
+# Valid app types for skills
+VALID_APP_TYPES = list(SKILL_HANDLERS.keys())
+
+
+class SkillManager:
+    """Manages skills storage, retrieval, and operations across different tools."""
+
+    def __init__(self, config_dir: Optional[Path] = None):
+        """Initialize skill manager.
+
+        Args:
+            config_dir: Configuration directory (defaults to ~/.config/code-assistant-manager)
+        """
+        if config_dir is None:
+            config_dir = Path.home() / ".config" / "code-assistant-manager"
+        self.config_dir = Path(config_dir)
+        self.skills_file = self.config_dir / "skills.json"
+        self.repos_file = self.config_dir / "skill_repos.json"
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize handlers
+        self._handlers: Dict[str, BaseSkillHandler] = {}
+        for app_name, handler_class in SKILL_HANDLERS.items():
+            self._handlers[app_name] = handler_class()
+
+    def get_handler(self, app_type: str) -> BaseSkillHandler:
+        """Get the handler for a specific app type.
+
+        Args:
+            app_type: The app type (e.g., 'claude', 'codex')
+
+        Returns:
+            The handler instance
+
+        Raises:
+            ValueError: If app_type is not supported
+        """
+        if app_type not in self._handlers:
+            raise ValueError(
+                f"Unknown app type: {app_type}. Supported: {list(self._handlers.keys())}"
+            )
+        return self._handlers[app_type]
+
+    def _load_skills(self) -> Dict[str, Skill]:
+        """Load skills from file."""
+        if not self.skills_file.exists():
+            return {}
+
+        try:
+            with open(self.skills_file, "r") as f:
+                data = json.load(f)
+            return {
+                skill_key: Skill.from_dict(skill_data)
+                for skill_key, skill_data in data.items()
+            }
+        except Exception as e:
+            logger.warning(f"Failed to load skills: {e}")
+            return {}
+
+    def _save_skills(self, skills: Dict[str, Skill]) -> None:
+        """Save skills to file."""
+        try:
+            data = {skill_key: skill.to_dict() for skill_key, skill in skills.items()}
+            with open(self.skills_file, "w") as f:
+                json.dump(data, f, indent=2)
+            logger.debug(f"Saved {len(skills)} skills to {self.skills_file}")
+        except Exception as e:
+            logger.error(f"Failed to save skills: {e}")
+            raise
+
+    def _load_repos(self) -> Dict[str, SkillRepo]:
+        """Load skill repos from file."""
+        if not self.repos_file.exists():
+            self._init_default_repos_file()
+
+        try:
+            with open(self.repos_file, "r") as f:
+                data = json.load(f)
+            return {
+                repo_id: SkillRepo.from_dict(repo_data)
+                for repo_id, repo_data in data.items()
+            }
+        except Exception as e:
+            logger.warning(f"Failed to load skill repos: {e}")
+            return {}
+
+    def _init_default_repos_file(self) -> None:
+        """Initialize the repos file with default skill repos."""
+        repos = {}
+        for repo_data in DEFAULT_SKILL_REPOS:
+            repo = SkillRepo(
+                owner=repo_data["owner"],
+                name=repo_data["name"],
+                branch=repo_data.get("branch", "main"),
+                enabled=repo_data.get("enabled", True),
+                skills_path=repo_data.get("skillsPath"),
+            )
+            repo_id = f"{repo.owner}/{repo.name}"
+            repos[repo_id] = repo
+
+        self._save_repos(repos)
+        logger.info(f"Initialized {len(repos)} default skill repos")
+
+    def _save_repos(self, repos: Dict[str, SkillRepo]) -> None:
+        """Save skill repos to file."""
+        try:
+            data = {repo_id: repo.to_dict() for repo_id, repo in repos.items()}
+            with open(self.repos_file, "w") as f:
+                json.dump(data, f, indent=2)
+            logger.debug(f"Saved {len(repos)} skill repos to {self.repos_file}")
+        except Exception as e:
+            logger.error(f"Failed to save skill repos: {e}")
+            raise
+
+    def get_all(self) -> Dict[str, Skill]:
+        """Get all skills."""
+        return self._load_skills()
+
+    def get(self, skill_key: str) -> Optional[Skill]:
+        """Get a specific skill."""
+        skills = self._load_skills()
+        return skills.get(skill_key)
+
+    def create(self, skill: Skill) -> None:
+        """Create a new skill."""
+        skills = self._load_skills()
+        if skill.key in skills:
+            raise ValueError(f"Skill with key '{skill.key}' already exists")
+        skills[skill.key] = skill
+        self._save_skills(skills)
+        logger.info(f"Created skill: {skill.key}")
+
+    def update(self, skill: Skill) -> None:
+        """Update an existing skill."""
+        skills = self._load_skills()
+        if skill.key not in skills:
+            raise ValueError(f"Skill with key '{skill.key}' not found")
+        skills[skill.key] = skill
+        self._save_skills(skills)
+        logger.info(f"Updated skill: {skill.key}")
+
+    def upsert(self, skill: Skill) -> None:
+        """Create or update a skill."""
+        skills = self._load_skills()
+        skills[skill.key] = skill
+        self._save_skills(skills)
+        logger.info(f"Upserted skill: {skill.key}")
+
+    def delete(self, skill_key: str) -> None:
+        """Delete a skill."""
+        skills = self._load_skills()
+        if skill_key not in skills:
+            raise ValueError(f"Skill with key '{skill_key}' not found")
+        del skills[skill_key]
+        self._save_skills(skills)
+        logger.info(f"Deleted skill: {skill_key}")
+
+    def get_repos(self) -> List[SkillRepo]:
+        """Get all skill repos."""
+        repos = self._load_repos()
+        return list(repos.values())
+
+    def add_repo(self, repo: SkillRepo) -> None:
+        """Add a skill repo."""
+        repos = self._load_repos()
+        repo_id = f"{repo.owner}/{repo.name}"
+        repos[repo_id] = repo
+        self._save_repos(repos)
+        logger.info(f"Added skill repo: {repo_id}")
+
+    def remove_repo(self, owner: str, name: str) -> None:
+        """Remove a skill repo."""
+        repos = self._load_repos()
+        repo_id = f"{owner}/{name}"
+        if repo_id not in repos:
+            raise ValueError(f"Skill repo '{repo_id}' not found")
+        del repos[repo_id]
+        self._save_repos(repos)
+        logger.info(f"Removed skill repo: {repo_id}")
+
+    def install(self, skill_key: str, app_type: str = "claude") -> Path:
+        """Install a skill for a specific app.
+
+        Args:
+            skill_key: The skill identifier
+            app_type: The app type to install to
+
+        Returns:
+            Path to the installed skill directory
+        """
+        skills = self._load_skills()
+        if skill_key not in skills:
+            raise ValueError(f"Skill with key '{skill_key}' not found")
+
+        skill = skills[skill_key]
+        handler = self.get_handler(app_type)
+
+        dest_path = handler.install(skill)
+
+        # Update installed status
+        skill.installed = True
+        self._save_skills(skills)
+        logger.info(f"Installed skill: {skill_key} to {app_type}")
+
+        return dest_path
+
+    def uninstall(self, skill_key: str, app_type: str = "claude") -> None:
+        """Uninstall a skill from a specific app.
+
+        Args:
+            skill_key: The skill identifier
+            app_type: The app type to uninstall from
+        """
+        skills = self._load_skills()
+        if skill_key not in skills:
+            raise ValueError(f"Skill with key '{skill_key}' not found")
+
+        skill = skills[skill_key]
+        handler = self.get_handler(app_type)
+
+        handler.uninstall(skill)
+
+        # Update installed status
+        skill.installed = False
+        self._save_skills(skills)
+        logger.info(f"Uninstalled skill: {skill_key} from {app_type}")
+
+    def fetch_skills_from_repos(self) -> List[Skill]:
+        """Fetch all skills from configured repositories.
+
+        Returns:
+            List of discovered skills
+        """
+        repos = self._load_repos()
+        if not repos:
+            self._init_default_repos_file()
+            repos = self._load_repos()
+
+        all_skills = []
+        existing_skills = self._load_skills()
+
+        # Use claude handler for fetching (all repos use same format)
+        handler = self.get_handler("claude")
+
+        for repo_id, repo in repos.items():
+            if not repo.enabled:
+                logger.debug(f"Skipping disabled repo: {repo_id}")
+                continue
+
+            try:
+                skills = self._fetch_skills_from_repo(repo, handler)
+                for skill in skills:
+                    if skill.key in existing_skills:
+                        skill.installed = existing_skills[skill.key].installed
+                    all_skills.append(skill)
+                logger.info(f"Found {len(skills)} skills in {repo_id}")
+            except Exception as e:
+                logger.warning(f"Failed to fetch skills from {repo_id}: {e}")
+
+        # Merge and save
+        for skill in all_skills:
+            existing_skills[skill.key] = skill
+        self._save_skills(existing_skills)
+
+        return all_skills
+
+    def _fetch_skills_from_repo(
+        self, repo: SkillRepo, handler: BaseSkillHandler
+    ) -> List[Skill]:
+        """Fetch skills from a single repository.
+
+        Args:
+            repo: The repository to fetch from
+            handler: The handler to use for parsing
+
+        Returns:
+            List of skills found
+        """
+        temp_dir, actual_branch = handler._download_repo(
+            repo.owner, repo.name, repo.branch
+        )
+        skills = []
+
+        try:
+            scan_dir = temp_dir
+            if repo.skills_path:
+                scan_dir = temp_dir / repo.skills_path.strip("/")
+
+            if not scan_dir.exists():
+                logger.warning(f"Skills path not found: {scan_dir}")
+                return skills
+
+            # Scan for SKILL.md files recursively
+            for skill_md in scan_dir.rglob("SKILL.md"):
+                skill_dir = skill_md.parent
+                if not skill_dir.is_dir():
+                    continue
+
+                meta = handler.parse_skill_metadata(skill_md)
+
+                try:
+                    rel_path = skill_dir.relative_to(scan_dir)
+                    source_directory = str(rel_path).replace("\\", "/")
+
+                    # Handle root level SKILL.md
+                    if source_directory == ".":
+                        source_directory = "."  # Keep as "." for root-level skills
+                        directory = (
+                            skill_dir.name if skill_dir != scan_dir else repo.name
+                        )
+                    else:
+                        directory = skill_dir.name
+                except ValueError:
+                    continue
+
+                path_from_repo_root = skill_dir.relative_to(temp_dir)
+                readme_path = str(path_from_repo_root).replace("\\", "/")
+
+                skill = Skill(
+                    key=f"{repo.owner}/{repo.name}:{source_directory}",
+                    name=meta.get("name", directory),
+                    description=meta.get("description", ""),
+                    directory=directory,
+                    installed=False,
+                    repo_owner=repo.owner,
+                    repo_name=repo.name,
+                    repo_branch=actual_branch,
+                    skills_path=repo.skills_path,
+                    readme_url=f"https://github.com/{repo.owner}/{repo.name}/tree/{actual_branch}/{readme_path}",
+                    source_directory=source_directory,
+                )
+                skills.append(skill)
+                logger.debug(f"Found skill: {skill.key}")
+        finally:
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
+
+        return skills
+
+    def sync_installed_status(self, app_type: str = "claude") -> None:
+        """Sync the installed status of all skills.
+
+        Args:
+            app_type: The app type to check
+        """
+        handler = self.get_handler(app_type)
+        installed_dirs = set()
+
+        for skill_dir in handler.get_installed_dirs():
+            try:
+                rel_path = skill_dir.relative_to(handler.skills_dir)
+                installed_dirs.add(str(rel_path).replace("\\", "/").lower())
+            except ValueError:
+                continue
+
+        skills = self._load_skills()
+        for skill in skills.values():
+            skill.installed = skill.directory.lower() in installed_dirs
+        self._save_skills(skills)
+        logger.debug(f"Synced installed status for {len(skills)} skills")
+
+    def get_installed_skills(self, app_type: str = "claude") -> List[Skill]:
+        """Get all installed skills for a specific app.
+
+        Args:
+            app_type: The app type to check
+
+        Returns:
+            List of installed skills
+        """
+        handler = self.get_handler(app_type)
+        installed_dirs = handler.get_installed_dirs()
+
+        if not installed_dirs:
+            return []
+
+        installed_skills = []
+        existing_skills = self._load_skills()
+
+        for skill_dir in installed_dirs:
+            try:
+                rel_path = skill_dir.relative_to(handler.skills_dir)
+                directory = str(rel_path).replace("\\", "/")
+            except ValueError:
+                continue
+
+            # Find matching skill in database
+            matching_skill = None
+            for skill in existing_skills.values():
+                if skill.directory.lower() == directory.lower():
+                    matching_skill = skill
+                    break
+
+            if matching_skill:
+                matching_skill.installed = True
+                installed_skills.append(matching_skill)
+            else:
+                # Local skill not in database
+                skill_md = skill_dir / "SKILL.md"
+                meta = (
+                    handler.parse_skill_metadata(skill_md) if skill_md.exists() else {}
+                )
+                skill = Skill(
+                    key=f"local:{directory}",
+                    name=meta.get("name", directory.split("/")[-1]),
+                    description=meta.get("description", ""),
+                    directory=directory,
+                    installed=True,
+                )
+                installed_skills.append(skill)
+
+        return installed_skills
+
+    def import_from_file(self, file_path: Path) -> None:
+        """Import skills from a JSON file."""
+        try:
+            with open(file_path, "r") as f:
+                data = json.load(f)
+
+            skills = self._load_skills()
+            imported_count = 0
+
+            if isinstance(data, dict):
+                for skill_key, skill_data in data.items():
+                    if isinstance(skill_data, dict):
+                        skill = Skill.from_dict(skill_data)
+                        skills[skill.key] = skill
+                        imported_count += 1
+            elif isinstance(data, list):
+                for skill_data in data:
+                    if isinstance(skill_data, dict):
+                        skill = Skill.from_dict(skill_data)
+                        skills[skill.key] = skill
+                        imported_count += 1
+
+            self._save_skills(skills)
+            logger.info(f"Imported {imported_count} skills from {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to import skills: {e}")
+            raise
+
+    def export_to_file(self, file_path: Path) -> None:
+        """Export skills to a JSON file."""
+        try:
+            skills = self._load_skills()
+            data = {skill_key: skill.to_dict() for skill_key, skill in skills.items()}
+            with open(file_path, "w") as f:
+                json.dump(data, f, indent=2)
+            logger.info(f"Exported {len(skills)} skills to {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to export skills: {e}")
+            raise

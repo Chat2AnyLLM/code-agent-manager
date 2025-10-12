@@ -1,0 +1,15 @@
+{
+  "common": {
+    "cache_ttl_seconds": "86400"
+  },
+  "endpoints": {
+    "openai-compatible:dashscope-qwen3-coder-plus": {
+      "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "api_key_env": "API_KEY_QWEN",
+      "list_models_cmd": "echo qwen3-coder-plus",
+      "use_proxy": false,
+      "description": "Alibaba Dashscope Endpoint",
+      "supported_client": "qwen,droid,iflow"
+    }
+  }
+}

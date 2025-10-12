@@ -1,0 +1,89 @@
+{
+  "name": "deepwiki",
+  "display_name": "DeepWiki",
+  "description": "AI-powered knowledge base and documentation search system",
+  "repository": {
+    "type": "http",
+    "url": "https://mcp.deepwiki.com/mcp"
+  },
+  "homepage": "https://deepwiki.com",
+  "author": {
+    "name": "DeepWiki"
+  },
+  "license": "Proprietary",
+  "categories": [
+    "Knowledge Base",
+    "Documentation"
+  ],
+  "tags": [
+    "wiki",
+    "documentation",
+    "knowledge base",
+    "search"
+  ],
+  "installations": {
+    "http": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp",
+      "description": "Run deepwiki mcp directly with HTTP",
+      "recommended": true
+    }
+  },
+  "examples": [
+    {
+      "title": "Basic DeepWiki Query",
+      "description": "Search for information in the knowledge base.",
+      "prompt": "Can you find documentation about..."
+    }
+  ],
+  "tools": [
+    {
+      "name": "search_knowledge_base",
+      "description": "Search for information in the DeepWiki knowledge base",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The search query to find relevant documentation"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of results to return",
+            "default": 5
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "get_article",
+      "description": "Retrieve a specific article by ID or title",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "article_id": {
+            "type": "string",
+            "description": "The unique identifier of the article"
+          }
+        },
+        "required": [
+          "article_id"
+        ]
+      }
+    },
+    {
+      "name": "list_categories",
+      "description": "List all available categories in the knowledge base",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ],
+  "is_official": false,
+  "is_archived": false,
+  "docker_url": null
+}

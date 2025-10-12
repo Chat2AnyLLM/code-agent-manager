@@ -1,0 +1,284 @@
+{
+  "name": "opencti",
+  "display_name": "OpenCTI",
+  "description": "Interact with OpenCTI platform to retrieve threat intelligence data including reports, indicators, malware and threat actors.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Spathodea-Network/opencti-mcp"
+  },
+  "homepage": "https://github.com/Spathodea-Network/opencti-mcp",
+  "author": {
+    "name": "Spathodea-Network"
+  },
+  "license": "MIT",
+  "categories": [
+    "Knowledge Base"
+  ],
+  "tags": [
+    "OpenCTI",
+    "Threat Intelligence"
+  ],
+  "installations": {
+    "npm": {
+      "type": "npm",
+      "command": "npx",
+      "args": [
+        "-y",
+        "https://github.com/Spathodea-Network/opencti-mcp"
+      ],
+      "env": {
+        "OPENCTI_URL": "${OPENCTI_URL}",
+        "OPENCTI_TOKEN": "${OPENCTI_TOKEN}"
+      }
+    }
+  },
+  "examples": [
+    {
+      "title": "Get Latest Reports",
+      "description": "Retrieves the most recent threat intelligence reports.",
+      "prompt": "{ \"name\": \"get_latest_reports\", \"arguments\": { \"first\": 10 } }"
+    },
+    {
+      "title": "Search Malware",
+      "description": "Searches for malware information in the OpenCTI database.",
+      "prompt": "{ \"name\": \"search_malware\", \"arguments\": { \"query\": \"ransomware\" } }"
+    },
+    {
+      "title": "User Management - List Users",
+      "description": "Lists all users in the system.",
+      "prompt": "{ \"name\": \"list_users\", \"arguments\": {} }"
+    }
+  ],
+  "arguments": {
+    "OPENCTI_URL": {
+      "description": "Your OpenCTI instance URL",
+      "required": true
+    },
+    "OPENCTI_TOKEN": {
+      "description": "Your OpenCTI API token",
+      "required": true
+    }
+  },
+  "tools": [
+    {
+      "name": "get_latest_reports",
+      "description": "獲取最新的OpenCTI報告",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "number",
+            "description": "返回結果數量限制",
+            "default": 10
+          }
+        }
+      }
+    },
+    {
+      "name": "get_report_by_id",
+      "description": "根據ID獲取OpenCTI報告",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "報告ID"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    {
+      "name": "search_indicators",
+      "description": "搜尋OpenCTI中的指標",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "搜尋關鍵字"
+          },
+          "first": {
+            "type": "number",
+            "description": "返回結果數量限制",
+            "default": 10
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "search_malware",
+      "description": "搜尋OpenCTI中的惡意程式",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "搜尋關鍵字"
+          },
+          "first": {
+            "type": "number",
+            "description": "返回結果數量限制",
+            "default": 10
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "search_threat_actors",
+      "description": "搜尋OpenCTI中的威脅行為者",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "搜尋關鍵字"
+          },
+          "first": {
+            "type": "number",
+            "description": "返回結果數量限制",
+            "default": 10
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "get_user_by_id",
+      "description": "根據ID獲取使用者資訊",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "使用者ID"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    {
+      "name": "list_users",
+      "description": "列出所有使用者",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "list_groups",
+      "description": "列出所有群組",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "number",
+            "description": "返回結果數量限制",
+            "default": 10
+          }
+        }
+      }
+    },
+    {
+      "name": "list_attack_patterns",
+      "description": "列出所有攻擊模式",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "number",
+            "description": "返回結果數量限制",
+            "default": 10
+          }
+        }
+      }
+    },
+    {
+      "name": "get_campaign_by_name",
+      "description": "根據名稱獲取行動資訊",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "行動名稱"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    {
+      "name": "list_connectors",
+      "description": "列出所有連接器",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "list_status_templates",
+      "description": "列出所有狀態模板",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_file_by_id",
+      "description": "根據ID獲取檔案資訊",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "檔案ID"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    {
+      "name": "list_files",
+      "description": "列出所有檔案",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "list_marking_definitions",
+      "description": "列出所有標記定義",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "list_labels",
+      "description": "列出所有標籤",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ],
+  "is_official": false,
+  "is_archived": false,
+  "docker_url": null
+}

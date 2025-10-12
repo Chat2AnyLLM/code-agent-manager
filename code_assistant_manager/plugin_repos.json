@@ -1,0 +1,96 @@
+{
+  "compounding-engineering": {
+    "name": "compounding-engineering",
+    "description": "A Claude Code plugin for compounding engineering practices",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "EveryInc",
+    "repoName": "compounding-engineering-plugin",
+    "repoBranch": "main",
+    "pluginPath": "plugins/compounding-engineering",
+    "aliases": [
+      "every-marketplace"
+    ]
+  },
+  "superpowers-marketplace": {
+    "name": "superpowers-marketplace",
+    "description": "Curated Claude Code plugins: skills, workflows, and productivity tools",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "obra",
+    "repoName": "superpowers-marketplace",
+    "repoBranch": "main"
+  },
+  "awesome-claude-code-plugins": {
+    "name": "awesome-claude-code-plugins",
+    "description": "Awesome Claude Code plugins collection",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "ccplugins",
+    "repoName": "awesome-claude-code-plugins",
+    "repoBranch": "main"
+  },
+  "claude-code-marketplace": {
+    "name": "claude-code-marketplace",
+    "description": "A marketplace for Claude Code plugins",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "ananddtyagi",
+    "repoName": "claude-code-marketplace",
+    "repoBranch": "main"
+  },
+  "anthropic-agent-skills": {
+    "name": "anthropic-agent-skills",
+    "description": "Anthropic example skills",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "anthropics",
+    "repoName": "skills",
+    "repoBranch": "main"
+  },
+  "claude-code-workflows": {
+    "name": "claude-code-workflows",
+    "description": "Production-ready workflow orchestration with 64 focused plugins, 87 specialized agents, and 44 tools - optimized for granular installation and minimal token usage",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "wshobson",
+    "repoName": "agents",
+    "repoBranch": "main"
+  },
+  "superpowers-dev": {
+    "name": "superpowers-dev",
+    "description": "Development marketplace for Superpowers core skills library",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "obra",
+    "repoName": "superpowers",
+    "repoBranch": "main"
+  },
+  "claude-code-plugins-plus": {
+    "name": "claude-code-plugins-plus",
+    "description": "A comprehensive marketplace and educational hub for Claude Code plugins",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "jeremylongshore",
+    "repoName": "claude-code-plugins-plus",
+    "repoBranch": "main"
+  },
+  "hcp-terraform-skills": {
+    "name": "hcp-terraform-skills",
+    "description": "Comprehensive Claude Code skills for HashiCorp Terraform, including style guides, testing frameworks, Terraform Stacks configurations, and HCP Terraform automation",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "hashi-demo-lab",
+    "repoName": "claude-skill-hcp-terraform",
+    "repoBranch": "main"
+  },
+  "mag-claude-plugins": {
+    "name": "mag-claude-plugins",
+    "description": "MAG team's curated collection of Claude Code plugins for modern full-stack development",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "MadAppGang",
+    "repoName": "claude-code",
+    "repoBranch": "main"
+  }
+}

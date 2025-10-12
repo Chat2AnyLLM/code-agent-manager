@@ -1,0 +1,68 @@
+{
+  "name": "awslabs.aws-documentation-mcp-server",
+  "display_name": "AWS Documentation MCP Server (awslabs)",
+  "description": "MCP server to provide access to AWS documentation and reference data.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awslabs/aws-documentation-mcp-server"
+  },
+  "homepage": "https://github.com/awslabs/aws-documentation-mcp-server",
+  "author": {
+    "name": "awslabs"
+  },
+  "license": "MIT",
+  "categories": [
+    "Documentation",
+    "Search"
+  ],
+  "tags": [
+    "aws",
+    "documentation",
+    "search",
+    "aws-docs"
+  ],
+  "installations": {
+    "uvx": {
+      "type": "uvx",
+      "command": "uvx",
+      "args": [
+        "awslabs.aws-documentation-mcp-server@latest"
+      ],
+      "description": "Run the AWS Documentation MCP server via uvx",
+      "recommended": true
+    },
+    "docker": {
+      "type": "docker",
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "--interactive",
+        "--env",
+        "FASTMCP_LOG_LEVEL=ERROR",
+        "--env",
+        "AWS_DOCUMENTATION_PARTITION=aws",
+        "mcp/aws-documentation:latest"
+      ],
+      "env": {},
+      "description": "Run the AWS Documentation MCP server via Docker"
+    }
+  },
+  "examples": [
+    {
+      "title": "Configure for MCP client",
+      "description": "Example configuration snippet for a client",
+      "prompt": "{\n  \"mcpServers\": {\n    \"awslabs.aws-documentation-mcp-server\": {\n      \"command\": \"uvx\",\n      \"args\": [\"awslabs.aws-documentation-mcp-server@latest\"],\n      \"env\": {\n        \"FASTMCP_LOG_LEVEL\": \"ERROR\",\n        \"AWS_DOCUMENTATION_PARTITION\": \"aws\",\n        \"MCP_USER_AGENT\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36\"\n      },\n      \"disabled\": false,\n      \"autoApprove\": []\n    }\n  }\n}"
+    }
+  ],
+  "arguments": {
+    "AWS_DOCUMENTATION_PARTITION": {
+      "description": "AWS partition to query (e.g., aws, aws-cn)",
+      "required": false,
+      "example": "aws"
+    }
+  },
+  "is_official": false,
+  "is_archived": false,
+  "docker_url": null
+}

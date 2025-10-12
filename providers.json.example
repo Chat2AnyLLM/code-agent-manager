@@ -1,0 +1,58 @@
+{
+  "common": {
+    "http_proxy": "http://proxy.example.com:8080/",
+    "https_proxy": "http://proxy.example.com:8080/",
+    "no_proxy": "localhost,127.0.0.1,192.168.1.100",
+    "cache_ttl_seconds": 86400
+  },
+  "endpoints": {
+    "litellm": {
+      "endpoint": "https://192.168.1.100:4142",
+      "api_key_env": "API_KEY_LITELLM",
+      "list_models_cmd": "python -m code_assistant_manager.litellm_models",
+      "keep_proxy_config": false,
+      "use_proxy": false,
+      "description": "Litellm support OpenAI compatible API calls",
+      "supported_client": "claude,copilot,droid,codebuddy,codex,qwen,crush,iflow"
+    },
+    "copilot-api": {
+      "endpoint": "https://192.168.1.100:5000",
+      "api_key_env": "API_KEY_COPILOT",
+      "list_models_cmd": "python -m code_assistant_manager.copilot_models",
+      "supported_client": "claude,copilot,droid,codebuddy,codex,qwen,neovate,crush",
+      "description": "Github Copilot API Proxy"
+    },
+    "openai-compatible:dashscope-qwen3-models": {
+      "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "api_key_env": "API_KEY_QWEN",
+      "list_models_cmd": "qwen3-max qwen3-coder-plus",
+      "use_proxy": false,
+      "description": "Alibaba Dashscope Endpoint",
+      "supported_client": "qwen,droid,iflow,crush"
+    },
+    "azure-openai:east2": {
+      "endpoint": "https://azure-openai-gpt-o1-east2.openai.azure.com/openai/v1",
+      "api_key_env": "API_KEY_AZURE_OPENAI",
+      "list_models_cmd": "model-router",
+      "use_proxy": false,
+      "description": "Azure Openai Endpoint",
+      "supported_client": "codex"
+    },
+    "azure-openai:zhujian0003-1688-resource": {
+      "endpoint": "https://zhujian0003-1688-resource.services.ai.azure.com/openai/v1/",
+      "api_key_env": "zhujian0003_1688_resource_API_KEY_AZURE_OPENAI",
+      "list_models_cmd": "grok-3",
+      "use_proxy": false,
+      "description": "Azure Openai Endpoint",
+      "supported_client": "codex"
+    },
+    "qwen-claude-proxy:dashscope-qwen3-coder-plus": {
+      "endpoint": "https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy",
+      "api_key_env": "API_KEY_QWEN",
+      "list_models_cmd": "qwen3-coder-plus",
+      "use_proxy": false,
+      "description": "Alibaba Dashscope Endpoint Claude Proxy",
+      "supported_client": "claude"
+    }
+  }
+}

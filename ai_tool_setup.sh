@@ -1,27 +1,30 @@
 #!/usr/bin/env bash
-# ai_tool_setup.sh
-# Source this file from your ~/.bashrc to enable interactive claude/codex wrapper functions
+# ai_tool_setup.sh - Python Project Setup Script
+# Source this file from your ~/.bashrc to enable convenient wrapper functions for the Python CLI
 # Usage: source /path/to/ai_tool_setup.sh
-# Security: This script sources claude_aliases.sh and codex_aliases.sh which provide the full
-# interactive experience. API keys should be stored in endpoints.conf (see endpoints.conf.example).
+#
+# This script:
+# - Sets up the Code Assistant Manager environment
+# - Loads .env variables via load_env.sh
+# - Provides shell function wrappers that call the Python CLI
+# - Creates default config file if needed
+#
+# API keys should be stored in settings.conf (see settings.conf.example).
 
 # Resolve script directory
-__AI_TOOLBOXX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-CONFIG_FILE="$__AI_TOOLBOXX_DIR/endpoints.conf"
+__CODE_ASSISTANT_MANAGER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+CONFIG_FILE="$__CODE_ASSISTANT_MANAGER_DIR/settings.conf"
 
 # Export the toolbox directory so alias scripts can use it
-export __AI_TOOLBOXX_DIR
+export __CODE_ASSISTANT_MANAGER_DIR
 
-# Load environment variables from .env via load_env.sh if available
-if [ -f "$__AI_TOOLBOXX_DIR/load_env.sh" ]; then
-  # shellcheck disable=SC1091
-  . "$__AI_TOOLBOXX_DIR/load_env.sh" >/dev/null 2>&1 || true
-fi
+# Environment variables from .env are loaded by the Python CLI implementation.
+# The legacy `load_env.sh` helper has been removed; Python code uses python-dotenv.
 
-# Helper: list sections in endpoints.conf
+# Helper: list sections in settings.conf (excluding [common] section)
 _ai_list_sections() {
   [ -f "$CONFIG_FILE" ] || return 1
-  awk '/^\s*\[/{gsub(/\[|\]/,"",$0); print $0}' "$CONFIG_FILE"
+  awk '/^\s*\[/{gsub(/\[|\]/,"",$0); if($0 != "common") print $0}' "$CONFIG_FILE"
 }
 
 # Helper: get a key value for a section
@@ -71,49 +74,59 @@ export -f _ai_get_value
 export -f _ai_get_value_fallback
 export -f _ai_get
 
-# Source the claude interactive helper
-if [ -f "$__AI_TOOLBOXX_DIR/claude_aliases.sh" ]; then
-  # shellcheck disable=SC1091
-  source "$__AI_TOOLBOXX_DIR/claude_aliases.sh"
-else
-  echo "Warning: claude_aliases.sh not found at $__AI_TOOLBOXX_DIR/claude_aliases.sh" >&2
-fi
+# Common helper functions removed - using Python CLI only
+# For environment variable management, environment variables are handled by the Python package.
 
-# Source the codex interactive helper
-if [ -f "$__AI_TOOLBOXX_DIR/codex_aliases.sh" ]; then
-  # shellcheck disable=SC1091
-  source "$__AI_TOOLBOXX_DIR/codex_aliases.sh"
-else
-  echo "Warning: codex_aliases.sh not found at $__AI_TOOLBOXX_DIR/codex_aliases.sh" >&2
-fi
+# Python CLI wrappers - calling the unified Python implementation with new subcommand structure
+# Shell scripts are now deprecated in favor of the Python package
 
-# Source the copilot CLI setup helper
-if [ -f "$__AI_TOOLBOXX_DIR/copilot_cli_setup.sh" ]; then
-  # shellcheck disable=SC1091
-  source "$__AI_TOOLBOXX_DIR/copilot_cli_setup.sh"
-else
-  echo "Warning: copilot_cli_setup.sh not found at $__AI_TOOLBOXX_DIR/copilot_cli_setup.sh" >&2
-fi
+claude() {
+  python -m code_assistant_manager launch claude "$@"
+}
 
-# Source the gemini CLI setup helper
-if [ -f "$__AI_TOOLBOXX_DIR/gemini_cli_setup.sh" ]; then
-  # shellcheck disable=SC1091
-  source "$__AI_TOOLBOXX_DIR/gemini_cli_setup.sh"
-else
-  echo "Warning: gemini_cli_setup.sh not found at $__AI_TOOLBOXX_DIR/gemini_cli_setup.sh" >&2
-fi
+codex() {
+  python -m code_assistant_manager launch codex "$@"
+}
 
-# Source the droid CLI setup helper
-if [ -f "$__AI_TOOLBOXX_DIR/droid_cli_setup.sh" ]; then
-  # shellcheck disable=SC1091
-  source "$__AI_TOOLBOXX_DIR/droid_cli_setup.sh"
-else
-  echo "Warning: droid_cli_setup.sh not found at $__AI_TOOLBOXX_DIR/droid_cli_setup.sh" >&2
-fi
+copilot() {
+  python -m code_assistant_manager launch copilot "$@"
+}
 
-# If endpoints.conf doesn't exist, create an example copy next to this script
-if [ ! -f "$CONFIG_FILE" ] && [ -f "$__AI_TOOLBOXX_DIR/endpoints.conf.example" ]; then
-  cp "$__AI_TOOLBOXX_DIR/endpoints.conf.example" "$CONFIG_FILE"
+gemini() {
+  python -m code_assistant_manager launch gemini "$@"
+}
+
+droid() {
+  python -m code_assistant_manager launch droid "$@"
+}
+
+qwen() {
+  python -m code_assistant_manager launch qwen "$@"
+}
+
+codebuddy() {
+  python -m code_assistant_manager launch codebuddy "$@"
+}
+
+iflow() {
+  python -m code_assistant_manager launch iflow "$@"
+}
+
+qodercli() {
+  python -m code_assistant_manager launch qodercli "$@"
+}
+
+zed() {
+  python -m code_assistant_manager launch zed "$@"
+}
+
+neovate() {
+  python -m code_assistant_manager launch neovate "$@"
+}
+
+# If settings.conf doesn't exist, create an example copy next to this script
+if [ ! -f "$CONFIG_FILE" ] && [ -f "$__CODE_ASSISTANT_MANAGER_DIR/settings.conf.example" ]; then
+  cp "$__CODE_ASSISTANT_MANAGER_DIR/settings.conf.example" "$CONFIG_FILE"
   echo "Created example config at $CONFIG_FILE. Edit it and replace placeholder api_key values."
 fi
 
@@ -127,25 +140,50 @@ fi
 # Usage instructions
 cat <<USAGE
 
-✓ AI Toolboxx loaded successfully!
+✓ Code Assistant Manager loaded successfully!
+
+IMPORTANT: Shell scripts are now DEPRECATED. All commands use the Python CLI with new subcommand structure.
 
 To enable claude/codex wrappers automatically, add this to your ~/.bashrc:
 
-  source "$__AI_TOOLBOXX_DIR/ai_tool_setup.sh"
+  source "$__CODE_ASSISTANT_MANAGER_DIR/ai_tool_setup.sh"
 
-Available commands:
-  - claude   : Interactive Claude CLI wrapper with model selection
-  - codex    : Interactive Codex CLI wrapper with model selection
-  - copilot  : Setup and start GitHub Copilot CLI
-  - gemini   : Setup and start Google Gemini CLI
-  - droid    : Setup and start Factory.ai Droid CLI
+Available commands (all call Python CLI with new subcommand structure):
+  - claude         : Claude Code CLI
+  - codex          : OpenAI Codex CLI
+  - copilot        : GitHub Copilot CLI
+  - gemini         : Google Gemini CLI
+  - droid          : Factory.ai Droid CLI
+  - qwen           : Qwen Code CLI
+  - codebuddy      : Tencent CodeBuddy CLI
+  - iflow          : iFlow CLI
+  - qodercli       : Qoder CLI - to be implemented
+  - zed            : Zed Editor - to be implemented
+  - neovate        : Neovate Code CLI - to be implemented
+
+Direct Python usage (recommended):
+  - python -m code_assistant_manager launch claude    Claude Code CLI
+  - python -m code_assistant_manager launch codex     OpenAI Codex CLI
+  - python -m code_assistant_manager launch copilot   GitHub Copilot CLI
+  - python -m code_assistant_manager launch gemini    Google Gemini CLI
+  - python -m code_assistant_manager launch droid     Factory.ai Droid CLI
+  - python -m code_assistant_manager launch qwen      Qwen Code CLI
+  - python -m code_assistant_manager launch codebuddy Tencent CodeBuddy CLI
+  - python -m code_assistant_manager launch iflow     iFlow CLI
+  - python -m code_assistant_manager launch qodercli  Qoder CLI - to be implemented
+  - python -m code_assistant_manager launch zed       Zed Editor - to be implemented
+  - python -m code_assistant_manager launch neovate   Neovate Code CLI - to be implemented
+
+Additional commands:
+  - python -m code_assistant_manager mcp [args...]     Manage MCP servers
+  - python -m code_assistant_manager upgrade [tool]    Upgrade CLI tools
 
 Configuration:
   - Edit $CONFIG_FILE to configure endpoints and API keys
-  - Use load_env.sh to set per-endpoint API key variables (API_KEY_LITELLM, API_KEY_COPILOT, etc.)
+  - Environment variables can be set via settings.conf or loaded by the Python package from a .env file
 
 Security note:
-  - API keys should be stored in endpoints.conf or environment variables
+  - API keys should be stored in settings.conf or environment variables
   - Do not commit secrets to version control
 
 USAGE

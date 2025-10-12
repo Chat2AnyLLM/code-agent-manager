@@ -2,5 +2,20 @@
 .env.local
 # token files
 *token*
-.serena
-endpoints.conf
+.qwen
+settings.conf
+test_*.sh
+*_test.sh
+*__pycache__*
+.serena/
+build
+*egg-info*
+.neovate
+*.log
+dist
+.crush/
+.mcp.json
+.venv
+.claude/*
+codebuddy_usage.md
+.coverage

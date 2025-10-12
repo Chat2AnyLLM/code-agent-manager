@@ -1,0 +1,35 @@
+{
+  "name": "aws-knowledge-mcp-server",
+  "display_name": "AWS Knowledge MCP Server",
+  "description": "MCP server providing access to the AWS Knowledge service.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aws/aws-knowledge-mcp-server"
+  },
+  "homepage": "https://github.com/aws/aws-knowledge-mcp-server",
+  "author": {
+    "name": "aws"
+  },
+  "license": "MIT",
+  "categories": ["Knowledge", "Search"],
+  "tags": ["aws", "knowledge", "search"],
+  "installations": {
+    "http": {
+      "type": "http",
+      "url": "https://knowledge-mcp.global.api.aws",
+      "description": "Run AWS Knowledge MCP server via HTTP",
+      "recommended": true
+    }
+  },
+  "examples": [
+    {
+      "title": "Configure for MCP client (HTTP)",
+      "description": "Example configuration snippet for HTTP-based access",
+      "prompt": "{\n  \"mcpServers\": {\n    \"aws-knowledge-mcp-server\": {\n      \"url\": \"https://knowledge-mcp.aws.amazon.com\",\n      \"type\": \"http\",\n      \"disabled\": false,\n      \"autoApprove\": []\n    }\n  }\n}"
+    }
+  ],
+  "arguments": {},
+  "is_official": false,
+  "is_archived": false,
+  "docker_url": null
+}

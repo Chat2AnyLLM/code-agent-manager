@@ -1,0 +1,60 @@
+{
+  "name": "steampipe",
+  "display_name": "Steampipe",
+  "description": "Cloud-native SQL interface for APIs and cloud platforms",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/turbot/steampipe-mcp"
+  },
+  "license": "Apache 2.0",
+  "categories": [
+    "Cloud Platforms",
+    "Databases"
+  ],
+  "tags": [
+    "Steampipe",
+    "Cloud",
+    "API",
+    "SQL",
+    "Turbot"
+  ],
+  "author": {
+    "name": "Turbot"
+  },
+  "homepage": "https://github.com/turbot/steampipe-mcp",
+  "arguments": {
+    "STEAMPIPE_DATABASE_URL": {
+      "description": "PostgreSQL connection string to Steampipe workspace database",
+      "required": true,
+      "example": "postgresql://my_name:my_pw@workspace-name.usea1.db.pipes.turbot.com:9193/abc123"
+    }
+  },
+  "installations": {
+    "npm": {
+      "type": "npm",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@turbot/steampipe-mcp",
+        "${STEAMPIPE_DATABASE_URL}"
+      ]
+    }
+  },
+  "tools": [
+    {
+      "name": "query",
+      "description": "Run SQL queries against cloud APIs and platforms via Steampipe",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sql": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "is_official": false,
+  "is_archived": false,
+  "docker_url": null
+}

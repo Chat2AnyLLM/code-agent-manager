@@ -1,0 +1,16 @@
+{
+  "iannuttall/claude-agents": {
+    "owner": "iannuttall",
+    "name": "claude-agents",
+    "branch": "main",
+    "enabled": true,
+    "agentsPath": "agents"
+  },
+  "diet103/claude-code-infrastructure-showcase": {
+    "owner": "diet103",
+    "name": "claude-code-infrastructure-showcase",
+    "branch": "main",
+    "agentsPath": ".claude/agents",
+    "enabled": true
+  }
+}

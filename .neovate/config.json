@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": []
+    },
+    "memory": {
+      "type": "stdio",
+      "command": "npx",
+      "args": []
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": []
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "serena",
+        "start-mcp-server"
+      ]
+    }
+  }
+}

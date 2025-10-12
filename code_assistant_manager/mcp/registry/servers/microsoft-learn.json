@@ -1,0 +1,62 @@
+{
+  "name": "microsoft-learn",
+  "display_name": "Microsoft Learn MCP",
+  "description": "Access Microsoft Learn documentation and resources through the Model Context Protocol. Provides comprehensive access to Microsoft's technical documentation, tutorials, and learning paths.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microsoft/microsoft-learn-mcp"
+  },
+  "homepage": "https://learn.microsoft.com",
+  "author": {
+    "name": "Microsoft"
+  },
+  "license": "MIT",
+  "categories": [
+    "Documentation",
+    "Knowledge Base"
+  ],
+  "tags": [
+    "microsoft",
+    "learn",
+    "documentation",
+    "azure",
+    "windows",
+    "dotnet",
+    "office",
+    "365",
+    "technical-docs"
+  ],
+  "installations": {
+    "npm": {
+      "type": "npm",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://learn.microsoft.com/api/mcp"
+      ],
+      "description": "Connect to Microsoft Learn MCP server via mcp-remote"
+    }
+  },
+  "tools": [],
+  "examples": [
+    {
+      "title": "Search Azure documentation",
+      "description": "Find information about Azure services",
+      "prompt": "How do I create an Azure Virtual Machine?"
+    },
+    {
+      "title": "Learn .NET development",
+      "description": "Get guidance on .NET programming",
+      "prompt": "Show me how to use dependency injection in ASP.NET Core"
+    },
+    {
+      "title": "Windows development",
+      "description": "Find Windows development resources",
+      "prompt": "How do I create a Universal Windows Platform app?"
+    }
+  ],
+  "is_official": true,
+  "is_archived": false,
+  "docker_url": null
+}

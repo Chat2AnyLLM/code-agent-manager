@@ -1,0 +1,55 @@
+[flake8]
+# Flake8 configuration for code-assistant-manager
+
+# Compatibility with Black
+max-line-length = 88
+extend-ignore = E203, W503, E501
+
+# Exclude patterns
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    .eggs,
+    *.egg,
+    build,
+    dist,
+    .tox,
+    .mypy_cache,
+    .pytest_cache,
+    node_modules,
+    *.egg-info
+
+# Complexity
+max-complexity = 15
+
+# McCabe complexity
+# Default is 10, we allow slightly more for complex CLI logic
+per-file-ignores =
+    __init__.py:F401,F403
+    cli.py:C901
+    tools/base.py:C901,B950,B907
+    code_assistant_manager/cli/commands.py:C901,F401,F811,B950,B110
+    code_assistant_manager/cli/doctor.py:C901,B950
+    code_assistant_manager/cli/upgrade.py:C901,F401,F811,B950
+    code_assistant_manager/cli/utils.py:F401,C901
+    code_assistant_manager/mcp/server_commands.py:B008,B950,E731,C901,F541,B907
+    code_assistant_manager/tools/__init__.py:B950
+    code_assistant_manager/tools/codebuddy.py:B950
+    code_assistant_manager/tools/crush.py:B950,B907
+    code_assistant_manager/tools/droid.py:B950,B907
+    code_assistant_manager/upgrades/npm_upgrade.py:B950,B907
+    code_assistant_manager/upgrades/shell_upgrade.py:B950,B907
+    tests/test_cli.py:F401,F811,F841,B908
+    tests/test_filtering.py:F401,F841
+    tests/test_ui.py:F401
+    tests/test_ui_key_provider.py:F401
+    tests/test_ui_numeric_fallback.py:F401
+    tests/test_ui_pexpect_integration.py:F401
+    tests/test_upgrade_functionality.py:F401,B950
+
+# Plugins configuration
+# flake8-bugbear, flake8-comprehensions, flake8-simplify
+select = C,E,F,W,B,B9

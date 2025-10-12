@@ -1,0 +1,134 @@
+{
+  "name": "terraform",
+  "display_name": "Terraform MCP Server",
+  "description": "MCP server for interacting with Terraform configurations and operations",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modelcontextprotocol/servers"
+  },
+  "homepage": "https://github.com/modelcontextprotocol/servers",
+  "author": {
+    "name": "Model Context Protocol"
+  },
+  "license": "MIT",
+  "categories": [
+    "Dev Tools"
+  ],
+  "tags": [
+    "terraform",
+    "infrastructure",
+    "iac",
+    "cloud"
+  ],
+  "installations": {
+    "docker": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "hashicorp/terraform-mcp-server"
+      ]
+    }
+  },
+  "arguments": {
+    "TERRAFORM_WORKING_DIR": {
+      "description": "The working directory containing Terraform configuration files",
+      "required": true,
+      "example": "/path/to/terraform/configs"
+    }
+  },
+  "tools": [
+    {
+      "name": "terraform_init",
+      "description": "Initialize a Terraform working directory",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the Terraform configuration directory"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "terraform_plan",
+      "description": "Create an execution plan for Terraform",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the Terraform configuration directory"
+          },
+          "vars": {
+            "type": "object",
+            "description": "Terraform variables to set for the plan",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "terraform_apply",
+      "description": "Apply changes to reach the desired state of the configuration",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the Terraform configuration directory"
+          },
+          "auto_approve": {
+            "type": "boolean",
+            "description": "Automatically approve the apply without prompting",
+            "default": false
+          },
+          "vars": {
+            "type": "object",
+            "description": "Terraform variables to set for the apply",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "terraform_destroy",
+      "description": "Destroy Terraform-managed infrastructure",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the Terraform configuration directory"
+          },
+          "auto_approve": {
+            "type": "boolean",
+            "description": "Automatically approve the destroy without prompting",
+            "default": false
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    }
+  ],
+  "is_official": false,
+  "is_archived": false
+}

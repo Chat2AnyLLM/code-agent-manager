@@ -1,0 +1,117 @@
+{
+  "name": "mcp-alchemy",
+  "display_name": "MCP Alchemy - Database Assistant",
+  "description": "Database assistant MCP server enabling LLMs to interact with relational databases for exploration, querying, and analysis. Supports PostgreSQL, MySQL, MariaDB, SQLite, Oracle, MS SQL Server, CrateDB, Vertica, and other SQLAlchemy-compatible databases.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/runekaagaard/mcp-alchemy"
+  },
+  "homepage": "https://github.com/runekaagaard/mcp-alchemy",
+  "author": {
+    "name": "runekaagaard"
+  },
+  "license": "MPL-2.0",
+  "categories": [
+    "Databases"
+  ],
+  "tags": [
+    "Database",
+    "SQL",
+    "PostgreSQL",
+    "MySQL",
+    "SQLite",
+    "Oracle",
+    "SQLAlchemy",
+    "Query Analysis"
+  ],
+  "installations": {
+    "uvx": {
+      "type": "uvx",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "mcp-alchemy",
+        "--with",
+        "psycopg2-binary",
+        "--refresh-package",
+        "mcp-alchemy",
+        "mcp-alchemy"
+      ]
+    }
+  },
+  "arguments": {
+    "DB_URL": {
+      "description": "SQLAlchemy database URL for database connection",
+      "required": true,
+      "example": "postgresql://user:password@localhost/dbname"
+    },
+    "CLAUDE_LOCAL_FILES_PATH": {
+      "description": "Optional path for storing full query results as files",
+      "required": false,
+      "example": "/tmp/claude-files"
+    },
+    "EXECUTE_QUERY_MAX_CHARS": {
+      "description": "Maximum characters for query results (default: 10000)",
+      "required": false,
+      "example": "50000"
+    }
+  },
+  "tools": [
+    {
+      "name": "all_table_names",
+      "description": "Lists all database table names",
+      "inputSchema": {},
+      "required": []
+    },
+    {
+      "name": "filter_table_names",
+      "description": "Searches tables by substring match",
+      "inputSchema": {
+        "filter": {
+          "type": "string",
+          "description": "Substring to filter table names"
+        }
+      },
+      "required": [
+        "filter"
+      ]
+    },
+    {
+      "name": "schema_definitions",
+      "description": "Retrieves detailed table schemas, including columns, keys, and relationships",
+      "inputSchema": {
+        "table_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of table names to get schemas for"
+        }
+      },
+      "required": [
+        "table_names"
+      ]
+    },
+    {
+      "name": "execute_query",
+      "description": "Runs SQL queries with formatted output, supporting parameters and truncation for large results",
+      "inputSchema": {
+        "query": {
+          "type": "string",
+          "description": "SQL query to execute"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Optional parameters for parameterized queries",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  ],
+  "is_official": false,
+  "is_archived": false,
+  "docker_url": null
+}

@@ -1,0 +1,57 @@
+{
+  "name": "wikipedia-mcp",
+  "display_name": "Wikipedia MCP Server",
+  "description": "MCP server for querying Wikipedia content via the wikipedia-mcp tool",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rudra-ravi/wikipedia-mcp"
+  },
+  "homepage": "https://github.com/rudra-ravi/wikipedia-mcp",
+  "author": {
+    "name": "wikipedia-mcp"
+  },
+  "license": "MIT",
+  "categories": [
+    "Knowledge",
+    "Search"
+  ],
+  "tags": [
+    "wikipedia",
+    "search",
+    "knowledge",
+    "mcp"
+  ],
+  "installations": {
+    "wikipedia": {
+      "type": "stdio",
+      "command": "wikipedia-mcp",
+      "args": [] ,
+      "description": "You must install the wikipedia-mcp CLI first: pipx install git+https://github.com/rudra-ravi/wikipedia-mcp.git"
+    }
+  },
+  "arguments": {},
+  "tools": [
+    {
+      "name": "search_wikipedia",
+      "description": "Search Wikipedia for a query and retrieve summaries",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query to run against Wikipedia"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results to return",
+            "default": 5
+          }
+        },
+        "required": ["query"]
+      }
+    }
+  ],
+  "is_official": false,
+  "is_archived": false
+}
+

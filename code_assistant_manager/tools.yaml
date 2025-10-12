@@ -1,0 +1,306 @@
+tools:
+  gemini-cli:
+    enabled: true
+    install_cmd: npm install -g @google/gemini-cli@latest
+    cli_command: gemini
+    description: "Google Gemini CLI"
+    env:
+      required_any:
+        - ["GEMINI_API_KEY"]
+        - ["GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION", "GOOGLE_GENAI_USE_VERTEXAI"]
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      notes:
+        - "No code-assistant-manager endpoint selection; authentication is driven by environment variables."
+    cli_parameters:
+      injected: []
+    filesystem:
+      touched:
+        - "~/.gemini/settings.json (security section removed if present before launch)"
+
+  openai-codex:
+    enabled: true
+    install_cmd: npm install -g @openai/codex@latest
+    cli_command: codex
+    description: "OpenAI Codex CLI"
+    env:
+      exported:
+        BASE_URL: "Populated from selected endpoint.endpoint."
+        OPENAI_API_KEY: "Resolved from endpoint configuration and environment (masked in output)."
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        endpoint: "Base URL for OpenAI-compatible API."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include codex."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected:
+        - "-c model_providers.custom.name=custom"
+        - "-c model_providers.custom.base_url={BASE_URL}"
+        - "-c profiles.custom.model={selected_model}"
+        - "-c profiles.custom.model_provider=custom"
+        - "-c profiles.custom.model_reasoning_effort=low"
+        - "-c model_providers.custom.env_key=OPENAI_API_KEY"
+        - "-p custom"
+
+  qwen-code:
+    enabled: true
+    install_cmd: npm install -g @qwen-code/qwen-code@latest
+    cli_command: qwen
+    description: "Qwen Code CLI"
+    env:
+      exported:
+        OPENAI_BASE_URL: "Populated from selected endpoint.endpoint."
+        OPENAI_API_KEY: "Resolved from endpoint configuration and environment (masked in output)."
+        OPENAI_MODEL: "Model ID selected via code-assistant-manager prompt."
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        endpoint: "Base URL for OpenAI-compatible API."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include qwen."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected: []
+
+  claude-code:
+    enabled: true
+    install_cmd: curl -fsSL https://claude.ai/install.sh | bash
+    cli_command: claude
+    description: "Claude Code CLI"
+    env:
+      exported:
+        ANTHROPIC_BASE_URL: "Populated from selected endpoint.endpoint."
+        ANTHROPIC_AUTH_TOKEN: "Resolved API key for the endpoint."
+        ANTHROPIC_MODEL: "Primary model selected via code-assistant-manager prompt."
+        ANTHROPIC_SMALL_FAST_MODEL: "Secondary model selected via code-assistant-manager prompt."
+        CLAUDE_MODEL_2: "Alias for the secondary model."
+        CLAUDE_MODELS: "Comma-separated primary and secondary models."
+        ANTHROPIC_DEFAULT_SONNET_MODEL: "Defaulted to the primary model."
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: "Defaulted to the primary model."
+        DISABLE_NON_ESSENTIAL_MODEL_CALLS: "1"
+        CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        endpoint: "Base URL for the Anthropic-compatible API."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include claude."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected: []
+
+  copilot-api:
+    enabled: true
+    install_cmd: npm install -g @github/copilot
+    cli_command: copilot
+    description: "GitHub Copilot CLI"
+    env:
+      required:
+        GITHUB_TOKEN: "Must be set for GitHub Copilot authentication."
+      optional:
+        NODE_EXTRA_CA_CERTS: "Forwarded when file exists to extend trusted CAs."
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      notes:
+        - "No endpoint selection; runs the installed GitHub Copilot CLI directly."
+    cli_parameters:
+      injected:
+        - "--banner"
+
+  codebuddy:
+    enabled: true
+    install_cmd: npm install -g "@tencent-ai/codebuddy-code@latest"
+    cli_command: codebuddy
+    description: "Tencent CodeBuddy CLI"
+    env:
+      exported:
+        CODEBUDDY_BASE_URL: "Populated from selected endpoint.endpoint."
+        CODEBUDDY_API_KEY: "Resolved API key for the endpoint."
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        endpoint: "Base URL for Tencent CodeBuddy API."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include codebuddy."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected:
+        - "--model {selected_model}"
+
+  droid:
+    enabled: true
+    install_cmd: curl -fsSL https://app.factory.ai/cli | sh
+    cli_command: droid
+    description: "Factory.ai Droid CLI"
+    env:
+      exported:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      removed:
+        - http_proxy
+        - HTTP_PROXY
+        - https_proxy
+        - HTTPS_PROXY
+        - no_proxy
+        - NO_PROXY
+        - all_proxy
+        - ALL_PROXY
+    configuration:
+      required:
+        endpoint: "Base URL for each supported endpoint (multiple selections allowed)."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include droid."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected: []
+    filesystem:
+      generated:
+        - "~/.factory/config.json containing custom_models entries with base_url, api_key, provider, and max_tokens"
+
+  iflow:
+    enabled: true
+    install_cmd: npm i -g @iflow-ai/iflow-cli
+    cli_command: iflow
+    description: "iFlow CLI"
+    env:
+      exported:
+        IFLOW_API_KEY: "Resolved from selected endpoint actual_api_key."
+        IFLOW_BASE_URL: "Populated from selected endpoint.endpoint."
+        IFLOW_MODEL_NAME: "Model selected via code-assistant-manager prompt."
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        endpoint: "Base URL for iFlow-compatible API."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include iflow."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected: []
+
+  zed:
+    enabled: false
+    install_cmd: curl -f https://zed.dev/install.sh | sh
+    cli_command: zed
+    description: "Zed Editor - to be implemented"
+
+  qodercli:
+    enabled: false
+    install_cmd: npm install -g @qoder-ai/qodercli
+    cli_command: qodercli
+    description: "Qoder CLI - to be implemented"
+
+  neovate:
+    enabled: false
+    install_cmd: npm i @neovate/code -g
+    cli_command: neovate
+    description: "Neovate Code CLI - to be implemented"
+    env:
+      exported:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        endpoint: "Base URL for Neovate-compatible API."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include neovate."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected: []
+    filesystem:
+      generated:
+        - "~/.neovate/config.json containing provider configuration based on selected endpoint"
+
+  crush:
+    enabled: true
+    install_cmd: npm install -g @charmland/crush
+    cli_command: crush
+    description: "Charmland Crush CLI"
+    env:
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      notes:
+        - "Configures MCP servers from the local registry into crush.json"
+    cli_parameters:
+      injected: []
+    filesystem:
+      generated:
+        - "~/.config/crush/crush.json containing MCP server configurations"
+
+  cursor-agent:
+    enabled: true
+    install_cmd: curl https://cursor.com/install -fsS | bash
+    cli_command: cursor-agent
+    description: "Cursor Agent CLI"
+    env:
+      required_any:
+        - ["CURSOR_API_KEY"]
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      notes:
+        - "Cursor Agent requires authentication via CURSOR_API_KEY environment variable"
+        - "MCP servers can be configured in ~/.cursor/mcp.json"
+    cli_parameters:
+      injected: []
+    filesystem:
+      touched:
+        - "~/.cursor/mcp.json (MCP server configurations)"
