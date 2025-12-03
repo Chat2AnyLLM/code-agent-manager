@@ -358,8 +358,8 @@ class PromptManager:
         if not target_file:
             raise ValueError(f"Tool '{app_type}' does not support level '{level}'")
 
-        # Sync to the target prompt file using the handler
-        handler.sync_prompt(prompt.content, level, project_dir)
+        # Sync to the target prompt file using the handler, with prompt ID tracking
+        handler.sync_prompt(prompt.content, level, project_dir, prompt_id=prompt_id)
 
         # Record this prompt as active for this app/level
         self.set_active_prompt(prompt_id, app_type, level, project_dir)

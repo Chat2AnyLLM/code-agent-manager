@@ -1,7 +1,13 @@
 """Prompt data models."""
 
+import uuid
 from datetime import datetime
 from typing import Dict, Optional
+
+
+def generate_prompt_id() -> str:
+    """Generate a unique prompt ID."""
+    return str(uuid.uuid4())[:8]
 
 
 class Prompt:
@@ -9,9 +15,9 @@ class Prompt:
 
     def __init__(
         self,
-        id: str,
         name: str,
         content: str,
+        id: Optional[str] = None,
         description: Optional[str] = None,
         is_default: bool = False,
         created_at: Optional[int] = None,
@@ -20,7 +26,7 @@ class Prompt:
         apply_to: Optional[str] = None,  # Glob pattern for path-specific instructions
         exclude_agent: Optional[str] = None,  # "coding-agent" or "code-review"
     ):
-        self.id = id
+        self.id = id or generate_prompt_id()
         self.name = name
         self.content = content
         self.description = description

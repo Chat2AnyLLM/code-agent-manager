@@ -13,3 +13,5 @@ rm -rf dist/*
 ./install.sh
 cp ~/.config/code-assistant-manager/providers.json.bak ~/.config/code-assistant-manager/providers.json
 ```
+
+<!-- cam-prompt-id: 13daf2d6 -->

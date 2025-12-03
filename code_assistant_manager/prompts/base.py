@@ -1,11 +1,16 @@
 """Base class for tool-specific prompt handlers."""
 
 import logging
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+# Marker pattern for embedded prompt ID
+PROMPT_ID_MARKER = "<!-- cam-prompt-id: {} -->"
+PROMPT_ID_PATTERN = re.compile(r"<!-- cam-prompt-id: ([^\s]+) -->")
 
 
 class BasePromptHandler(ABC):
@@ -187,6 +192,7 @@ class BasePromptHandler(ABC):
         content: str,
         level: str = "user",
         project_dir: Optional[Path] = None,
+        prompt_id: Optional[str] = None,
     ) -> Path:
         """
         Write prompt content to the tool's prompt file.
@@ -195,6 +201,7 @@ class BasePromptHandler(ABC):
             content: The prompt content
             level: Target scope ("user" or "project")
             project_dir: Project directory when targeting project scope
+            prompt_id: Optional prompt ID to embed in the file for tracking
 
         Returns:
             Path to the synced file
@@ -211,8 +218,15 @@ class BasePromptHandler(ABC):
         # Strip metadata header if present
         content = self._strip_metadata_header(content)
 
+        # Strip any existing prompt ID marker
+        content = PROMPT_ID_PATTERN.sub("", content).strip()
+
         # Normalize header to match this tool's name
         content = self._normalize_header(content, filename=file_path.name)
+
+        # Embed prompt ID marker at the end if provided
+        if prompt_id:
+            content = content.rstrip() + "\n\n" + PROMPT_ID_MARKER.format(prompt_id) + "\n"
 
         # Ensure parent directory exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -228,6 +242,28 @@ class BasePromptHandler(ABC):
             if temp_path.exists():
                 temp_path.unlink()
             raise
+
+    def get_installed_prompt_id(
+        self,
+        level: str = "user",
+        project_dir: Optional[Path] = None,
+    ) -> Optional[str]:
+        """
+        Extract the prompt ID from an installed prompt file.
+
+        Args:
+            level: Prompt level ("user" or "project")
+            project_dir: Optional project directory for project level prompts
+
+        Returns:
+            The prompt ID if found, None otherwise
+        """
+        content = self.get_live_content(level, project_dir)
+        if not content:
+            return None
+
+        match = PROMPT_ID_PATTERN.search(content)
+        return match.group(1) if match else None
 
     def get_live_content(
         self,
