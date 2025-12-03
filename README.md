@@ -98,10 +98,11 @@ CAM supports **13 AI coding assistants**:
 # Install via pip (Python 3.9+)
 pip install code-assistant-manager
 
-# Or install from source
-git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
-cd code-assistant-manager
-pip install -e ".[dev]"
+# Or install using the install script
+./install.sh
+
+# Or install directly from the web
+curl -fsSL https://raw.githubusercontent.com/Chat2AnyLLM/code-assistant-manager/main/install.sh | bash
 ```
 
 ## Quick Start
