@@ -17,6 +17,7 @@ class Colors:
     YELLOW = "\033[1;33m"
     RED = "\033[0;31m"
     BOLD = "\033[1m"
+    DIM = "\033[2m"
     RESET = "\033[0m"
     REVERSE = "\033[7m"
     REVERSE_OFF = "\033[27m"

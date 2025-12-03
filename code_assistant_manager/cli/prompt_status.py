@@ -95,10 +95,10 @@ def _show_level_section(
 ):
     """Show prompts for a specific level."""
     prompts = manager.list_prompts(level=level, project_dir=project_dir)
-    active_count = sum(1 for p in prompts if p.is_active)
+    default_count = sum(1 for p in prompts if p.is_default)
     total_count = len(prompts)
 
-    typer.echo(f"    {level.capitalize()}: {active_count}/{total_count} active")
+    typer.echo(f"    {level.capitalize()}: {default_count}/{total_count} default")
 
     if prompts:
         default_id = manager.get_default_prompt(None, level, project_dir)
@@ -106,11 +106,11 @@ def _show_level_section(
             typer.echo(f"      Default: {default_id}")
 
         # Show recent prompts
-        recent = sorted(prompts, key=lambda p: p.prompt_id, reverse=True)[:3]
+        recent = sorted(prompts, key=lambda p: p.id, reverse=True)[:3]
         for prompt in recent:
-            status = "✓" if prompt.is_active else "✗"
-            default = " (default)" if prompt.prompt_id == default_id else ""
-            typer.echo(f"      {status} {prompt.prompt_id}{default}")
+            status = "✓" if prompt.is_default else "✗"
+            default = " (default)" if prompt.id == default_id else ""
+            typer.echo(f"      {status} {prompt.id}{default}")
 
 
 def _show_app_status(manager: PromptManager, app: str, project_dir: Optional[Path]):
@@ -133,11 +133,11 @@ def _show_copilot_status(manager: PromptManager, project_dir: Optional[Path]):
         prompts = manager.list_prompts(
             app="copilot", level="project", project_dir=project_dir
         )
-        active_count = sum(1 for p in prompts if p.is_active)
+        default_count = sum(1 for p in prompts if p.is_default)
         total_count = len(prompts)
 
         typer.echo(
-            f"  Project ({project_dir.name}): {active_count}/{total_count} active"
+            f"  Project ({project_dir.name}): {default_count}/{total_count} default"
         )
         if prompts:
             default_id = manager.get_default_prompt("copilot", "project", project_dir)

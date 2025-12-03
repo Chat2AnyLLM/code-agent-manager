@@ -38,13 +38,13 @@ def _parse_app_list(app_str: str) -> List[str]:
 
 
 def list_prompts(
-    app: str = typer.Option(
+    app: Optional[str] = typer.Option(
         None,
         "--app",
         "-a",
         help="Filter by app type (claude, codex, gemini, copilot, codebuddy)",
     ),
-    level: str = typer.Option(
+    level: Optional[str] = typer.Option(
         None,
         "--level",
         "-l",
@@ -88,14 +88,12 @@ def list_prompts(
         typer.echo(f"\nFound {len(prompts)} prompt(s):\n")
 
         for prompt in prompts:
-            status = "✓" if prompt.is_active else "✗"
+            status = "✓" if prompt.is_default else "✗"
             default = " (default)" if prompt.is_default else ""
-            typer.echo(f"  {status} {prompt.prompt_id}{default}")
+            typer.echo(f"  {status} {prompt.id}{default}")
             if prompt.description:
                 typer.echo(f"    {Colors.DIM}{prompt.description}{Colors.RESET}")
-            typer.echo(
-                f"    {Colors.DIM}App: {prompt.app}, Level: {prompt.level}{Colors.RESET}"
-            )
+            typer.echo(f"    {Colors.DIM}Name: {prompt.name}{Colors.RESET}")
             typer.echo()
 
     except Exception as e:
@@ -116,10 +114,8 @@ def view_prompt(prompt_id: str):
             typer.echo(f"Error: Prompt '{prompt_id}' not found.")
             raise typer.Exit(1)
 
-        typer.echo(f"\nPrompt: {prompt.prompt_id}")
-        typer.echo(f"App: {prompt.app}")
-        typer.echo(f"Level: {prompt.level}")
-        typer.echo(f"Active: {'Yes' if prompt.is_active else 'No'}")
+        typer.echo(f"\nPrompt: {prompt.id}")
+        typer.echo(f"Name: {prompt.name}")
         typer.echo(f"Default: {'Yes' if prompt.is_default else 'No'}")
         if prompt.description:
             typer.echo(f"Description: {prompt.description}")
@@ -192,7 +188,7 @@ def add_prompt(
             project_dir=project_dir,
         )
 
-        typer.echo(f"Created prompt: {prompt.prompt_id}")
+        typer.echo(f"Created prompt: {prompt.id}")
 
         # Set as default if requested
         if set_default:
@@ -241,7 +237,7 @@ def update_prompt(
             name=name,
         )
 
-        typer.echo(f"Updated prompt: {updated_prompt.prompt_id}")
+        typer.echo(f"Updated prompt: {updated_prompt.id}")
 
     except Exception as e:
         logger.error(f"Error updating prompt '{prompt_id}': {e}")

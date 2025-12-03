@@ -59,13 +59,6 @@ def set_default_prompt(
             typer.echo(f"Error: Prompt '{prompt_id}' not found.")
             raise typer.Exit(1)
 
-        # Verify prompt matches app/level
-        if prompt.app != app or prompt.level != level:
-            typer.echo(
-                f"Error: Prompt '{prompt_id}' is for {prompt.app}/{prompt.level}, not {app}/{level}."
-            )
-            raise typer.Exit(1)
-
         # Set as default
         manager.set_default_prompt(app, level, prompt_id, project_dir)
         typer.echo(f"Set '{prompt_id}' as default for {app} ({level})")

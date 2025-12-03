@@ -98,7 +98,7 @@ def install_prompts(
 
 
 def sync_prompts_alias(
-    source_app: str = typer.Option(..., "--from", "-f", help="Source app"),
+    source_app: str = typer.Option(..., "--from", "-s", help="Source app"),
     target_app: str = typer.Option(..., "--to", "-t", help="Target app"),
     level: str = typer.Option(
         "user", "--level", "-l", help="Level to sync at (user, project)"

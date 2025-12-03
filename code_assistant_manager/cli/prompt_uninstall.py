@@ -6,10 +6,7 @@ from typing import Dict, List, Optional
 
 import typer
 
-from code_assistant_manager.cli.option_utils import (
-    ensure_project_dir,
-    resolve_level_targets,
-)
+from code_assistant_manager.cli.option_utils import ensure_project_dir
 from code_assistant_manager.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
@@ -24,6 +21,23 @@ USER_LEVEL_APPS = [
     "codebuddy",
 ]  # codebuddy supports user and project levels
 VALID_LEVELS = ["user", "project"]
+
+
+def _build_targets(
+    app: Optional[str],
+    level: Optional[str],
+    project_dir: Optional[Path],
+) -> List[Dict]:
+    """Build target list for uninstallation."""
+    targets = []
+    apps = [app] if app else VALID_APP_TYPES
+    levels = [level] if level else VALID_LEVELS
+
+    for a in apps:
+        for l in levels:
+            targets.append({"app": a, "level": l, "project_dir": project_dir})
+
+    return targets
 
 
 def uninstall_prompt(
@@ -77,11 +91,11 @@ def uninstall_prompt(
 
     # Determine what to uninstall
     if target == "all":
-        targets = resolve_level_targets(None, None, project_dir)
+        targets = _build_targets(None, None, project_dir)
     elif target == "app":
-        targets = resolve_level_targets(app, None, project_dir)
+        targets = _build_targets(app, None, project_dir)
     elif target == "level":
-        targets = resolve_level_targets(None, level, project_dir)
+        targets = _build_targets(None, level, project_dir)
 
     if not targets:
         typer.echo("No targets found to uninstall.")
@@ -94,8 +108,8 @@ def uninstall_prompt(
         typer.echo("No prompts found to uninstall.")
         return
 
-    # Show what will be removed and confirm
-    if not _confirm_uninstall(all_targets):
+    # Show what will be removed and confirm (skip if force)
+    if not force and not _confirm_uninstall(all_targets):
         typer.echo("Uninstall cancelled.")
         return
 
@@ -119,7 +133,7 @@ def _collect_uninstall_targets(targets: List[Dict]) -> List[Dict]:
         for prompt in prompts:
             all_targets.append(
                 {
-                    "prompt_id": prompt.prompt_id,
+                    "prompt_id": prompt.id,
                     "app": app,
                     "level": level,
                     "project_dir": project_dir,
