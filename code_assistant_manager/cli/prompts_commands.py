@@ -30,6 +30,47 @@ def _find_prompt_by_name(manager: PromptManager, name: str) -> Optional[Prompt]:
     return None
 
 
+def _strip_metadata_from_content(content: str) -> str:
+    """
+    Strip metadata headers from content that shouldn't be part of the prompt.
+
+    This includes:
+    - YAML front matter (--- ... ---)
+    - Existing metadata headers from show command output
+    - CAM prompt ID markers
+    """
+    import re
+
+    # First strip CAM prompt ID markers
+    from code_assistant_manager.prompts.base import PROMPT_ID_PATTERN
+    content = PROMPT_ID_PATTERN.sub("", content).strip()
+
+    # Strip YAML front matter
+    yaml_pattern = r'^---\s*\n.*?\n---\s*\n'
+    content = re.sub(yaml_pattern, '', content, flags=re.DOTALL).strip()
+
+    # Strip metadata headers that look like the show command output
+    # Look for patterns like "Prompt: ..." or "ID: ..." at the beginning
+    lines = content.splitlines()
+
+    # Find where actual content starts (after metadata headers)
+    content_start_idx = 0
+    for i, line in enumerate(lines):
+        # Stop at the first line that doesn't look like metadata
+        if not re.match(r'^(Prompt|ID|Description|Status|Default|Content|Imported from):\s*', line, re.IGNORECASE):
+            # Also skip empty lines at the beginning
+            if line.strip():
+                content_start_idx = i
+                break
+        content_start_idx = i + 1
+
+    # If we found metadata headers, return content starting after them
+    if content_start_idx > 0 and content_start_idx < len(lines):
+        return '\n'.join(lines[content_start_idx:]).strip()
+
+    return content.strip()
+
+
 def _generate_fancy_name() -> str:
     """Generate a fancy, creative name for a prompt."""
     adjectives = [
@@ -133,6 +174,8 @@ def add_prompt(
             typer.echo(f"Error: File not found: {file}")
             raise typer.Exit(1)
         content = file.read_text()
+        # Strip metadata headers that shouldn't be part of the prompt content
+        content = _strip_metadata_from_content(content)
     elif not sys.stdin.isatty():
         # Read from stdin (piped input)
         content = sys.stdin.read()
@@ -221,6 +264,9 @@ def update_prompt(
         if not content.strip():
             typer.echo("Error: File is empty")
             raise typer.Exit(1)
+
+        # Strip metadata headers that shouldn't be part of the prompt content
+        content = _strip_metadata_from_content(content)
 
     # Check if new name conflicts with existing prompt
     if new_name and new_name != name:
@@ -331,6 +377,9 @@ def import_prompt(
     # Strip any existing ID marker from the content
     from code_assistant_manager.prompts.base import PROMPT_ID_PATTERN
     content = PROMPT_ID_PATTERN.sub("", content).strip()
+
+    # Strip metadata headers that shouldn't be part of the prompt content
+    content = _strip_metadata_from_content(content)
 
     # Generate or validate name
     if not name:
@@ -467,27 +516,32 @@ def status(
     # Build installation map: prompt_id -> [(app, level, file_path), ...]
     install_map = {}  # prompt_id -> list of (app, level, file_path) tuples
     untracked = []    # list of (app, level, preview) for untracked installs
-    
+
     for app in VALID_APP_TYPES:
         handler = manager.get_handler(app)
-        
+
         for level in ["user", "project"]:
             proj = project_dir if level == "project" else None
             file_path = handler.get_prompt_file_path(level, proj)
-            
+
             if not file_path or not file_path.exists():
                 continue
-                
+
             content = file_path.read_text().strip()
             if not content:
                 continue
-            
-            installed_id = handler.get_installed_prompt_id(level, proj)
-            
-            if installed_id:
-                if installed_id not in install_map:
-                    install_map[installed_id] = []
-                install_map[installed_id].append((app, level, file_path))
+
+            # Check if any configured prompt matches this content
+            matched_prompt_id = None
+            for prompt_id, prompt in prompts.items():
+                if handler.get_matching_prompt_id(prompt.content, level, proj):
+                    matched_prompt_id = prompt_id
+                    break
+
+            if matched_prompt_id:
+                if matched_prompt_id not in install_map:
+                    install_map[matched_prompt_id] = []
+                install_map[matched_prompt_id].append((app, level, file_path))
             else:
                 preview = content[:30].replace('\n', ' ')
                 if len(content) > 30:

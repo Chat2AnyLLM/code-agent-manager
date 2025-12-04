@@ -224,9 +224,8 @@ class BasePromptHandler(ABC):
         # Normalize header to match this tool's name
         content = self._normalize_header(content, filename=file_path.name)
 
-        # Embed prompt ID marker at the end if provided
-        if prompt_id:
-            content = content.rstrip() + "\n\n" + PROMPT_ID_MARKER.format(prompt_id) + "\n"
+        # NOTE: We no longer embed prompt ID markers in live files
+        # Sync status is tracked by content comparison instead
 
         # Ensure parent directory exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -251,6 +250,9 @@ class BasePromptHandler(ABC):
         """
         Extract the prompt ID from an installed prompt file.
 
+        NOTE: This method is deprecated. We no longer embed prompt ID markers
+        in live files. Use get_matching_prompt_id() for content-based matching.
+
         Args:
             level: Prompt level ("user" or "project")
             project_dir: Optional project directory for project level prompts
@@ -264,6 +266,65 @@ class BasePromptHandler(ABC):
 
         match = PROMPT_ID_PATTERN.search(content)
         return match.group(1) if match else None
+
+    def get_matching_prompt_id(
+        self,
+        expected_content: str,
+        level: str = "user",
+        project_dir: Optional[Path] = None,
+    ) -> Optional[str]:
+        """
+        Check if the live content matches any configured prompt.
+
+        This method compares content to determine sync status without
+        requiring embedded markers in the live files.
+
+        Args:
+            expected_content: The expected prompt content to match against
+            level: Prompt level ("user" or "project")
+            project_dir: Optional project directory for project level prompts
+
+        Returns:
+            The prompt ID if content matches a configured prompt, None otherwise
+        """
+        from code_assistant_manager.prompts.manager import PromptManager
+
+        live_content = self.get_live_content(level, project_dir)
+        if not live_content:
+            return None
+
+        # Strip markers and normalize both contents for comparison
+        normalized_live = self._normalize_content_for_comparison(live_content)
+        normalized_expected = self._normalize_content_for_comparison(expected_content)
+
+        # If contents match, return a synthetic ID for tracking
+        # We use content hash as a stable identifier
+        if normalized_live == normalized_expected:
+            import hashlib
+            content_hash = hashlib.md5(normalized_expected.encode('utf-8')).hexdigest()[:8]
+            return f"content-{content_hash}"
+
+        return None
+
+    def _normalize_content_for_comparison(self, content: str) -> str:
+        """
+        Normalize content for comparison by stripping markers and standardizing format.
+
+        Args:
+            content: Raw content
+
+        Returns:
+            Normalized content for comparison
+        """
+        # Strip CAM markers
+        content = PROMPT_ID_PATTERN.sub("", content).strip()
+
+        # Strip metadata headers that shouldn't be part of comparison
+        content = self._strip_metadata_header(content)
+
+        # Normalize whitespace
+        lines = [line.rstrip() for line in content.splitlines()]
+        return "\n".join(lines).strip()
 
     def get_live_content(
         self,

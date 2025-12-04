@@ -282,11 +282,12 @@ class TestPromptDefaultAndSync:
 
         manager.sync_to_app("test", "claude")
 
-        # Check prompt was synced to file (with ID marker)
+        # Check prompt was synced to file (without ID marker - we use content comparison now)
         assert prompt_file.exists()
         content = prompt_file.read_text()
         assert "My test content" in content
-        assert "<!-- cam-prompt-id: test -->" in content
+        # No longer expect CAM prompt ID markers in live files
+        assert "<!-- cam-prompt-id: test -->" not in content
 
     def test_sync_to_app_project_level(self, temp_config_dir, temp_prompt_dir):
         """Project-level sync writes to project CLAUDE.md."""
@@ -303,7 +304,8 @@ class TestPromptDefaultAndSync:
         assert prompt_file.exists()
         content = prompt_file.read_text()
         assert "Project scoped content" in content
-        assert "<!-- cam-prompt-id: test -->" in content
+        # No longer expect CAM prompt ID markers in live files
+        assert "<!-- cam-prompt-id: test -->" not in content
 
     def test_get_live_content(self, temp_config_dir, temp_prompt_dir):
         """Test getting live prompt content."""
