@@ -1,5 +1,3 @@
-"""Simplified CLI commands for prompt management."""
-
 import logging
 import sys
 from pathlib import Path
@@ -86,12 +84,12 @@ def add_prompt(
     file: Optional[Path] = typer.Option(None, "--file", "-f", help="Read content from file"),
     default: bool = typer.Option(False, "--default", help="Set as default prompt"),
 ):
-    """Add a new prompt from file or stdin.
-    
+    """Add a new prompt from file, stdin, or interactive input.
+
     Examples:
         cam prompt add my-prompt -f prompt.md
         cat prompt.md | cam prompt add my-prompt
-        echo "Be helpful" | cam prompt add simple-prompt
+        cam prompt add my-prompt  # Interactive mode
     """
     manager = _get_manager()
 
@@ -101,7 +99,7 @@ def add_prompt(
             typer.echo(f"Error: Prompt with name '{name}' already exists. Use a different name or remove it first.")
             raise typer.Exit(1)
 
-    # Read content from file or stdin
+    # Read content from file, stdin, or interactive input
     if file:
         if not file.exists():
             typer.echo(f"Error: File not found: {file}")
@@ -111,10 +109,17 @@ def add_prompt(
         # Read from stdin (piped input)
         content = sys.stdin.read()
     else:
-        typer.echo("Error: Provide content via --file or pipe to stdin")
-        typer.echo("  Example: cam prompt add my-prompt -f prompt.md")
-        typer.echo("  Example: cat prompt.md | cam prompt add my-prompt")
-        raise typer.Exit(1)
+        # Interactive input mode
+        typer.echo()  # Enter a newline as requested
+        typer.echo("Enter prompt content (press Ctrl+C when finished):")
+        lines = []
+        try:
+            while True:
+                line = input()
+                lines.append(line)
+        except KeyboardInterrupt:
+            typer.echo("\n")  # New line after Ctrl+C
+            content = "\n".join(lines)
 
     if not content.strip():
         typer.echo("Error: Content cannot be empty")
