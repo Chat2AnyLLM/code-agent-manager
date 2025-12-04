@@ -144,6 +144,82 @@ def add_prompt(
         typer.echo(f"  Set as default prompt")
 
 
+@prompt_app.command("update")
+def update_prompt(
+    name: str = typer.Argument(..., help="Name of the prompt to update"),
+    description: Optional[str] = typer.Option(None, "--description", "-d", help="Update the description"),
+    file: Optional[Path] = typer.Option(None, "--file", "-f", help="Read new content from file"),
+    new_name: Optional[str] = typer.Option(None, "--name", "-n", help="Rename the prompt"),
+    default: Optional[bool] = typer.Option(None, "--default/--no-default", help="Set or unset as default prompt"),
+):
+    """Update a configured prompt's content, description, name, or default status.
+
+    Examples:
+        cam prompt update my-prompt -f updated-prompt.md
+        cam prompt update my-prompt --description "Updated description"
+        cam prompt update my-prompt --name "New Prompt Name" --default
+        cam prompt update my-prompt -f prompt.md -d "New description" --default
+    """
+    manager = _get_manager()
+
+    # Find the prompt by name
+    prompt = _find_prompt_by_name(manager, name)
+    if not prompt:
+        typer.echo(f"Error: Prompt '{name}' not found")
+        raise typer.Exit(1)
+
+    # Read content from file if provided
+    content = None
+    if file:
+        if not file.exists():
+            typer.echo(f"Error: File not found: {file}")
+            raise typer.Exit(1)
+        content = file.read_text()
+        if not content.strip():
+            typer.echo("Error: File is empty")
+            raise typer.Exit(1)
+
+    # Check if new name conflicts with existing prompt
+    if new_name and new_name != name:
+        existing_prompt = _find_prompt_by_name(manager, new_name)
+        if existing_prompt:
+            typer.echo(f"Error: Prompt with name '{new_name}' already exists")
+            raise typer.Exit(1)
+
+    # Update the prompt
+    try:
+        updated_prompt = manager.update_prompt(
+            prompt_id=prompt.id,
+            content=content,
+            description=description,
+            name=new_name,
+        )
+
+        # Handle default status change
+        if default is True:
+            manager.clear_default()  # Clear any existing default
+            manager.set_default(prompt.id)
+            typer.echo(f"  Set as default prompt")
+        elif default is False and prompt.is_default:
+            manager.clear_default()
+            typer.echo(f"  Unset as default prompt")
+
+        typer.echo(f"{Colors.GREEN}✓{Colors.RESET} Updated prompt: {updated_prompt.name}")
+
+        if content:
+            typer.echo(f"  Content updated from file: {file}")
+
+        if description:
+            typer.echo(f"  Description updated")
+
+        if new_name and new_name != name:
+            typer.echo(f"  Renamed from '{name}' to '{new_name}'")
+
+    except Exception as e:
+        typer.echo(f"Error: {e}")
+        raise typer.Exit(1)
+
+
 @prompt_app.command("remove")
 def remove_prompt(
     name: str = typer.Argument(..., help="Prompt name to remove"),
@@ -325,8 +401,8 @@ def status(
     if project_dir is None:
         project_dir = Path.cwd()
 
-    # Build installation map: prompt_id -> [(app, level), ...]
-    install_map = {}  # prompt_id -> list of (app, level) tuples
+    # Build installation map: prompt_id -> [(app, level, file_path), ...]
+    install_map = {}  # prompt_id -> list of (app, level, file_path) tuples
     untracked = []    # list of (app, level, preview) for untracked installs
     
     for app in VALID_APP_TYPES:
@@ -348,7 +424,7 @@ def status(
             if installed_id:
                 if installed_id not in install_map:
                     install_map[installed_id] = []
-                install_map[installed_id].append((app, level))
+                install_map[installed_id].append((app, level, file_path))
             else:
                 preview = content[:30].replace('\n', ' ')
                 if len(content) > 30:
@@ -367,7 +443,7 @@ def status(
             # Show where this prompt is installed
             if prompt_id in install_map:
                 locations = install_map[prompt_id]
-                loc_strs = [f"{app}:{level}" for app, level in locations]
+                loc_strs = [f"{app}:{level} ({file_path})" for app, level, file_path in locations]
                 typer.echo(f"    Installed: {Colors.GREEN}{', '.join(loc_strs)}{Colors.RESET}")
             else:
                 typer.echo(f"    Installed: {Colors.DIM}nowhere{Colors.RESET}")
@@ -388,7 +464,7 @@ def status(
         typer.echo(f"{Colors.BOLD}Orphaned Installations (prompt deleted):{Colors.RESET}\n")
         for pid in orphaned:
             locations = install_map[pid]
-            loc_strs = [f"{app}:{level}" for app, level in locations]
+            loc_strs = [f"{app}:{level} ({file_path})" for app, level, file_path in locations]
             typer.echo(f"  {Colors.RED}{pid}{Colors.RESET} - installed at: {', '.join(loc_strs)}")
         typer.echo()
 
@@ -396,3 +472,4 @@ def status(
 # Hidden aliases
 prompt_app.command("ls", hidden=True)(list_prompts)
 prompt_app.command("rm", hidden=True)(remove_prompt)
+prompt_app.command("edit", hidden=True)(update_prompt)
