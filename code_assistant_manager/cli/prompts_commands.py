@@ -2,6 +2,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional
+import random
 
 import typer
 
@@ -27,6 +28,38 @@ def _find_prompt_by_name(manager: PromptManager, name: str) -> Optional[Prompt]:
         if p.name == name:
             return p
     return None
+
+
+def _generate_fancy_name() -> str:
+    """Generate a fancy, creative name for a prompt."""
+    adjectives = [
+        "Cosmic", "Digital", "Quantum", "Cyber", "Neural", "Pixel", "Binary",
+        "Virtual", "Synthetic", "Logic", "Code", "Syntax", "Algorithm", "Byte",
+        "Data", "Matrix", "Circuit", "Pulse", "Wave", "Stream", "Flux", "Nexus",
+        "Aether", "Zenith", "Prism", "Echo", "Nova", "Aura", "Spark", "Bloom",
+        "Whisper", "Dream", "Vision", "Harmony", "Pulse", "Radiant", "Ethereal",
+        "Luminous", "Mystic", "Phantom", "Sapphire", "Crimson", "Amber", "Azure"
+    ]
+
+    nouns = [
+        "Coder", "Assistant", "Wizard", "Sage", "Oracle", "Companion", "Guide",
+        "Mentor", "Architect", "Scribe", "Alchemist", "Artisan", "Craftsman",
+        "Navigator", "Explorer", "Pioneer", "Trailblazer", "Pathfinder", "Seeker",
+        "Dreamer", "Visionary", "Innovator", "Creator", "Builder", "Weaver",
+        "Sorcerer", "Enchanter", "Luminary", "Beacon", "Guardian", "Sentinel",
+        "Whisperer", "Harmonizer", "Illuminator", "Transformer", "Catalyst"
+    ]
+
+    # Generate 2-3 word combinations
+    name_parts = []
+    name_parts.append(random.choice(adjectives))
+    name_parts.append(random.choice(nouns))
+
+    # Sometimes add a second adjective for variety
+    if random.random() < 0.3:
+        name_parts.insert(0, random.choice(adjectives))
+
+    return " ".join(name_parts)
 
 
 @prompt_app.command("list")
@@ -79,7 +112,7 @@ def show_prompt(
 
 @prompt_app.command("add")
 def add_prompt(
-    name: str = typer.Argument(..., help="Name for the prompt"),
+    name: Optional[str] = typer.Argument(None, help="Name for the prompt (auto-generated if not provided)"),
     description: Optional[str] = typer.Option(None, "--description", "-d", help="Description of the prompt"),
     file: Optional[Path] = typer.Option(None, "--file", "-f", help="Read content from file"),
     default: bool = typer.Option(False, "--default", help="Set as default prompt"),
@@ -87,17 +120,12 @@ def add_prompt(
     """Add a new prompt from file, stdin, or interactive input.
 
     Examples:
-        cam prompt add my-prompt -f prompt.md
-        cat prompt.md | cam prompt add my-prompt
-        cam prompt add my-prompt  # Interactive mode
+        cam prompt add "My Custom Prompt" -f prompt.md
+        cam prompt add -f prompt.md  # Auto-generates a fancy name
+        cat prompt.md | cam prompt add
+        cam prompt add  # Interactive mode with fancy name
     """
     manager = _get_manager()
-
-    # Check if prompt with same name already exists
-    for p in manager.get_all().values():
-        if p.name == name:
-            typer.echo(f"Error: Prompt with name '{name}' already exists. Use a different name or remove it first.")
-            raise typer.Exit(1)
 
     # Read content from file, stdin, or interactive input
     if file:
@@ -124,6 +152,21 @@ def add_prompt(
     if not content.strip():
         typer.echo("Error: Content cannot be empty")
         raise typer.Exit(1)
+
+    # Generate or validate name
+    if not name:
+        # Generate a fancy name and ensure it's unique
+        while True:
+            name = _generate_fancy_name()
+            if not _find_prompt_by_name(manager, name):
+                break
+        typer.echo(f"✨ Generated fancy name: {Colors.CYAN}{name}{Colors.RESET}")
+    else:
+        # Check if prompt with same name already exists
+        existing_prompt = _find_prompt_by_name(manager, name)
+        if existing_prompt:
+            typer.echo(f"Error: Prompt with name '{name}' already exists. Use a different name or remove it first.")
+            raise typer.Exit(1)
 
     # Create the prompt (ID is auto-generated)
     prompt = Prompt(
@@ -242,16 +285,17 @@ def remove_prompt(
 
 @prompt_app.command("import")
 def import_prompt(
-    name: str = typer.Argument(..., help="Name for the imported prompt"),
+    name: Optional[str] = typer.Argument(None, help="Name for the imported prompt (auto-generated if not provided)"),
     app: str = typer.Option(..., "--app", "-a", help=f"App to import from ({', '.join(VALID_APP_TYPES)})"),
     level: str = typer.Option("user", "--level", "-l", help="Level: user or project"),
     project_dir: Optional[Path] = typer.Option(None, "--project-dir", "-d", help="Project directory (for project level)"),
     description: Optional[str] = typer.Option(None, "--description", help="Description of the prompt"),
 ):
     """Import a prompt from an app's live prompt file.
-    
+
     Examples:
-        cam prompt import my-claude --app claude
+        cam prompt import "My Claude Prompt" --app claude
+        cam prompt import --app claude  # Auto-generates a fancy name
         cam prompt import project-prompt --app claude --level project -d .
     """
     if app not in VALID_APP_TYPES:
@@ -266,11 +310,6 @@ def import_prompt(
         project_dir = Path.cwd()
 
     manager = _get_manager()
-
-    # Check if prompt with same name already exists
-    if _find_prompt_by_name(manager, name):
-        typer.echo(f"Error: Prompt '{name}' already exists. Use a different name.")
-        raise typer.Exit(1)
 
     # Get the live content
     handler = manager.get_handler(app)
@@ -292,6 +331,30 @@ def import_prompt(
     # Strip any existing ID marker from the content
     from code_assistant_manager.prompts.base import PROMPT_ID_PATTERN
     content = PROMPT_ID_PATTERN.sub("", content).strip()
+
+    # Generate or validate name
+    if not name:
+        # Generate a fancy name with app context and ensure it's unique
+        while True:
+            base_name = _generate_fancy_name()
+            # Add app context to make it more specific
+            app_prefixes = {
+                "claude": "Claude",
+                "codex": "Codex",
+                "gemini": "Gemini",
+                "copilot": "Copilot",
+                "codebuddy": "CodeBuddy"
+            }
+            prefix = app_prefixes.get(app, app.capitalize())
+            name = f"{prefix} {base_name}"
+            if not _find_prompt_by_name(manager, name):
+                break
+        typer.echo(f"✨ Generated fancy name: {Colors.CYAN}{name}{Colors.RESET}")
+    else:
+        # Check if prompt with same name already exists
+        if _find_prompt_by_name(manager, name):
+            typer.echo(f"Error: Prompt '{name}' already exists. Use a different name.")
+            raise typer.Exit(1)
 
     # Create the prompt (ID is auto-generated)
     prompt = Prompt(

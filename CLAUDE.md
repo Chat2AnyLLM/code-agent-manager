@@ -14,4 +14,4 @@ rm -rf dist/*
 cp ~/.config/code-assistant-manager/providers.json.bak ~/.config/code-assistant-manager/providers.json
 ```
 
-<!-- cam-prompt-id: 13daf2d6 -->
+<!-- cam-prompt-id: 71b21925 -->
