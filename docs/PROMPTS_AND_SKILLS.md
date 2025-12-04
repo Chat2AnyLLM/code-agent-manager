@@ -4,10 +4,11 @@ Code Assistant Manager includes built-in support for managing **prompts** and **
 
 ## Key Features
 
-- **Download skills from GitHub repositories** and install them to `~/.claude/skills/`, `~/.codex/skills/`, or `~/.gemini/skills/`
-- **Sync prompts** to the actual tool config files: `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md`
-- **Multi-app support**: Claude, Codex (OpenAI), and Gemini
-- **Repository-based skill discovery**: Automatically fetch available skills from configured GitHub repositories
+- **Fancy name generation**: ✨ Auto-generate creative prompt names like "Cosmic Coder" or "Quantum Assistant"
+- **Enhanced prompt management**: Add, update, import, install, and sync prompts across AI assistants
+- **Multi-level support**: User-level and project-level prompt management
+- **File-based operations**: Read from and write to prompt files directly
+- **Status tracking**: See exactly where prompts are installed with file paths
 
 ## Prompts
 
@@ -16,29 +17,24 @@ Prompts are reusable text templates that you can apply to any AI assistant. They
 ### Quick Start
 
 ```bash
-# Import the current user-level live prompt from Claude
-cam prompt import-live --app claude
+# Add a new prompt (auto-generates fancy name if none provided)
+cam prompt add -f my-prompt.md              # ✨ Generates creative name
+cam prompt add "My Expert Coder" -f my-prompt.md
 
-# Import the current project-level prompt from the working directory
-cam prompt import-live --app claude --level project --project-dir $(pwd)
+# Import all live prompts from all apps (auto-generates fancy names)
+cam prompt import --app all --level all
 
-# Import every live prompt (all apps + levels)
-cam prompt import-live --app all --level all --project-dir $(pwd)
+# Update an existing prompt
+cam prompt update "My Prompt" -f updated-prompt.md --description "New version"
 
-# Show the project-level prompt file content
-cam prompt show-live --app claude --level project --project-dir $(pwd)
+# Install prompts to specific apps
+cam prompt install "My Prompt" --app claude --level user
+
+# Check where prompts are installed with file paths
+cam prompt status
 
 # List all prompts
 cam prompt list
-
-# Create a new prompt
-cam prompt create my-prompt --name "My Expert Coder" --file my-prompt.md
-
-# Activate a prompt (writes to CLAUDE.md, AGENTS.md, or GEMINI.md)
-cam prompt activate my-prompt --app claude
-
-# Show what's currently in the user-level live file
-cam prompt show-live --app claude
 ```
 
 ### Prompt File Locations
@@ -60,83 +56,77 @@ cam prompt ls       # shorthand
 cam p list          # alias
 ```
 
-#### View a specific prompt
+#### Add a new prompt
 ```bash
-cam prompt view <prompt-id>
-```
+# Interactive mode (auto-generates fancy name)
+cam prompt add
 
-#### Create a new prompt
-```bash
-# Interactive mode (prompts for content)
-cam prompt create my-prompt --name "My Prompt" --description "My description"
+# From a file (auto-generates fancy name)
+cam prompt add -f path/to/prompt.md
 
-# From a file
-cam prompt create my-prompt --name "My Prompt" --file path/to/prompt.txt
+# From a file with custom name
+cam prompt add "My Custom Prompt" -f path/to/prompt.md
+
+# From stdin with custom name
+cat prompt.md | cam prompt add "My Prompt"
+
+# With description
+cam prompt add "Expert Coder" -f prompt.md -d "Advanced coding assistant"
 ```
 
 #### Update a prompt
 ```bash
-cam prompt update <prompt-id> --name "New Name" --description "New description"
-cam prompt update <prompt-id> --file path/to/new-content.txt
+# Update content from file
+cam prompt update "My Prompt" -f new-content.md
+
+# Update description and name
+cam prompt update "My Prompt" --description "Updated description" --name "New Name"
+
+# Set/unset as default prompt
+cam prompt update "My Prompt" --default
+cam prompt update "My Prompt" --no-default
+
+# Update multiple properties at once
+cam prompt update "My Prompt" -f updated.md --name "Better Name" --default
 ```
 
-#### Delete a prompt
+#### Import prompts from live app files
 ```bash
-cam prompt delete <prompt-id>
-cam prompt delete <prompt-id> --force      # Skip confirmation
+# Import from Claude (auto-generates fancy name)
+cam prompt import --app claude
+
+# Import with custom name
+cam prompt import "My Claude Prompt" --app claude
+
+# Import from specific level
+cam prompt import --app claude --level project
+
+# Import from all apps and levels (bulk import)
+cam prompt import --app all --level all
 ```
 
-#### Activate/Deactivate prompts (syncs to app files)
+#### Install prompts to app files
 ```bash
-# Activate a prompt and sync it to Claude's CLAUDE.md (user scope)
-cam prompt activate my-prompt --app claude
+# Install to Claude user level
+cam prompt install "My Prompt" --app claude --level user
 
-# Activate for Codex (syncs to AGENTS.md)
-cam prompt activate my-prompt --app codex
+# Install to project level
+cam prompt install "My Prompt" --app claude --level project
 
-# Activate for Gemini (syncs to GEMINI.md)
-cam prompt activate my-prompt --app gemini
-
-# Activate at the project scope (writes ./CLAUDE.md, ./AGENTS.md, or ./GEMINI.md)
-cam prompt activate my-prompt --app claude --level project --project-dir $(pwd)
-
-# Deactivate a prompt
-cam prompt deactivate my-prompt
+# Install to multiple apps
+cam prompt install "My Prompt" --app claude
+cam prompt install "My Prompt" --app copilot
 ```
 
-#### Sync all active prompts
+#### Remove a prompt
 ```bash
-cam prompt sync
+cam prompt remove "My Prompt"
+cam prompt remove "My Prompt" --force      # Skip confirmation
 ```
 
-#### Import from live file
+#### Check prompt status
 ```bash
-# Import current CLAUDE.md as a new prompt
-cam prompt import-live --app claude --name "Imported Prompt"
-
-# Import the prompt stored in the current project's CLAUDE.md
-cam prompt import-live --app claude --level project --project-dir $(pwd) --name "Project Prompt"
-
-# Import all user/project prompts for every app
-cam prompt import-live --app all --level all --project-dir $(pwd)
-
-# Show current user-level live content
-cam prompt show-live --app claude
-
-# Show the project-level prompt content
-cam prompt show-live --app claude --level project --project-dir $(pwd)
-
-# Show every prompt file across all apps and levels
-cam prompt show-live --app all --level all --project-dir $(pwd)
-```
-
-#### Import/Export prompts
-```bash
-# Export to JSON file
-cam prompt export --file ~/my-prompts.json
-
-# Import from JSON file
-cam prompt import --file ~/my-prompts.json
+cam prompt status    # Shows where prompts are installed with file paths
 ```
 
 ## Skills

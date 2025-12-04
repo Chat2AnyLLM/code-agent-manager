@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Fancy Name Generation**: ✨ Auto-generate creative prompt names like "Cosmic Coder" or "Quantum Assistant" when adding or importing prompts
+- **Enhanced Prompt Update Command**: New `cam prompt update` command with `--file` option to update prompt content, description, name, and default status
+- **Improved Prompt Status**: `cam prompt status` now shows file paths alongside app:level information for better visibility
+- **Optional Prompt Names**: `cam prompt add` and `cam prompt import` commands now support optional names with automatic fancy name generation
+
+### Changed
+- **Prompt CLI Commands**: Updated command structure to be more intuitive:
+  - `cam prompt add` - Add prompts (auto-generates names if not provided)
+  - `cam prompt update` - Update existing prompts with content from files
+  - `cam prompt import` - Import from live app files with fancy names
+  - `cam prompt install` - Install configured prompts to app files
+  - `cam prompt status` - Enhanced to show file paths
+
 ## [1.0.3] - 2024-10-18
 
 ### Changed
