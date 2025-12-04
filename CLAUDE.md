@@ -7,6 +7,7 @@ This file documents repository-level expectations and instructions intended to g
 - Always test the CLI usages for the change related
 - Never commit credentials, keys, .env files
 - After any changes, run the folling to reinstall the project:
+- Always update readme, tests and docs for changes
 ```
 rm -rf dist/*
 ./install.sh uninstall

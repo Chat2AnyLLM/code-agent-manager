@@ -5,37 +5,44 @@
 ### Basic Operations
 ```bash
 # List all prompts
-cam prompt list          # or: cam p list
+cam prompt list          # or: cam p list, cam p ls
 
-# View a prompt
-cam prompt view <id>
-
-# Create a new prompt
-cam prompt create <id> --name "Name" --description "Description"
+# Add a new prompt (interactive or from file)
+cam prompt add "My Prompt" -f prompt.md    # From file
+cam prompt add -f prompt.md               # Auto-generate fancy name ✨
 
 # Update a prompt
-cam prompt update <id> --name "New Name"
+cam prompt update "My Prompt" -f updated.md --description "New desc"
+cam prompt edit "My Prompt" -f updated.md  # Alias
 
-# Delete a prompt
-cam prompt delete <id>
+# Import prompts from live app files
+cam prompt import --app claude             # Auto-generate fancy name ✨
+cam prompt import "My Claude" --app claude # Custom name
+
+# Install prompts to app files
+cam prompt install "My Prompt" --app claude --level user
+
+# Remove a prompt
+cam prompt remove "My Prompt"
+
+# Show prompt status (where installed, file paths)
+cam prompt status
 ```
 
-### Enable/Disable
+### Advanced Operations
 ```bash
-# Enable a prompt
-cam prompt enable <id>
+# Import all live prompts from all apps
+cam prompt import --app all --level all
 
-# Disable a prompt
-cam prompt disable <id>
-```
+# Update prompt content from file
+cam prompt update "My Prompt" --file new-content.md
 
-### Import/Export
-```bash
-# Export all prompts
-cam prompt export --file ~/prompts.json
+# Change prompt name or description
+cam prompt update "My Prompt" --name "New Name" --description "Updated"
 
-# Import prompts
-cam prompt import --file ~/prompts.json
+# Set/unset as default prompt
+cam prompt update "My Prompt" --default
+cam prompt update "My Prompt" --no-default
 ```
 
 ## Skill Commands

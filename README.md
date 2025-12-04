@@ -32,7 +32,7 @@ CAM solves this by providing a single, consistent interface to manage everything
 - **MCP Registry:** Built-in registry with **381 pre-configured MCP servers** ready to install across all supported tools.
 - **Extensible Framework:** Standardized architecture for managing:
   - **Agents:** Standalone assistant configurations (markdown-based with YAML front matter).
-  - **Prompts:** Reusable system prompts synced across assistants at user or project scope.
+  - **Prompts:** ✨ Reusable system prompts with fancy name generation synced across assistants at user or project scope.
   - **Skills:** Custom tools and functionalities for your agents (directory-based with SKILL.md).
   - **Plugins:** Marketplace extensions for supported assistants (GitHub repos or local paths).
 - **MCP Support:** First-class support for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), allowing assistants to connect to external data sources and tools.
@@ -206,11 +206,13 @@ cam agent repos                  # Manage agent repositories
 ### Prompt Subcommands
 
 ```bash
-cam prompt list                  # List saved prompts
-cam prompt create                # Create a new prompt
-cam prompt sync <id> <tool>      # Sync a prompt to a tool
-cam prompt set-default <id>      # Set default prompt for sync-all
-cam prompt sync-all              # Sync default prompt to all tools
+cam prompt list                  # List all saved prompts
+cam prompt add [NAME] -f FILE    # Add prompt (auto-generates fancy name ✨)
+cam prompt update NAME -f FILE   # Update prompt content, name, or settings
+cam prompt import --app claude   # Import from live app files (fancy names ✨)
+cam prompt install NAME --app claude  # Install prompt to app files
+cam prompt remove NAME           # Remove a prompt
+cam prompt status                # Show where prompts are installed with file paths
 ```
 
 ### Skill Subcommands
