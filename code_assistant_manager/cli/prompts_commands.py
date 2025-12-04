@@ -96,11 +96,11 @@ def _generate_fancy_name() -> str:
     name_parts.append(random.choice(adjectives))
     name_parts.append(random.choice(nouns))
 
-    # Sometimes add a second adjective for variety
+    # Sometimes add a second adjective for variety (30% chance)
     if random.random() < 0.3:
         name_parts.insert(0, random.choice(adjectives))
 
-    return " ".join(name_parts)
+    return "_".join(name_parts)
 
 
 @prompt_app.command("list")
@@ -395,7 +395,7 @@ def import_prompt(
                 "codebuddy": "CodeBuddy"
             }
             prefix = app_prefixes.get(app, app.capitalize())
-            name = f"{prefix} {base_name}"
+            name = f"{prefix}_{base_name}"  # Use underscore instead of space
             if not _find_prompt_by_name(manager, name):
                 break
         typer.echo(f"✨ Generated fancy name: {Colors.CYAN}{name}{Colors.RESET}")
