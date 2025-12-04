@@ -94,7 +94,7 @@ _code_assistant_manager_completions()
     config_commands="validate list ls l"
 
     # Prompt subcommands
-    prompt_commands="list view create update delete sync import-live show-live import export unsync status"
+    prompt_commands="list show add update remove import install uninstall status"
 
     # Plugin subcommands
     plugin_commands="marketplace list repos add-repo remove-repo install uninstall enable disable validate browse view status"
@@ -275,36 +275,36 @@ _code_assistant_manager_completions()
                         COMPREPLY=( $(compgen -W "--help" -- ${cur}) )
                         return 0
                         ;;
-                    view|delete)
+                    show)
                         COMPREPLY=( $(compgen -W "--help" -- ${cur}) )
                         return 0
                         ;;
-                    create)
-                        COMPREPLY=( $(compgen -W "--title -t --content -c --description -d --tags --help" -- ${cur}) )
+                    add)
+                        COMPREPLY=( $(compgen -W "--file -f --description -d --default --no-default --help" -- ${cur}) )
                         return 0
                         ;;
                     update)
-                        COMPREPLY=( $(compgen -W "--title -t --content -c --description -d --tags --help" -- ${cur}) )
+                        COMPREPLY=( $(compgen -W "--file -f --description -d --name -n --default --no-default --help" -- ${cur}) )
                         return 0
                         ;;
-                    sync)
-                        COMPREPLY=( $(compgen -W "--app-type -a --all --help" -- ${cur}) )
+                    remove)
+                        COMPREPLY=( $(compgen -W "--force -f --help" -- ${cur}) )
                         return 0
                         ;;
-                    import-live|show-live)
-                        COMPREPLY=( $(compgen -W "--app-type -a --help" -- ${cur}) )
+                    import)
+                        COMPREPLY=( $(compgen -W "--app -a --level -l --project-dir -d --description --help" -- ${cur}) )
                         return 0
                         ;;
-                    import|export)
-                        COMPREPLY=( $(compgen -W "--file -f --help" -- ${cur}) )
+                    install)
+                        COMPREPLY=( $(compgen -W "--app -a --level -l --project-dir -d --help" -- ${cur}) )
                         return 0
                         ;;
-                    unsync)
-                        COMPREPLY=( $(compgen -W "--app-type -a --prompt-id -p --all --help" -- ${cur}) )
+                    uninstall)
+                        COMPREPLY=( $(compgen -W "--app -a --level -l --project-dir -d --force -f --help" -- ${cur}) )
                         return 0
                         ;;
                     status)
-                        COMPREPLY=( $(compgen -W "--level -l --help" -- ${cur}) )
+                        COMPREPLY=( $(compgen -W "--project-dir -d --help" -- ${cur}) )
                         return 0
                         ;;
                 esac
@@ -507,17 +507,14 @@ _code_assistant_manager() {
 
     prompt_commands=(
         'list:List all prompts'
-        'view:View a specific prompt'
-        'create:Create a new prompt'
-        'update:Update an existing prompt'
-        'delete:Delete a prompt'
-        'sync:Sync prompts to editor clients'
-        'import-live:Import prompts from live editor'
-        'show-live:Show live prompts from editor'
-        'import:Import prompts from file'
-        'export:Export prompts to file'
-        'unsync:Remove synced prompts from editors'
-        'status:Show prompt sync status'
+        'show:Show prompt content'
+        'add:Add a new prompt (auto-generates fancy name)'
+        'update:Update existing prompt'
+        'remove:Remove a prompt'
+        'import:Import from live app files (auto-generates fancy name)'
+        'install:Install prompt to app files'
+        'uninstall:Uninstall prompt from app files'
+        'status:Show installation status'
     )
 
     skill_commands=(
@@ -643,26 +640,29 @@ _code_assistant_manager() {
                             list)
                                 _values 'option' '--help[Show help]'
                                 ;;
-                            view|delete)
+                            show)
                                 _values 'option' '--help[Show help]'
                                 ;;
-                            create|update)
-                                _values 'option' '--title[Prompt title]' '--content[Prompt content]' '--description[Prompt description]' '--tags[Prompt tags]' '--help[Show help]'
+                            add)
+                                _values 'option' '--file[Prompt file]:file:_files' '--description[Prompt description]' '--default[Set as default]' '--no-default[Unset as default]' '--help[Show help]'
                                 ;;
-                            sync)
-                                _values 'option' '--app-type[Application type]:app:(claude codex gemini qwen codebuddy)' '--all[Sync all prompts]' '--help[Show help]'
+                            update)
+                                _values 'option' '--file[Updated content file]:file:_files' '--description[Updated description]' '--name[New prompt name]' '--default[Set as default]' '--no-default[Unset as default]' '--help[Show help]'
                                 ;;
-                            import-live|show-live)
-                                _values 'option' '--app-type[Application type]:app:(claude codex gemini qwen codebuddy)' '--help[Show help]'
+                            remove)
+                                _values 'option' '--force[Skip confirmation]' '--help[Show help]'
                                 ;;
-                            import|export)
-                                _values 'option' '--file[File path]:file:_files' '--help[Show help]'
+                            import)
+                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--description[Prompt description]' '--help[Show help]'
                                 ;;
-                            unsync)
-                                _values 'option' '--app-type[Application type]:app:(claude codex gemini qwen codebuddy)' '--prompt-id[Prompt ID]' '--all[Unsync all prompts]' '--help[Show help]'
+                            install)
+                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--help[Show help]'
+                                ;;
+                            uninstall)
+                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--force[Skip confirmation]' '--help[Show help]'
                                 ;;
                             status)
-                                _values 'option' '--level[Status level]:level:(summary detailed)' '--help[Show help]'
+                                _values 'option' '--project-dir[Project directory]:directory:_files -/' '--help[Show help]'
                                 ;;
                             *)
                                 _values 'option' '--help[Show help]'

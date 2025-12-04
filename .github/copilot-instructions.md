@@ -1,4 +1,4 @@
-# Copilot Instructions for Testing
+# copilot-instructions.md — GitHub Copilot Code Assistant Instructions
 
 This is a test instruction file for GitHub Copilot CLI custom instructions support.
 

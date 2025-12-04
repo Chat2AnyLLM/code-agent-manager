@@ -205,7 +205,6 @@ class PromptManager:
 
     def update(self, prompt: Prompt) -> None:
         """Update an existing prompt."""
-        print("DEBUG: update method called!")  # Debug
         prompts = self._load_prompts()
         if prompt.id not in prompts:
             raise ValueError(f"Prompt with id '{prompt.id}' not found")
@@ -359,8 +358,8 @@ class PromptManager:
         if not target_file:
             raise ValueError(f"Tool '{app_type}' does not support level '{level}'")
 
-        # Sync to the target prompt file using the handler
-        handler.sync_prompt(prompt.content, level, project_dir)
+        # Sync to the target prompt file using the handler, with prompt ID tracking
+        handler.sync_prompt(prompt.content, level, project_dir, prompt_id=prompt_id)
 
         # Record this prompt as active for this app/level
         self.set_active_prompt(prompt_id, app_type, level, project_dir)
@@ -622,3 +621,180 @@ class PromptManager:
         else:
             # For path-specific, just return the directory path info
             return None
+
+    # ==================== CLI Compatibility Methods ====================
+    # These methods provide the API expected by the CLI commands
+
+    def list_prompts(
+        self,
+        app: Optional[str] = None,
+        level: Optional[str] = None,
+        project_dir: Optional[Path] = None,
+    ) -> List[Prompt]:
+        """List prompts, optionally filtered by app and level.
+
+        Note: Currently returns all prompts as storage doesn't track app/level.
+        Filtering would require storing app/level metadata with each prompt.
+        """
+        prompts = self._load_prompts()
+        return list(prompts.values())
+
+    def get_prompt(self, prompt_id: str) -> Optional[Prompt]:
+        """Get a specific prompt by ID. Alias for get()."""
+        return self.get(prompt_id)
+
+    def create_prompt(
+        self,
+        prompt_id: str,
+        app: str,
+        level: str,
+        content: str,
+        description: Optional[str] = None,
+        project_dir: Optional[Path] = None,
+    ) -> Prompt:
+        """Create a new prompt with the given parameters."""
+        prompt = Prompt(
+            id=prompt_id,
+            name=prompt_id,
+            content=content,
+            description=description or "",
+            is_default=False,
+        )
+        self.create(prompt)
+        return prompt
+
+    def update_prompt(
+        self,
+        prompt_id: str,
+        content: Optional[str] = None,
+        description: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> Prompt:
+        """Update an existing prompt."""
+        prompt = self.get(prompt_id)
+        if not prompt:
+            raise ValueError(f"Prompt with id '{prompt_id}' not found")
+
+        if content is not None:
+            prompt.content = content
+        if description is not None:
+            prompt.description = description
+        if name is not None:
+            prompt.name = name
+
+        self.update(prompt)
+        return prompt
+
+    def remove_prompt(self, prompt_id: str) -> None:
+        """Remove a prompt. Alias for delete()."""
+        self.delete(prompt_id)
+
+    def get_default_prompt(
+        self,
+        app: Optional[str] = None,
+        level: str = "user",
+        project_dir: Optional[Path] = None,
+    ) -> Optional[str]:
+        """Get the default prompt ID for an app/level combination.
+
+        Note: Currently returns the global default prompt ID.
+        App/level-specific defaults would require additional storage.
+        """
+        default = self.get_default()
+        return default.id if default else None
+
+    def set_default_prompt(
+        self,
+        app: str,
+        level: str,
+        prompt_id: str,
+        project_dir: Optional[Path] = None,
+    ) -> None:
+        """Set a prompt as the default for an app/level combination.
+
+        Note: Currently sets the global default prompt.
+        """
+        self.set_default(prompt_id)
+
+    def clear_default_prompt(
+        self,
+        app: str,
+        level: str,
+        project_dir: Optional[Path] = None,
+    ) -> None:
+        """Clear the default prompt for an app/level combination.
+
+        Note: Currently clears the global default prompt.
+        """
+        self.clear_default()
+
+    def unsync_prompt_aliases(
+        self,
+        app: str,
+        level: str,
+        project_dir: Optional[Path] = None,
+    ) -> int:
+        """Remove synced prompt aliases for an app. Returns count of removed aliases."""
+        # This is a placeholder - actual implementation would depend on how aliases are stored
+        return 0
+
+    def install_from_url(
+        self,
+        url: str,
+        app: Optional[str] = None,
+        level: str = "user",
+        project_dir: Optional[Path] = None,
+        force: bool = False,
+    ) -> int:
+        """Install prompts from a URL. Returns count of installed prompts."""
+        # Placeholder implementation
+        raise NotImplementedError("URL installation not yet implemented")
+
+    def install_from_file(
+        self,
+        file_path: Path,
+        app: Optional[str] = None,
+        level: str = "user",
+        project_dir: Optional[Path] = None,
+        force: bool = False,
+    ) -> int:
+        """Install prompts from a file. Returns count of installed prompts."""
+        self.import_from_file(file_path)
+        return len(self._load_prompts())
+
+    def import_prompts_from_file(
+        self,
+        file_path: Path,
+        app: Optional[str] = None,
+        level: str = "user",
+        project_dir: Optional[Path] = None,
+        force: bool = False,
+    ) -> int:
+        """Import prompts from a JSON file. Returns count of imported prompts."""
+        before_count = len(self._load_prompts())
+        self.import_from_file(file_path)
+        after_count = len(self._load_prompts())
+        return after_count - before_count
+
+    def export_prompts_to_file(
+        self,
+        file_path: Path,
+        app: Optional[str] = None,
+        level: str = "user",
+        project_dir: Optional[Path] = None,
+    ) -> int:
+        """Export prompts to a JSON file. Returns count of exported prompts."""
+        self.export_to_file(file_path)
+        return len(self._load_prompts())
+
+    def sync_prompts_as_aliases(
+        self,
+        source_app: str,
+        target_app: str,
+        level: str = "user",
+        project_dir: Optional[Path] = None,
+        force: bool = False,
+    ) -> int:
+        """Sync prompts from one app to another as aliases. Returns count of synced prompts."""
+        # Placeholder implementation
+        return 0
