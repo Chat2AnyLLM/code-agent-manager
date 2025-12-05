@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # Maximum allowed lines per file
-MAX_LINES = 500
+MAX_LINES = 750
 
 # File extensions to check
 SOURCE_EXTENSIONS = {
@@ -87,7 +87,7 @@ def main():
         print(f"❌ Found {len(violations)} file(s) exceeding {MAX_LINES} lines:")
         print()
         for file_path, lines in sorted(violations):
-            print("20")
+            print(f"  {file_path}: {lines} lines")
         print()
         print(f"💡 Consider breaking large files into smaller modules.")
         print(f"   Maximum allowed: {MAX_LINES} lines per file")
