@@ -304,3 +304,24 @@ tools:
     filesystem:
       touched:
         - "~/.cursor/mcp.json (MCP server configurations)"
+
+  opencode:
+    enabled: true
+    install_cmd: curl -fsSL https://opencode.ai/install | bash
+    cli_command: opencode
+    description: "OpenCode.ai CLI"
+    env:
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      notes:
+        - "OpenCode.ai supports 75+ LLM providers via AI SDK and Models.dev"
+        - "API keys are configured via 'opencode /connect' command and stored in ~/.local/share/opencode/auth.json"
+        - "Providers and models are configured in opencode.jsonc"
+        - "MCP servers can be configured in opencode.jsonc under the 'mcp' section"
+    cli_parameters:
+      injected: []
+    filesystem:
+      touched:
+        - "~/.local/share/opencode/auth.json (API key storage)"
+        - "~/opencode.jsonc (provider and MCP server configuration)"

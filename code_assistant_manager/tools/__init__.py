@@ -19,6 +19,7 @@ from . import (  # noqa: F401
     gemini,
     iflow,
     neovate,
+    opencode,
     qodercli,
     qwen,
     zed,
@@ -74,6 +75,7 @@ from .endpoint_display import (  # noqa: F401,E402
 from .gemini import GeminiTool  # noqa: F401,E402
 from .iflow import IfLowTool  # noqa: F401,E402
 from .neovate import NeovateTool  # noqa: F401,E402
+from .opencode import OpenCodeTool  # noqa: F401,E402
 from .qodercli import QoderCLITool  # noqa: F401,E402
 from .qwen import QwenTool  # noqa: F401,E402
 
