@@ -128,7 +128,14 @@ class TestAllTools:
         self, mock_em_class, mock_run, tool_class_and_env, config_manager
     ):
         """Test successful execution for all tools."""
+        from unittest.mock import MagicMock
+        from subprocess import CompletedProcess
+
         tool_name, tool_class, base_url_env, api_key_env, model_env = tool_class_and_env
+
+        # Set up subprocess.run mock to return successful completion
+        mock_process = CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+        mock_run.return_value = mock_process
 
         mock_em = MagicMock()
         mock_em_class.return_value = mock_em
@@ -148,8 +155,9 @@ class TestAllTools:
                 return_value=(True, ("claude-3", "claude-2")),
             ):
                 tool = tool_class(config_manager)
-                result = tool.run([])
-                assert result == 0
+                with patch.object(tool, "_ensure_tool_installed", return_value=True):
+                    result = tool.run([])
+                    assert result == 0
         else:
             mock_em.fetch_models.return_value = (True, ["model1", "model2"])
             from code_assistant_manager.tools import select_model
@@ -159,8 +167,9 @@ class TestAllTools:
                 return_value=(True, "model1"),
             ):
                 tool = tool_class(config_manager)
-                result = tool.run([])
-                assert result == 0
+                with patch.object(tool, "_ensure_tool_installed", return_value=True):
+                    result = tool.run([])
+                    assert result == 0
 
     def test_tool_package_not_available(self, tool_class_and_env, config_manager):
         """Test all tools when package is not available."""
@@ -210,22 +219,24 @@ class TestDroidTool:
 
         mock_em_class.return_value = mock_em
 
-        mock_em.select_endpoint = MagicMock()
-        mock_em.get_endpoint_config.return_value = (
-            True,
-            {"endpoint": "https://api.example.com", "actual_api_key": "key123"},
-        )
-        mock_em.fetch_models.return_value = (True, ["model1"])
-        mock_select.return_value = (True, "model1")
-        mock_em._is_client_supported.return_value = True
+        # Mock config.get_sections to return endpoints
+        with patch.object(config_manager, 'get_sections', return_value=["endpoint1"]):
+            mock_em.select_endpoint = MagicMock()
+            mock_em.get_endpoint_config.return_value = (
+                True,
+                {"endpoint": "https://api.example.com", "actual_api_key": "key123"},
+            )
+            mock_em.fetch_models.return_value = (True, ["model1"])
+            mock_select.return_value = (True, "model1")
+            mock_em._is_client_supported.return_value = True
 
-        tool = DroidTool(config_manager)
+            # Mock subprocess.run to return success
+            mock_run.return_value.returncode = 0
 
-        with patch("builtins.open", create=True):
-            with patch("code_assistant_manager.tools.Path.home"):
-                result = tool.run([])
-                # Result may be 0 or 1 depending on endpoint setup
-                assert result in [0, 1]
+            tool = DroidTool(config_manager)
+
+            result = tool.run([])
+            assert result == 0
 
 
 class TestCopilotTool:
@@ -256,14 +267,32 @@ class TestGeminiTool:
     @patch("code_assistant_manager.tools.subprocess.run")
     @patch.object(GeminiTool, "_ensure_tool_installed", return_value=True)
     @patch.object(GeminiTool, "_check_command_available", return_value=True)
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test_key"})
+    @patch("code_assistant_manager.tools.EndpointManager")
+    @patch.dict(os.environ, {"GEMINI_API_KEY": "test_key"})
     def test_gemini_tool_run_success(
-        self, mock_check, mock_install, mock_run, config_manager
+        self, mock_em_class, mock_check, mock_install, mock_run, config_manager
     ):
         """Test successful Gemini tool execution."""
-        tool = GeminiTool(config_manager)
-        result = tool.run([])
-        assert result == 0
+        # Setup mock endpoint manager instance
+        mock_em = MagicMock()
+        mock_em_class.return_value = mock_em
+
+        mock_em.select_endpoint.return_value = (True, "endpoint1")
+        mock_em.get_endpoint_config.return_value = (
+            True,
+            {"endpoint": "https://api.example.com", "actual_api_key": "key123"},
+        )
+        mock_em.fetch_models.return_value = (True, ["gemini-1.5"])
+
+        # Mock the model selector
+        with patch("code_assistant_manager.menu.model_selector.ModelSelector.select_model_with_endpoint_info",
+                   return_value=(True, "gemini-1.5")):
+            # Mock subprocess.run to return success
+            mock_run.return_value.returncode = 0
+
+            tool = GeminiTool(config_manager)
+            result = tool.run([])
+            assert result == 0
 
     @patch.object(GeminiTool, "_ensure_tool_installed", return_value=False)
     def test_gemini_tool_package_not_available(self, mock_install, config_manager):

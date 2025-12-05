@@ -219,7 +219,11 @@ class BasePromptHandler(ABC):
         content = self._strip_metadata_header(content)
 
         # Strip any existing prompt ID marker
-        content = PROMPT_ID_PATTERN.sub("", content).strip()
+        original_content = content
+        content = PROMPT_ID_PATTERN.sub("", content)
+        if content != original_content:
+            # Only strip if we actually removed markers
+            content = content.strip()
 
         # Normalize header to match this tool's name
         content = self._normalize_header(content, filename=file_path.name)
