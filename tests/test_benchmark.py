@@ -13,6 +13,18 @@ from code_assistant_manager.config import ConfigManager
 from code_assistant_manager.endpoints import EndpointManager
 from code_assistant_manager.tools import ClaudeTool
 
+# Check if pytest-benchmark is available
+try:
+    import pytest_benchmark
+
+    HAS_BENCHMARK = True
+except ImportError:
+    HAS_BENCHMARK = False
+
+pytestmark = pytest.mark.skipif(
+    not HAS_BENCHMARK, reason="pytest-benchmark is required for benchmark tests"
+)
+
 
 @pytest.fixture
 def benchmark_config():

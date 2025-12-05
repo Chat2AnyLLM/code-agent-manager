@@ -153,7 +153,7 @@ class TestDisplayCenteredMenu:
 class TestSelectModel:
     """Test select_model function."""
 
-    @patch("code_assistant_manager.tools.display_centered_menu")
+    @patch("code_assistant_manager.menu.menus.display_centered_menu")
     def test_select_model_success(self, mock_menu):
         """Test successful model selection."""
         mock_menu.return_value = (True, 1)
@@ -162,7 +162,7 @@ class TestSelectModel:
         assert success is True
         assert model == "gpt-3.5"
 
-    @patch("code_assistant_manager.tools.display_centered_menu")
+    @patch("code_assistant_manager.menu.menus.display_centered_menu")
     def test_select_model_cancelled(self, mock_menu):
         """Test cancelled model selection."""
         mock_menu.return_value = (False, None)
@@ -171,7 +171,7 @@ class TestSelectModel:
         assert success is False
         assert model is None
 
-    @patch("code_assistant_manager.tools.display_centered_menu")
+    @patch("code_assistant_manager.menu.menus.display_centered_menu")
     def test_select_model_custom_prompt(self, mock_menu):
         """Test model selection with custom prompt."""
         mock_menu.return_value = (True, 0)
