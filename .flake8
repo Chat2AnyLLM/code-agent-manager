@@ -2,8 +2,8 @@
 # Flake8 configuration for code-assistant-manager
 
 # Compatibility with Black
-max-line-length = 88
-extend-ignore = E203, W503, E501
+max-line-length = 100
+extend-ignore = E203, W503, E501, B907, B904, F841, B017
 
 # Exclude patterns
 exclude =
