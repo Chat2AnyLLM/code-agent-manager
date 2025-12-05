@@ -374,7 +374,7 @@ class EndpointManager:
 
         # Try internal module execution
         if self._is_internal_module_command(tokens):
-            return self._execute_internal_module(tokens[2])
+            return self._execute_internal_module(tokens[2], env)
 
         # Try literal model list (command not found on PATH)
         if shutil.which(tokens[0]) is None:
@@ -391,14 +391,32 @@ class EndpointManager:
             and tokens[2] in self.INTERNAL_MODEL_MODULES
         )
 
-    def _execute_internal_module(self, module_name: str) -> Optional[str]:
+    def _execute_internal_module(self, module_name: str, env: Dict[str, str] = None) -> Optional[str]:
         """Execute an internal Python module for model listing."""
         try:
             mod = importlib.import_module(module_name)
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                mod.list_models()
-            return buf.getvalue().strip()
+
+            # Temporarily set environment variables if provided
+            old_env = {}
+            if env:
+                for key, value in env.items():
+                    if key in os.environ:
+                        old_env[key] = os.environ[key]
+                    os.environ[key] = value
+
+            try:
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    mod.list_models()
+                return buf.getvalue().strip()
+            finally:
+                # Restore original environment variables
+                for key, value in old_env.items():
+                    os.environ[key] = value
+                for key in env.keys():
+                    if key not in old_env and key in os.environ:
+                        del os.environ[key]
+
         except Exception as e:
             print(f"Warning: Failed to load module {module_name}: {e}")
             return None
