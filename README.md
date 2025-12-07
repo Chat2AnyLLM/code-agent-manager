@@ -43,23 +43,6 @@ CAM solves this by providing a single, consistent interface to manage everything
 
 ## Supported AI Assistants
 
-## Key Features
-
-- **Unified Management:** One tool (`cam`) to install, configure, and run all your AI assistants.
-- **Centralized Configuration:** Manage all API keys and endpoint settings from a single `providers.json` file with environment variables in `.env`.
-- **Interactive TUI:** A polished, interactive menu (`cam launch`) for easy navigation and operation with arrow-key navigation.
-- **MCP Registry:** Built-in registry with **381 pre-configured MCP servers** ready to install across all supported tools.
-- **Extensible Framework:** Standardized architecture for managing:
-    - **Agents:** Standalone assistant configurations (markdown-based with YAML front matter).
-    - **Prompts:** Reusable system prompts synced across assistants at user or project scope.
-    - **Skills:** Custom tools and functionalities for your agents (directory-based with SKILL.md).
-    - **Plugins:** Marketplace extensions for supported assistants (GitHub repos or local paths).
-- **MCP Support:** First-class support for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), allowing assistants to connect to external data sources and tools.
-- **Parallel Upgrades:** Concurrent tool upgrades with npm version checking and progress visualization.
-- **Diagnostics:** A comprehensive `doctor` command to validate your environment, API keys, tool installations, and cache status.
-
-## Supported AI Assistants
-
 CAM supports **13 AI coding assistants**:
 
 | Assistant | Command | Description | Install Method |
