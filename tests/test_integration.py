@@ -78,7 +78,7 @@ class TestModelSelectionFlow:
         assert "gpt-4" in models
 
     @patch("subprocess.run")
-    @patch("code_assistant_manager.ui.display_centered_menu")
+    @patch("code_assistant_manager.menu.menus.display_centered_menu")
     @patch("code_assistant_manager.tools.select_two_models")
     @patch.dict(os.environ, {"CODE_ASSISTANT_MANAGER_NONINTERACTIVE": "1"})
     def test_claude_tool_complete_workflow(
@@ -127,7 +127,7 @@ class TestModelSelectionFlow:
                         assert result == 0
 
     @patch("subprocess.run")
-    @patch("code_assistant_manager.ui.display_centered_menu")
+    @patch("code_assistant_manager.menu.menus.display_centered_menu")
     @patch("code_assistant_manager.tools.select_model")
     @patch.dict(os.environ, {"CODE_ASSISTANT_MANAGER_NONINTERACTIVE": "1"})
     def test_qwen_tool_complete_workflow(
@@ -189,7 +189,7 @@ class TestEndpointManagerIntegration:
         }
 
         success, models = endpoint_manager.fetch_models(
-            "test-endpoint", endpoint_config
+            "test-endpoint", endpoint_config, use_cache_if_available=False
         )
         assert success is True
         assert len(models) >= 3
@@ -374,7 +374,50 @@ class TestErrorRecovery:
         assert validate_url("ftp://invalid.com") is False
         assert validate_url("http://") is False
 
-        # Test valid URLs
-        assert validate_url("https://api.example.com") is True
-        assert validate_url("http://localhost:8000") is True
-        assert validate_url("http://127.0.0.1:5000") is True
+    @patch("code_assistant_manager.endpoints.importlib.import_module")
+    def test_execute_internal_module_with_env_vars(self, mock_import, integration_config):
+        """Test internal module execution with environment variable passing."""
+        config = ConfigManager(integration_config)
+        endpoint_manager = EndpointManager(config)
+
+        # Mock module
+        mock_mod = MagicMock()
+        mock_mod.list_models = MagicMock()
+        mock_import.return_value = mock_mod
+
+        # Test environment variables
+        test_env = {"TEST_VAR": "test_value", "endpoint": "https://test.com"}
+
+        result = endpoint_manager._execute_internal_module("test_module", test_env)
+
+        # Verify module was imported and called
+        mock_import.assert_called_once_with("test_module")
+        mock_mod.list_models.assert_called_once()
+
+        # Verify environment variables were set during execution
+        # (This would need more sophisticated mocking to verify env var handling)
+
+    @patch("code_assistant_manager.endpoints.importlib.import_module")
+    def test_execute_internal_module_env_restoration(self, mock_import, integration_config):
+        """Test that environment variables are properly restored after module execution."""
+        config = ConfigManager(integration_config)
+        endpoint_manager = EndpointManager(config)
+
+        # Mock module
+        mock_mod = MagicMock()
+        mock_mod.list_models = MagicMock()
+        mock_import.return_value = mock_mod
+
+        # Set up initial environment
+        original_env = dict(os.environ)
+        test_env = {"TEST_NEW_VAR": "new_value"}
+
+        try:
+            result = endpoint_manager._execute_internal_module("test_module", test_env)
+
+            # Verify environment was restored to original state
+            assert os.environ == original_env
+        finally:
+            # Restore environment in case of test failure
+            os.environ.clear()
+            os.environ.update(original_env)

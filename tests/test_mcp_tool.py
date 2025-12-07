@@ -62,6 +62,7 @@ def sample_new_config():
                 "qodercli",
                 "neovate",
                 "crush",
+                "cursor-agent",
             ],
         },
         "servers": {
@@ -111,6 +112,7 @@ def test_manager_initialization(mock_config):
         "qodercli",
         "neovate",
         "crush",
+        "cursor-agent",
     ]
     assert len(manager.clients) == len(expected_clients)
 
@@ -161,6 +163,7 @@ def test_get_available_tools(sample_new_config):
             "qodercli",
             "neovate",
             "crush",
+            "cursor-agent",
         ]
         assert set(tools) == set(expected_tools)
         assert tools == sorted(expected_tools)  # Should be sorted

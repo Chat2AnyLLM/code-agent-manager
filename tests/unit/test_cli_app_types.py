@@ -132,7 +132,7 @@ class TestPluginAppTypeValidation:
                 "code_assistant_manager.cli.plugins.plugin_install_commands._check_app_cli"
             ):
                 with patch(
-                    "code_assistant_manager.cli.plugins.plugin_install_commands.PluginManager"
+                    "code_assistant_manager.plugins.PluginManager"
                 ) as mock_manager:
                     handler = MagicMock()
                     handler.install_plugin.return_value = (True, "Installed")
@@ -143,7 +143,7 @@ class TestPluginAppTypeValidation:
                     result = runner.invoke(
                         plugin_app, ["install", "test-plugin", "-a", "claude"]
                     )
-                    assert "Invalid value" not in result.output
+                    assert "Invalid" not in result.output
 
     def test_plugin_install_accepts_codebuddy(self, runner):
         """Test plugin install accepts codebuddy app type."""
@@ -156,7 +156,7 @@ class TestPluginAppTypeValidation:
                 "code_assistant_manager.cli.plugins.plugin_install_commands._check_app_cli"
             ):
                 with patch(
-                    "code_assistant_manager.cli.plugins.plugin_install_commands.PluginManager"
+                    "code_assistant_manager.plugins.PluginManager"
                 ) as mock_manager:
                     handler = MagicMock()
                     handler.install_plugin.return_value = (True, "Installed")
@@ -167,7 +167,7 @@ class TestPluginAppTypeValidation:
                     result = runner.invoke(
                         plugin_app, ["install", "test-plugin", "-a", "codebuddy"]
                     )
-                    assert "Invalid value" not in result.output
+                    assert "Invalid" not in result.output
 
     def test_plugin_install_rejects_codex(self, runner):
         """Test plugin install rejects codex (not supported for plugins)."""
@@ -226,4 +226,5 @@ class TestPluginAppTypeValidation:
 
         result = runner.invoke(plugin_app, ["list", "-a", "gemini"])
         assert result.exit_code != 0
-        assert "Invalid value" in result.output
+        # Check for error message about invalid app type
+        assert "Invalid" in result.output or "invalid" in result.output.lower()

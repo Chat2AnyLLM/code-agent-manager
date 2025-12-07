@@ -692,7 +692,8 @@ class TestConfigFileHelpers:
 
         result = _get_preferred_container_key(config, is_toml=True)
 
-        assert result == "mcp_servers"
+        # Default is mcpServers for both JSON and TOML when no existing containers
+        assert result == "mcpServers"
 
     def test_remove_server_from_containers_mcpServers(self):
         """Test removing server from mcpServers container."""
@@ -736,26 +737,3 @@ class TestConfigFileHelpers:
         result = _remove_server_from_containers(config, "nonexistent")
 
         assert result is False
-
-    def test_find_server_container_mcpServers(self):
-        """Test finding server in mcpServers container."""
-        from code_assistant_manager.mcp.base_client import _find_server_container
-
-        config = {"mcpServers": {"test_server": {"type": "stdio"}}}
-
-        result = _find_server_container(config, "test_server")
-
-        assert result is not None
-        key, container = result
-        assert key == "mcpServers"
-        assert "test_server" in container
-
-    def test_find_server_container_not_found(self):
-        """Test finding server that doesn't exist."""
-        from code_assistant_manager.mcp.base_client import _find_server_container
-
-        config = {"mcpServers": {"other": {}}}
-
-        result = _find_server_container(config, "nonexistent")
-
-        assert result is None

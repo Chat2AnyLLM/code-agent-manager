@@ -525,12 +525,18 @@ class TestErrorRecovery:
                 with patch.object(
                     client, "_check_and_install_server", side_effect=[True, False]
                 ):
+                    with patch(
+                        "code_assistant_manager.mcp.base.find_mcp_config",
+                        return_value="/tmp/test_mcp.json",
+                    ):
+                        with patch.object(
+                            client, "_fallback_remove_server", return_value=True
+                        ):
+                            result = client.refresh_servers()
 
-                    result = client.refresh_servers()
-
-                    # Implementation returns False when any server fails
-                    # This test verifies that refresh operations complete without crashing
-                    assert result is False
+                            # Implementation returns False when any server fails
+                            # This test verifies that refresh operations complete without crashing
+                            assert result is False
 
     def test_config_operations_handle_corrupted_files(self, client, tmp_path):
         """Test config operations handle corrupted config files."""
