@@ -13,6 +13,10 @@ class OpenCodeTool(CLITool):
     tool_key = "opencode"
     install_description = "OpenCode.ai CLI"
 
+    # Default limits for OpenCode models
+    DEFAULT_CONTEXT_LIMIT = 256000
+    DEFAULT_OUTPUT_LIMIT = 65536
+
     def _get_filtered_endpoints(self) -> List[str]:
         """Collect endpoints that support the opencode client."""
         endpoints = self.config.get_sections(exclude_common=True)
@@ -126,8 +130,8 @@ class OpenCodeTool(CLITool):
                 provider["models"][model_key] = {
                     "name": model_name,
                     "limit": {
-                        "context": 128000,
-                        "output": 4096
+                        "context": self.DEFAULT_CONTEXT_LIMIT,
+                        "output": self.DEFAULT_OUTPUT_LIMIT
                     }
                 }
 
