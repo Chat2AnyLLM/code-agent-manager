@@ -7,7 +7,6 @@ This file documents repository-level expectations and instructions intended to g
 - If the change does not change to any real code, like python, then no need to test at all
 - Never commit credentials, keys, .env files
 - After any changes, run the folling to reinstall the project:
-- Always commit with author: Author: Jian Zhu <zhujian0805@gmail.com>
 - Never add Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 rm -rf dist/*
