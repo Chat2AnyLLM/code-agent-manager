@@ -4,6 +4,7 @@ This file documents repository-level expectations and instructions intended to g
 
 - Ask for approval before any git commit and push
 - Always all tests by find all fils with 'find' command and run them all one by one
+- If the change does not change to any real code, like python, then no need to test at all
 - Never commit credentials, keys, .env files
 - After any changes, run the folling to reinstall the project:
 ```
