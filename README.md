@@ -2,9 +2,7 @@
 
 <div align="center">
 
-[![PyPI Version](https://img.shields.io/pypi/v/code-assistant-manager?color=blue)](https://pypi.org/project/code-assistant-manager/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Python Versions](https://img.shields.io/pypi/pyversions/code-assistant-manager.svg)](https://pypi.org/project/code-assistant-manager/)
 [![Code Quality](https://img.shields.io/badge/code%20quality-A+-brightgreen.svg)](https://github.com/Chat2AnyLLM/code-assistant-manager/actions)
 
 **One CLI to Rule Them All.**
