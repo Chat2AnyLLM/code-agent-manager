@@ -590,3 +590,40 @@ def status(
 prompt_app.command("ls", hidden=True)(list_prompts)
 prompt_app.command("rm", hidden=True)(remove_prompt)
 prompt_app.command("edit", hidden=True)(update_prompt)
+
+
+@prompt_app.command("rename")
+def rename_prompt(
+    old_name: str = typer.Argument(..., help="Current name of the prompt to rename"),
+    new_name: str = typer.Argument(..., help="New name for the prompt"),
+):
+    """Rename an existing prompt.
+
+    Examples:
+        cam prompt rename "Old Name" "New Name"
+    """
+    manager = _get_manager()
+
+    # Find the prompt by old name
+    prompt = _find_prompt_by_name(manager, old_name)
+    if not prompt:
+        typer.echo(f"Error: Prompt '{old_name}' not found")
+        raise typer.Exit(1)
+
+    # Check if new name conflicts with existing prompt
+    if new_name != old_name:
+        existing_prompt = _find_prompt_by_name(manager, new_name)
+        if existing_prompt:
+            typer.echo(f"Error: Prompt with name '{new_name}' already exists")
+            raise typer.Exit(1)
+
+    # Rename the prompt
+    try:
+        updated_prompt = manager.update_prompt(
+            prompt_id=prompt.id,
+            name=new_name,
+        )
+        typer.echo(f"{Colors.GREEN}✓{Colors.RESET} Renamed prompt: '{old_name}' → '{new_name}'")
+    except Exception as e:
+        typer.echo(f"Error: {e}")
+        raise typer.Exit(1)
