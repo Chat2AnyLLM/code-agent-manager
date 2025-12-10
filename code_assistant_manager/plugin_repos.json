@@ -92,5 +92,14 @@
     "repoOwner": "MadAppGang",
     "repoName": "claude-code",
     "repoBranch": "main"
+  },
+  "thedotmack": {
+    "name": "thedotmack",
+    "description": "Plugins by Alex Newman (thedotmack)",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "thedotmack",
+    "repoName": "claude-mem",
+    "repoBranch": "main"
   }
 }
