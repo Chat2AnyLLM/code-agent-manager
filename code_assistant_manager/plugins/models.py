@@ -33,7 +33,7 @@ class Plugin:
     def key(self) -> str:
         """Unique key for this plugin."""
         if self.marketplace:
-            return f"{self.name}@{self.marketplace}"
+            return f"{self.marketplace}:{self.name}"
         elif self.repo_owner and self.repo_name:
             return f"{self.repo_owner}/{self.repo_name}:{self.name}"
         else:

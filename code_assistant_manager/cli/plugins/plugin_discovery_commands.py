@@ -93,7 +93,7 @@ def _display_marketplace_footer(info, marketplace: str, total: int, limit: int) 
         )
 
     typer.echo(
-        f"\n{Colors.CYAN}Install with:{Colors.RESET} cam plugin install <plugin-name>@{marketplace}"
+        f"\n{Colors.CYAN}Install with:{Colors.RESET} cam plugin install <marketplace>:<plugin-name>"
     )
     typer.echo()
 
@@ -343,7 +343,7 @@ def browse_marketplace(
 def view_plugin(
     plugin: str = typer.Argument(
         ...,
-        help="Plugin name to view (e.g., 'document-skills' or 'document-skills@anthropic-agent-skills')",
+        help="Plugin name to view (e.g., 'document-skills' or 'awesome-plugins:document-skills')",
     ),
     app_type: str = typer.Option(
         "claude",
@@ -356,7 +356,7 @@ def view_plugin(
 
     Shows the plugin description, version, category, and source marketplace.
     You can specify just the plugin name or include the marketplace name
-    with the @ format (e.g., 'plugin-name@marketplace').
+    with the : format (e.g., 'marketplace:plugin-name').
     """
     from code_assistant_manager.cli.option_utils import resolve_single_app
     from code_assistant_manager.plugins.fetch import fetch_repo_info
@@ -365,9 +365,13 @@ def view_plugin(
     manager = PluginManager()
 
     # Parse plugin name and marketplace if provided
-    parts = plugin.split("@")
+    parts = plugin.split(":")
     plugin_name = parts[0]
     marketplace_filter = parts[1] if len(parts) > 1 else None
+
+    # Support legacy @ syntax for backward compatibility
+    if "@" in plugin_name and not marketplace_filter:
+        plugin_name, marketplace_filter = plugin_name.split("@", 1)
 
     all_repos = manager.get_all_repos()
     if not all_repos:
@@ -457,7 +461,7 @@ def view_plugin(
 
     typer.echo()
     typer.echo(
-        f"{Colors.CYAN}Install:{Colors.RESET} cam plugin install {plugin_name}@{found_marketplace}"
+        f"{Colors.CYAN}Install:{Colors.RESET} cam plugin install {found_marketplace}:{plugin_name}"
     )
     typer.echo()
 
@@ -615,8 +619,14 @@ def show_app_info(app: str, show_cam_config: bool = True):
     if enabled_plugins:
         typer.echo(f"\n  {Colors.GREEN}Enabled:{Colors.RESET}")
         for plugin_key in sorted(enabled_plugins.keys()):
-            # Parse plugin key (format: plugin-name@marketplace or just plugin-name)
-            if "@" in plugin_key:
+            # Parse plugin key (format: marketplace:plugin-name or plugin-name)
+            if ":" in plugin_key:
+                marketplace, plugin_name = plugin_key.split(":", 1)
+                typer.echo(
+                    f"    {Colors.GREEN}✓{Colors.RESET} {plugin_name} ({marketplace})"
+                )
+            elif "@" in plugin_key:
+                # Legacy @ syntax support
                 plugin_name, marketplace = plugin_key.split("@", 1)
                 typer.echo(
                     f"    {Colors.GREEN}✓{Colors.RESET} {plugin_name} ({marketplace})"
@@ -627,7 +637,14 @@ def show_app_info(app: str, show_cam_config: bool = True):
     if disabled_plugins:
         typer.echo(f"\n  {Colors.RED}Disabled:{Colors.RESET}")
         for plugin_key in sorted(disabled_plugins.keys()):
-            if "@" in plugin_key:
+            # Parse plugin key (format: marketplace:plugin-name or plugin-name)
+            if ":" in plugin_key:
+                marketplace, plugin_name = plugin_key.split(":", 1)
+                typer.echo(
+                    f"    {Colors.RED}✗{Colors.RESET} {plugin_name} ({marketplace})"
+                )
+            elif "@" in plugin_key:
+                # Legacy @ syntax support
                 plugin_name, marketplace = plugin_key.split("@", 1)
                 typer.echo(
                     f"    {Colors.RED}✗{Colors.RESET} {plugin_name} ({marketplace})"
@@ -791,8 +808,14 @@ def show_app_info(app: str, show_cam_config: bool = True):
     if enabled_plugins:
         typer.echo(f"\n  {Colors.GREEN}Enabled:{Colors.RESET}")
         for plugin_key in sorted(enabled_plugins.keys()):
-            # Parse plugin key (format: plugin-name@marketplace or just plugin-name)
-            if "@" in plugin_key:
+            # Parse plugin key (format: marketplace:plugin-name or plugin-name)
+            if ":" in plugin_key:
+                marketplace, plugin_name = plugin_key.split(":", 1)
+                typer.echo(
+                    f"    {Colors.GREEN}✓{Colors.RESET} {plugin_name} ({marketplace})"
+                )
+            elif "@" in plugin_key:
+                # Legacy @ syntax support
                 plugin_name, marketplace = plugin_key.split("@", 1)
                 typer.echo(
                     f"    {Colors.GREEN}✓{Colors.RESET} {plugin_name} ({marketplace})"
@@ -803,7 +826,14 @@ def show_app_info(app: str, show_cam_config: bool = True):
     if disabled_plugins:
         typer.echo(f"\n  {Colors.RED}Disabled:{Colors.RESET}")
         for plugin_key in sorted(disabled_plugins.keys()):
-            if "@" in plugin_key:
+            # Parse plugin key (format: marketplace:plugin-name or plugin-name)
+            if ":" in plugin_key:
+                marketplace, plugin_name = plugin_key.split(":", 1)
+                typer.echo(
+                    f"    {Colors.RED}✗{Colors.RESET} {plugin_name} ({marketplace})"
+                )
+            elif "@" in plugin_key:
+                # Legacy @ syntax support
                 plugin_name, marketplace = plugin_key.split("@", 1)
                 typer.echo(
                     f"    {Colors.RED}✗{Colors.RESET} {plugin_name} ({marketplace})"
