@@ -13,6 +13,7 @@ from .codebuddy import CodebuddyPromptHandler
 from .codex import CodexPromptHandler
 from .copilot import CopilotPromptHandler
 from .gemini import GeminiPromptHandler
+from .opencode import OpenCodePromptHandler
 from .models import Prompt
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ PROMPT_HANDLERS: Dict[str, Type[BasePromptHandler]] = {
     "gemini": GeminiPromptHandler,
     "copilot": CopilotPromptHandler,
     "codebuddy": CodebuddyPromptHandler,
+    "opencode": OpenCodePromptHandler,
 }
 
 # Valid app types

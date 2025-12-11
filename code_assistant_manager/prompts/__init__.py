@@ -23,6 +23,7 @@ Supported Tools:
     - codex: OpenAI Codex CLI (~/.codex/AGENTS.md, ./AGENTS.md)
     - gemini: Google Gemini CLI (~/.gemini/GEMINI.md, ./GEMINI.md)
     - copilot: GitHub Copilot CLI (.github/copilot-instructions.md, .github/instructions/)
+    - opencode: OpenCode (~/.config/opencode/AGENTS.md, ./AGENTS.md)
 """
 
 from .base import BasePromptHandler
@@ -36,6 +37,7 @@ from .copilot import (
     parse_copilot_frontmatter,
 )
 from .gemini import GeminiPromptHandler
+from .opencode import OpenCodePromptHandler
 from .manager import PROMPT_HANDLERS, VALID_APP_TYPES, PromptManager, get_handler
 from .models import Prompt
 
@@ -44,12 +46,14 @@ USER_PROMPT_FILE_PATHS = {
     "claude": ClaudePromptHandler().user_prompt_path,
     "codex": CodexPromptHandler().user_prompt_path,
     "gemini": GeminiPromptHandler().user_prompt_path,
+    "opencode": OpenCodePromptHandler().user_prompt_path,
 }
 
 PROJECT_PROMPT_FILE_NAMES = {
     "claude": ClaudePromptHandler().project_prompt_filename,
     "codex": CodexPromptHandler().project_prompt_filename,
     "gemini": GeminiPromptHandler().project_prompt_filename,
+    "opencode": OpenCodePromptHandler().project_prompt_filename,
 }
 
 PROMPT_FILE_PATHS = USER_PROMPT_FILE_PATHS
@@ -80,6 +84,7 @@ __all__ = [
     "CodexPromptHandler",
     "GeminiPromptHandler",
     "CopilotPromptHandler",
+    "OpenCodePromptHandler",
     # Helper functions
     "get_handler",
     "get_prompt_file_path",
