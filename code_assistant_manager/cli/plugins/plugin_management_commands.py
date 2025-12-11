@@ -185,7 +185,7 @@ def list_repos():
         for name, repo in sorted(marketplaces.items()):
             _print_repo(name, repo, name in user_repos)
         typer.echo(
-            f"{Colors.CYAN}Add marketplace with:{Colors.RESET} cam plugin install <marketplace-name>"
+            f"{Colors.CYAN}Install marketplace with:{Colors.RESET} cam plugin marketplace install <marketplace-name>"
         )
 
     typer.echo(

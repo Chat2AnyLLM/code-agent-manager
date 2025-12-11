@@ -161,7 +161,11 @@ class TestPluginCommands:
                     "code_assistant_manager.plugins.PluginManager",
                     return_value=mock_manager,
                 ):
-                    result = runner.invoke(plugin_app, ["install", "test-plugin"])
+                    with patch(
+                        "code_assistant_manager.cli.plugins.plugin_install_commands._resolve_plugin_conflict",
+                        return_value=None
+                    ):
+                        result = runner.invoke(plugin_app, ["install", "test-plugin"])
 
         assert result.exit_code == 0
         assert "installed" in result.output.lower()
@@ -180,9 +184,13 @@ class TestPluginCommands:
                 "code_assistant_manager.cli.plugins.plugin_install_commands._check_app_cli"
             ):
                 # Use input="y\n" to confirm the prompt (workaround for Python 3.14-nogil issue with --force flag)
-                result = runner.invoke(
-                    plugin_app, ["uninstall", "test-plugin"], input="y\n"
-                )
+                with patch(
+                    "code_assistant_manager.cli.plugins.plugin_install_commands._resolve_installed_plugin_conflict",
+                    return_value=None
+                ):
+                    result = runner.invoke(
+                        plugin_app, ["uninstall", "test-plugin"], input="y\n"
+                    )
 
         assert result.exit_code == 0
 
