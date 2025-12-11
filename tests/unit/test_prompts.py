@@ -449,9 +449,11 @@ class TestPromptConstants:
         assert "claude" in PROMPT_FILE_PATHS
         assert "codex" in PROMPT_FILE_PATHS
         assert "gemini" in PROMPT_FILE_PATHS
+        assert "opencode" in PROMPT_FILE_PATHS
 
     def test_prompt_file_paths_values(self):
         """Test PROMPT_FILE_PATHS has correct file names."""
         assert PROMPT_FILE_PATHS["claude"].name == "CLAUDE.md"
         assert PROMPT_FILE_PATHS["codex"].name == "AGENTS.md"
         assert PROMPT_FILE_PATHS["gemini"].name == "GEMINI.md"
+        assert PROMPT_FILE_PATHS["opencode"].name == "AGENTS.md"

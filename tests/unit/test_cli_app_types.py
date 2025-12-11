@@ -29,8 +29,8 @@ class TestSupportedAppTypes:
         assert set(SKILL_APP_TYPES) == expected
 
     def test_agent_valid_app_types(self):
-        """Test agent module supports all 6 app types."""
-        expected = {"claude", "codex", "gemini", "droid", "codebuddy", "copilot"}
+        """Test agent module supports all 7 app types."""
+        expected = {"claude", "codex", "gemini", "droid", "codebuddy", "copilot", "opencode"}
         assert set(AGENT_APP_TYPES) == expected
 
     def test_plugin_valid_app_types(self):
@@ -102,7 +102,7 @@ class TestAgentAppTypeValidation:
             mock_manager.return_value = mock_instance
 
             # Should accept all valid app types
-            for app in ["claude", "codex", "gemini", "droid", "codebuddy"]:
+            for app in ["claude", "codex", "gemini", "droid", "codebuddy", "copilot", "opencode"]:
                 result = runner.invoke(agent_app, ["install", "test-agent", "-a", app])
                 # Should not fail with "Invalid value" error
                 assert "Invalid value" not in result.output

@@ -17,6 +17,7 @@ from .codex import CodexAgentHandler
 from .copilot import CopilotAgentHandler
 from .droid import DroidAgentHandler
 from .gemini import GeminiAgentHandler
+from .opencode import OpenCodeAgentHandler
 from .models import Agent, AgentRepo
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ AGENT_HANDLERS: Dict[str, Type[BaseAgentHandler]] = {
     "droid": DroidAgentHandler,
     "codebuddy": CodebuddyAgentHandler,
     "copilot": CopilotAgentHandler,
+    "opencode": OpenCodeAgentHandler,
 }
 
 # Valid app types for agents

@@ -30,7 +30,7 @@ APP_TYPE_OPTION = typer.Option(
     "claude",
     "--app",
     "-a",
-    help="App type(s) to install to (claude, codex, gemini, droid, codebuddy, all). Comma-separated.",
+    help="App type(s) to install to (claude, codex, gemini, droid, codebuddy, opencode, all). Comma-separated.",
 )
 FORCE_OPTION = typer.Option(False, "--force", "-f", help="Skip confirmation")
 OWNER_OPTION = typer.Option(..., "--owner", "-o", help="Repository owner")
@@ -43,20 +43,20 @@ APP_TYPE_OPTION_ALL = typer.Option(
     None,
     "--app",
     "-a",
-    help="App type(s) to show (claude, codex, gemini, droid, codebuddy, all). Default shows all.",
+    help="App type(s) to show (claude, codex, gemini, droid, codebuddy, opencode, all). Default shows all.",
 )
 APP_TYPE_OPTION_UNINSTALL = typer.Option(
     ...,
     "--app",
     "-a",
-    help="App type(s) to uninstall all agents from (claude, codex, gemini, droid, codebuddy, all). Comma-separated.",
+    help="App type(s) to uninstall all agents from (claude, codex, gemini, droid, codebuddy, opencode, all). Comma-separated.",
 )
 from code_assistant_manager.plugins.fetch import parse_github_url
 
 logger = logging.getLogger(__name__)
 
 agent_app = typer.Typer(
-    help="Manage agents for AI assistants (Claude, Codex, Gemini, Droid, CodeBuddy)",
+    help="Manage agents for AI assistants (Claude, Codex, Gemini, Droid, CodeBuddy, OpenCode)",
     no_args_is_help=True,
 )
 
