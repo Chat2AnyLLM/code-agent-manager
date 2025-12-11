@@ -10,6 +10,7 @@ from .droid import DroidMCPClient
 from .gemini import GeminiMCPClient
 from .iflow import IflowMCPClient
 from .neovate import NeovateMCPClient
+from .opencode import OpenCodeMCPClient
 from .qodercli import QoderCLIMCPClient
 from .qwen import QwenMCPClient
 from .zed import ZedMCPClient
@@ -25,6 +26,7 @@ __all__ = [
     "GeminiMCPClient",
     "IflowMCPClient",
     "NeovateMCPClient",
+    "OpenCodeMCPClient",
     "QoderCLIMCPClient",
     "QwenMCPClient",
     "ZedMCPClient",

@@ -17,6 +17,7 @@ from .clients import (
     GeminiMCPClient,
     IflowMCPClient,
     NeovateMCPClient,
+    OpenCodeMCPClient,
     QoderCLIMCPClient,
     QwenMCPClient,
     ZedMCPClient,
@@ -40,4 +41,5 @@ __all__ = [
     "ZedMCPClient",
     "QoderCLIMCPClient",
     "NeovateMCPClient",
+    "OpenCodeMCPClient",
 ]
