@@ -12,7 +12,7 @@ from code_assistant_manager.prompts import PromptManager, Prompt, VALID_APP_TYPE
 logger = logging.getLogger(__name__)
 
 prompt_app = typer.Typer(
-    help="Manage prompts for AI assistants (Claude, Codex, Gemini, Copilot, CodeBuddy)",
+    help="Manage prompts for AI assistants (Claude, Codex, Gemini, Copilot, CodeBuddy, OpenCode)",
     no_args_is_help=True,
 )
 
@@ -332,7 +332,7 @@ def remove_prompt(
 @prompt_app.command("import")
 def import_prompt(
     name: Optional[str] = typer.Argument(None, help="Name for the imported prompt (auto-generated if not provided)"),
-    app: str = typer.Option(..., "--app", "-a", help=f"App to import from ({', '.join(VALID_APP_TYPES)})"),
+    app: str = typer.Option(..., "--app", "-a", help=f"App to import from ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
     level: str = typer.Option("user", "--level", "-l", help="Level: user or project"),
     project_dir: Optional[Path] = typer.Option(None, "--project-dir", "-d", help="Project directory (for project level)"),
     description: Optional[str] = typer.Option(None, "--description", help="Description of the prompt"),
@@ -420,7 +420,7 @@ def import_prompt(
 @prompt_app.command("install")
 def install_prompt(
     name: str = typer.Argument(..., help="Prompt name to install"),
-    app: str = typer.Option(..., "--app", "-a", help=f"Target app ({', '.join(VALID_APP_TYPES)})"),
+    app: str = typer.Option(..., "--app", "-a", help=f"Target app ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
     level: str = typer.Option("user", "--level", "-l", help="Level: user or project"),
     project_dir: Optional[Path] = typer.Option(None, "--project-dir", "-d", help="Project directory (for project level)"),
 ):
@@ -459,7 +459,7 @@ def install_prompt(
 
 @prompt_app.command("uninstall")
 def uninstall_prompt(
-    app: str = typer.Option(..., "--app", "-a", help=f"Target app ({', '.join(VALID_APP_TYPES)})"),
+    app: str = typer.Option(..., "--app", "-a", help=f"Target app ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
     level: str = typer.Option("user", "--level", "-l", help="Level: user or project"),
     project_dir: Optional[Path] = typer.Option(None, "--project-dir", "-d", help="Project directory (for project level)"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),

@@ -29,6 +29,7 @@ class MCPManager(MCPBase):
             GeminiMCPClient,
             IflowMCPClient,
             NeovateMCPClient,
+            OpenCodeMCPClient,
             QoderCLIMCPClient,
             QwenMCPClient,
             ZedMCPClient,
@@ -48,6 +49,7 @@ class MCPManager(MCPBase):
             "neovate": NeovateMCPClient(),
             "crush": CrushMCPClient(),
             "cursor-agent": CursorAgentMCPClient(),
+            "opencode": OpenCodeMCPClient(),
         }
 
     def get_client(self, tool_name: str):
