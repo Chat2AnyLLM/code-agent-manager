@@ -25,7 +25,15 @@ class OpenCodeMCPClient(MCPClient):
                     # Check for mcp section in OpenCode config
                     if "mcp" in config and isinstance(config["mcp"], dict):
                         if server_name in config["mcp"]:
-                            return True
+                            server_config = config["mcp"][server_name]
+                            # Check if it's in the correct OpenCode format
+                            # Should have "type": "local" and "command" as array
+                            if (isinstance(server_config, dict) and
+                                server_config.get("type") == "local" and
+                                isinstance(server_config.get("command"), list)):
+                                return True
+                            # If it's in the old format, consider it not properly installed
+                            # so it will be re-installed with the correct format
                 except Exception:
                     continue
         return False
@@ -48,6 +56,9 @@ class OpenCodeMCPClient(MCPClient):
             if config_path.exists():
                 content = config_path.read_text(encoding="utf-8").strip()
                 config = json.loads(content) if content else {}
+
+            # Normalize existing config to handle legacy formats
+            config = self._normalize_opencode_config(config)
 
             # OpenCode uses "mcp" section
             if "mcp" not in config:
@@ -73,15 +84,22 @@ class OpenCodeMCPClient(MCPClient):
         return [home / ".config" / "opencode" / "opencode.json"]
 
     def _convert_to_opencode_format(self, server_info: dict) -> dict:
-        """Convert global server config to OpenCode format."""
-        # OpenCode uses the same format as the global config
-        # but may need some adjustments for local vs remote
+        """Convert global server config to OpenCode format.
+
+        OpenCode expects local MCP servers to have a 'command' field as an array
+        containing both the command and its arguments, unlike the standard MCP
+        format which separates command and args.
+        """
         opencode_config = {}
 
         if server_info.get("command"):
             # Local server
             opencode_config["type"] = "local"
-            opencode_config["command"] = server_info["command"]
+            # OpenCode expects command as an array combining command and args
+            command_list = [server_info["command"]]
+            if "args" in server_info and server_info["args"]:
+                command_list.extend(server_info["args"])
+            opencode_config["command"] = command_list
             if "env" in server_info:
                 opencode_config["env"] = server_info["env"]
         elif server_info.get("url"):
@@ -257,6 +275,128 @@ class OpenCodeMCPClient(MCPClient):
             user_config_path, server_name, opencode_server_info
         )
 
+    def _normalize_opencode_config(self, config: dict) -> dict:
+        """Normalize OpenCode configuration to handle legacy formats.
+
+        Converts old format with separate command/args to new array format.
+        """
+        if "mcp" not in config:
+            return config
+
+        normalized_config = config.copy()
+        normalized_config["mcp"] = {}
+
+        for server_name, server_config in config["mcp"].items():
+            if isinstance(server_config, dict):
+                normalized_server = server_config.copy()
+
+                # Handle legacy format: convert separate command/args to array
+                if (server_config.get("type") in ["stdio", "local"] and
+                    isinstance(server_config.get("command"), str) and
+                    "args" in server_config):
+
+                    # Combine command and args into array
+                    command_list = [server_config["command"]]
+                    if server_config["args"]:
+                        command_list.extend(server_config["args"])
+
+                    normalized_server["command"] = command_list
+                    normalized_server["type"] = "local"  # Normalize type to "local"
+                    # Remove the old "args" field
+                    normalized_server.pop("args", None)
+
+                normalized_config["mcp"][server_name] = normalized_server
+            else:
+                # Keep non-dict configs as-is
+                normalized_config["mcp"][server_name] = server_config
+
+        return normalized_config
+
+    def add_server_with_config(
+        self, server_name: str, server_config, scope: str = "user"
+    ) -> bool:
+        """Add a server configuration for OpenCode with proper format conversion."""
+        # Convert the server config to OpenCode format
+        opencode_config = self._convert_to_opencode_format_from_schema(server_config)
+
+        # Get the config file path
+        config_paths = self._get_config_paths(scope)
+        if not config_paths:
+            print(f"No config paths found for scope '{scope}'")
+            return False
+
+        # Add to the first available config path
+        for config_path in config_paths:
+            if self._add_server_config_to_file(config_path, server_name, opencode_config):
+                print(f"✓ Successfully added {server_name} to OpenCode configuration")
+                return True
+
+        print(f"✗ Failed to add {server_name} to any OpenCode configuration file")
+        return False
+
+    def _convert_to_opencode_format_from_schema(self, server_config) -> dict:
+        """Convert a ServerConfig object to OpenCode format."""
+        opencode_config = {}
+
+        # Handle remote servers
+        if hasattr(server_config, "url") and server_config.url:
+            opencode_config["type"] = "remote"
+            opencode_config["url"] = server_config.url
+            if hasattr(server_config, "headers") and server_config.headers:
+                opencode_config["headers"] = server_config.headers
+        else:
+            # Handle STDIO servers - OpenCode expects command as array
+            opencode_config["type"] = "local"
+            command = getattr(server_config, "command", "echo")
+            args = getattr(server_config, "args", [])
+
+            # Combine command and args into array for OpenCode
+            if isinstance(command, str):
+                opencode_config["command"] = [command] + args
+            else:
+                opencode_config["command"] = command + args
+
+            # Add environment variables if present
+            env_vars = getattr(server_config, "env", {})
+            if env_vars:
+                opencode_config["env"] = env_vars
+
+        # Add enabled flag
+        opencode_config["enabled"] = True
+
+        return opencode_config
+
+    def add_server(self, server_name: str, scope: str = "user") -> bool:
+        """Add a specific MCP server for OpenCode by directly managing the configuration."""
+        # Get server configuration from the main config
+        success, config = self.load_config()
+        if not success or "servers" not in config:
+            print(f"  No server configuration found for {server_name}")
+            return False
+
+        server_info = config["servers"].get(server_name)
+        if not server_info:
+            print(f"  Server info not found for {server_name}")
+            return False
+
+        # Convert to OpenCode format
+        opencode_server_info = self._convert_to_opencode_format(server_info)
+
+        # Get the config file path
+        config_paths = self._get_config_paths(scope)
+        if not config_paths:
+            print(f"No config paths found for scope '{scope}'")
+            return False
+
+        # Add to the first available config path
+        for config_path in config_paths:
+            if self._add_server_config_to_file(config_path, server_name, opencode_server_info):
+                print(f"✓ Successfully added {server_name} to OpenCode configuration")
+                return True
+
+        print(f"✗ Failed to add {server_name} to any OpenCode configuration file")
+        return False
+
     def list_servers(self, scope: str = "all") -> bool:
         """List servers by reading OpenCode config files."""
         tool_configs = self.get_tool_config(self.tool_name)
@@ -301,6 +441,61 @@ class OpenCodeMCPClient(MCPClient):
                 content = "No MCP servers configured"
             print_squared_frame(f"{self.tool_name.upper()} MCP SERVERS", content)
             return True
+
+    def normalize_config_file(self, config_path: Path = None) -> bool:
+        """Normalize an OpenCode configuration file to fix legacy formats.
+
+        This method can be used to fix existing configuration files that use
+        the old command/args format to the new array format expected by OpenCode.
+        """
+        if config_path is None:
+            home = Path.home()
+            config_path = home / ".config" / "opencode" / "opencode.json"
+
+        try:
+            # Load existing config
+            config = {}
+            if config_path.exists():
+                content = config_path.read_text(encoding="utf-8").strip()
+                config = json.loads(content) if content else {}
+            else:
+                print(f"Config file not found: {config_path}")
+                return False
+
+            # Normalize the config
+            normalized_config = self._normalize_opencode_config(config)
+
+            # Check if any changes were made
+            if config != normalized_config:
+                # Write back the normalized config
+                config_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(config_path, "w", encoding="utf-8") as f:
+                    json.dump(normalized_config, f, indent=2, ensure_ascii=False)
+
+                print(f"✓ Normalized OpenCode configuration at {config_path}")
+                return True
+            else:
+                print(f"Configuration at {config_path} is already in the correct format")
+                return True
+
+        except Exception as e:
+            print(f"Error normalizing OpenCode config {config_path}: {e}")
+            return False
+
+    def _get_config_paths(self, scope: str):
+        """Get OpenCode configuration file paths based on scope."""
+        from pathlib import Path
+
+        home = Path.home()
+        if scope == "user":
+            return [home / ".config" / "opencode" / "opencode.json"]
+        elif scope == "project":
+            return [Path.cwd() / ".opencode.json"]
+        else:  # all
+            return [
+                home / ".config" / "opencode" / "opencode.json",
+                Path.cwd() / ".opencode.json"
+            ]
 
     def remove_server(self, server_name: str, scope: str = "user") -> bool:
         """Remove a server from OpenCode config files based on scope."""
