@@ -63,6 +63,7 @@ def sample_new_config():
                 "neovate",
                 "crush",
                 "cursor-agent",
+                "opencode",
             ],
         },
         "servers": {
@@ -113,6 +114,7 @@ def test_manager_initialization(mock_config):
         "neovate",
         "crush",
         "cursor-agent",
+        "opencode",
     ]
     assert len(manager.clients) == len(expected_clients)
 
@@ -164,6 +166,7 @@ def test_get_available_tools(sample_new_config):
             "neovate",
             "crush",
             "cursor-agent",
+            "opencode",
         ]
         assert set(tools) == set(expected_tools)
         assert tools == sorted(expected_tools)  # Should be sorted

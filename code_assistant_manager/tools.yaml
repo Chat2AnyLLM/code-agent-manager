@@ -325,3 +325,22 @@ tools:
       touched:
         - "~/.local/share/opencode/auth.json (API key storage)"
         - "~/opencode.jsonc (provider and MCP server configuration)"
+
+  continue:
+    enabled: true
+    install_cmd: npm i -g @continuedev/cli
+    cli_command: cn
+    description: "Continue.dev CLI"
+    env:
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      notes:
+        - "Continue.dev is an open-source AI coding assistant"
+        - "Configuration is stored in ~/.continue/config.yaml"
+        - "Supports multiple AI providers and models"
+    cli_parameters:
+      injected: []
+    filesystem:
+      generated:
+        - "~/.continue/config.yaml (Continue configuration file)"
