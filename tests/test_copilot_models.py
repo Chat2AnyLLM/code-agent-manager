@@ -173,10 +173,10 @@ class TestFetchModels:
         mock_response.json.return_value = {"data": []}
         mock_get.return_value = mock_response
 
-        fetch_models("test-copilot-token", account_type="individual")
+        fetch_models("test-copilot-token", "https://api.githubcopilot.com")
 
         call_args = mock_get.call_args
-        assert call_args[0][0] == "https://api.githubcopilot.com/models"
+        assert call_args[0][0] == "https://api.githubcopilot.com/v1/models"
 
     @patch("code_assistant_manager.copilot_models.requests.get")
     def test_fetch_models_url_organization(self, mock_get):
@@ -185,10 +185,10 @@ class TestFetchModels:
         mock_response.json.return_value = {"data": []}
         mock_get.return_value = mock_response
 
-        fetch_models("test-copilot-token", account_type="myorg")
+        fetch_models("test-copilot-token", "https://api.myorg.githubcopilot.com")
 
         call_args = mock_get.call_args
-        assert call_args[0][0] == "https://api.myorg.githubcopilot.com/models"
+        assert call_args[0][0] == "https://api.myorg.githubcopilot.com/v1/models"
 
     @patch("code_assistant_manager.copilot_models.requests.get")
     def test_fetch_models_headers(self, mock_get):
