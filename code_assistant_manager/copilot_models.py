@@ -62,10 +62,46 @@ def copilot_headers(
     return h
 
 
-def fetch_models(copilot_token: str, account_type: str = "individual"):
-    url = f"{copilot_base_url(account_type)}/models"
+def fetch_models(copilot_token: str, base_url: str = "https://192.168.1.100:5000"):
+    url = f"{base_url}/v1/models"
     # Security: Add timeout to prevent hanging connections
-    r = requests.get(url, headers=copilot_headers(copilot_token), timeout=30)
+
+    # Determine if SSL verification should be enabled
+    # For internal/private IPs, skip verification as they often use self-signed certificates
+    import ipaddress
+    from urllib.parse import urlparse
+
+    verify_ssl = True
+    try:
+        parsed = urlparse(base_url)
+        if parsed.hostname:
+            try:
+                ip = ipaddress.ip_address(parsed.hostname)
+                # Skip verification for private IPs (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8)
+                if ip.is_private or ip.is_loopback:
+                    verify_ssl = False
+            except ValueError:
+                # Not an IP address, keep verification enabled
+                pass
+    except Exception:
+        # If parsing fails, keep verification enabled
+        pass
+
+    # Check if we're using a configured endpoint with API key authentication
+    # (instead of direct GitHub Copilot API access)
+    api_key = os.environ.get("api_key")
+    if api_key:
+        # Use OpenAI-compatible API key authentication for proxy endpoints
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+    else:
+        # Use GitHub Copilot token authentication for direct API access
+        headers = copilot_headers(copilot_token)
+
+    # Make the request
+    r = requests.get(url, headers=headers, timeout=30, verify=verify_ssl)
     r.raise_for_status()
     return r.json()
 
@@ -111,8 +147,21 @@ def list_models():
         copilot_token = info["token"]
         state["copilot_token"] = copilot_token
 
+    # Get base URL from environment (set by EndpointManager) or from config
+    base_url = os.environ.get("endpoint")
+    if not base_url:
+        # Try to get from config
+        try:
+            from .config import ConfigManager
+            config = ConfigManager()
+            copilot_config = config.get_endpoint_config("copilot-api")
+            base_url = copilot_config.get("endpoint", "https://192.168.1.100:5000")
+        except Exception as e:
+            logger.debug(f"Could not load config, using default URL: {e}")
+            base_url = "https://192.168.1.100:5000"
+
     logger.debug("Fetching Copilot models")
-    models = fetch_models(copilot_token)
+    models = fetch_models(copilot_token, base_url)
     model_count = len(models.get("data", []))
     logger.debug(f"Found {model_count} models")
 
