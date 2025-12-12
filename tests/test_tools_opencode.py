@@ -124,7 +124,7 @@ class TestOpenCodeTool:
             assert config_file.exists()
 
             # Verify content
-            with open(config_file, "r") as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 config_data = json.load(f)
 
             assert "$schema" in config_data

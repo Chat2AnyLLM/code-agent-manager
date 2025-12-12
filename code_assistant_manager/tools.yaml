@@ -317,14 +317,14 @@ tools:
       notes:
         - "OpenCode.ai supports 75+ LLM providers via AI SDK and Models.dev"
         - "API keys are configured via 'opencode /connect' command and stored in ~/.local/share/opencode/auth.json"
-        - "Providers and models are configured in opencode.jsonc"
-        - "MCP servers can be configured in opencode.jsonc under the 'mcp' section"
+        - "Providers and models are configured in opencode.json"
+        - "MCP servers can be configured in opencode.json under the 'mcp' section"
     cli_parameters:
       injected: []
     filesystem:
       touched:
         - "~/.local/share/opencode/auth.json (API key storage)"
-        - "~/opencode.jsonc (provider and MCP server configuration)"
+        - "~/.config/opencode/opencode.json (provider and MCP server configuration)"
 
   continue:
     enabled: true
@@ -338,6 +338,7 @@ tools:
       notes:
         - "Continue.dev is an open-source AI coding assistant"
         - "Configuration is stored in ~/.continue/config.yaml"
+        - "MCP servers can be configured in config.yaml under 'mcpServers'"
         - "Supports multiple AI providers and models"
     cli_parameters:
       injected: []

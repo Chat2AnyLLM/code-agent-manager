@@ -24,6 +24,7 @@ class MCPManager(MCPBase):
             CodexMCPClient,
             CopilotMCPClient,
             CrushMCPClient,
+            ContinueMCPClient,
             CursorAgentMCPClient,
             DroidMCPClient,
             GeminiMCPClient,
@@ -50,6 +51,7 @@ class MCPManager(MCPBase):
             "crush": CrushMCPClient(),
             "cursor-agent": CursorAgentMCPClient(),
             "opencode": OpenCodeMCPClient(),
+            "continue": ContinueMCPClient(),
         }
 
     def get_client(self, tool_name: str):

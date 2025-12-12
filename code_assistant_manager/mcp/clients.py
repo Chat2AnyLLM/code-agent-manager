@@ -5,6 +5,7 @@ from .codebuddy import CodeBuddyMCPClient
 from .codex import CodexMCPClient
 from .copilot import CopilotMCPClient
 from .crush import CrushMCPClient
+from .continue_mcp import ContinueMCPClient
 from .cursor import CursorAgentMCPClient
 from .droid import DroidMCPClient
 from .gemini import GeminiMCPClient
@@ -19,6 +20,7 @@ __all__ = [
     "ClaudeMCPClient",
     "CodeBuddyMCPClient",
     "CodexMCPClient",
+    "ContinueMCPClient",
     "CopilotMCPClient",
     "CrushMCPClient",
     "CursorAgentMCPClient",

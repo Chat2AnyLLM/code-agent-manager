@@ -129,23 +129,27 @@ def list_models():
     load_env()
     logger.debug("Environment variables loaded")
 
-    github_token = os.environ.get("GITHUB_TOKEN")
-    if not github_token:
-        logger.error("GITHUB_TOKEN environment variable is required but not found")
-        raise SystemExit("GITHUB_TOKEN environment variable is required")
+    # If EndpointManager provided an API key (proxy mode), we don't need GitHub token auth.
+    if os.environ.get("api_key"):
+        copilot_token = ""
+    else:
+        github_token = os.environ.get("GITHUB_TOKEN")
+        if not github_token:
+            logger.error("GITHUB_TOKEN environment variable is required but not found")
+            raise SystemExit("GITHUB_TOKEN environment variable is required")
 
-    logger.debug("Starting Copilot token refresh loop")
-    state = {}
-    start_refresh_loop(github_token, state)
+        logger.debug("Starting Copilot token refresh loop")
+        state = {}
+        start_refresh_loop(github_token, state)
 
-    time.sleep(1)
+        time.sleep(1)
 
-    copilot_token = state.get("copilot_token")
-    if not copilot_token:
-        logger.debug("No token in state, fetching directly")
-        info = get_copilot_token(github_token)
-        copilot_token = info["token"]
-        state["copilot_token"] = copilot_token
+        copilot_token = state.get("copilot_token")
+        if not copilot_token:
+            logger.debug("No token in state, fetching directly")
+            info = get_copilot_token(github_token)
+            copilot_token = info["token"]
+            state["copilot_token"] = copilot_token
 
     # Get base URL from environment (set by EndpointManager) or from config
     base_url = os.environ.get("endpoint")

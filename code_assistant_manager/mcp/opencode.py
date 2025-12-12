@@ -20,21 +20,7 @@ class OpenCodeMCPClient(MCPClient):
             if config_path.exists():
                 try:
                     with open(config_path, "r", encoding="utf-8") as f:
-                        # OpenCode uses JSONC (JSON with comments)
-                        content = f.read()
-                        # Remove comments for JSON parsing (basic implementation)
-                        lines = content.split('\n')
-                        clean_lines = []
-                        for line in lines:
-                            # Remove full-line comments
-                            if line.strip().startswith('//'):
-                                continue
-                            # Remove end-of-line comments
-                            if '//' in line:
-                                line = line.split('//')[0]
-                            clean_lines.append(line)
-                        clean_content = '\n'.join(clean_lines)
-                        config = json.loads(clean_content)
+                        config = json.load(f)
 
                     # Check for mcp section in OpenCode config
                     if "mcp" in config and isinstance(config["mcp"], dict):
@@ -47,40 +33,21 @@ class OpenCodeMCPClient(MCPClient):
     def _get_config_paths(self, scope: str):
         """Override to provide OpenCode-specific config paths for scope-based operations."""
         home = Path.home()
-        if scope == "user":
-            return [home / ".config" / "opencode" / "opencode.jsonc"]
-        elif scope == "project":
-            return [Path.cwd() / "opencode.jsonc"]
-        else:  # all
-            return [
-                home / ".config" / "opencode" / "opencode.jsonc",
-                Path.cwd() / "opencode.jsonc"
-            ]
+        config_path = home / ".config" / "opencode" / "opencode.json"
+        return [config_path]
 
     def _add_server_config_to_file(
         self, config_path, server_name: str, client_config: dict
     ) -> bool:
-        """Add server config to an OpenCode JSONC file."""
+        """Add server config to an OpenCode JSON file."""
         config_path = Path(config_path)
 
         try:
             # Load existing config
             config = {}
             if config_path.exists():
-                with open(config_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    # Basic JSONC parsing (remove comments)
-                    lines = content.split('\n')
-                    clean_lines = []
-                    for line in lines:
-                        if line.strip().startswith('//'):
-                            continue
-                        if '//' in line:
-                            line = line.split('//')[0]
-                        clean_lines.append(line)
-                    clean_content = '\n'.join(clean_lines)
-                    if clean_content.strip():
-                        config = json.loads(clean_content)
+                content = config_path.read_text(encoding="utf-8").strip()
+                config = json.loads(content) if content else {}
 
             # OpenCode uses "mcp" section
             if "mcp" not in config:
@@ -89,11 +56,9 @@ class OpenCodeMCPClient(MCPClient):
             # Add the server config
             config["mcp"][server_name] = client_config
 
-            # Write back as JSONC (JSON with comments)
+            # Write back as JSON
             config_path.parent.mkdir(parents=True, exist_ok=True)
             with open(config_path, "w", encoding="utf-8") as f:
-                f.write("// OpenCode configuration file\n")
-                f.write("// This file contains MCP server configurations\n\n")
                 json.dump(config, f, indent=2, ensure_ascii=False)
 
             return True
@@ -105,12 +70,7 @@ class OpenCodeMCPClient(MCPClient):
     def _get_config_locations(self, tool_name: str):
         """Override to provide OpenCode-specific config locations."""
         home = Path.home()
-        # OpenCode uses opencode.jsonc at user level and project level
-        locations = [
-            home / ".config" / "opencode" / "opencode.jsonc",  # User-level
-            Path.cwd() / "opencode.jsonc",  # Project-level
-        ]
-        return locations
+        return [home / ".config" / "opencode" / "opencode.json"]
 
     def _convert_to_opencode_format(self, server_info: dict) -> dict:
         """Convert global server config to OpenCode format."""
@@ -162,14 +122,9 @@ class OpenCodeMCPClient(MCPClient):
             print("Failed to load server configurations")
             return False
 
-        # Determine target locations based on scope
+        # OpenCode uses a single config file location
         locations = self._get_config_locations(self.tool_name)
-        if scope == "user":
-            target_locations = [locations[0]]  # User-level only
-        elif scope == "project":
-            target_locations = [locations[1]]  # Project only
-        else:
-            target_locations = locations
+        target_locations = locations
 
         success_count = 0
         for server_name in tool_configs.keys():
@@ -186,10 +141,7 @@ class OpenCodeMCPClient(MCPClient):
                 if self._add_server_config_to_file(
                     config_path, server_name, opencode_server_info
                 ):
-                    level = (
-                        "user-level" if config_path == locations[0] else "project-level"
-                    )
-                    print(f"  Added {server_name} to {level} configuration")
+                    print(f"  Added {server_name} to user-level configuration")
                     added = True
                     success_count += 1
                     break  # Add to first available location
@@ -278,7 +230,7 @@ class OpenCodeMCPClient(MCPClient):
     def _remove_server_from_user_config(self, server_name: str) -> bool:
         """Remove a server from user-level OpenCode config only."""
         home = Path.home()
-        user_config_path = home / ".config" / "opencode" / "opencode.jsonc"
+        user_config_path = home / ".config" / "opencode" / "opencode.json"
 
         return self._remove_server_from_config(user_config_path, server_name)
 
@@ -299,7 +251,7 @@ class OpenCodeMCPClient(MCPClient):
         opencode_server_info = self._convert_to_opencode_format(server_info)
 
         home = Path.home()
-        user_config_path = home / ".config" / "opencode" / "opencode.jsonc"
+        user_config_path = home / ".config" / "opencode" / "opencode.json"
 
         return self._add_server_config_to_file(
             user_config_path, server_name, opencode_server_info
@@ -314,31 +266,15 @@ class OpenCodeMCPClient(MCPClient):
 
         config_locations = self._get_config_locations(self.tool_name)
         user_servers = {}
-        project_servers = {}
 
-        for i, config_path in enumerate(config_locations):
+        for config_path in config_locations:
             if config_path.exists():
                 try:
                     with open(config_path, "r", encoding="utf-8") as f:
-                        content = f.read()
-                        # Basic JSONC parsing
-                        lines = content.split('\n')
-                        clean_lines = []
-                        for line in lines:
-                            if line.strip().startswith('//'):
-                                continue
-                            if '//' in line:
-                                line = line.split('//')[0]
-                            clean_lines.append(line)
-                        clean_content = '\n'.join(clean_lines)
-                        if clean_content.strip():
-                            config = json.loads(clean_content)
+                        config = json.load(f)
 
                     if "mcp" in config and isinstance(config["mcp"], dict):
-                        if i == 0:  # user-level
-                            user_servers.update(config["mcp"])
-                        else:  # project-level
-                            project_servers.update(config["mcp"])
+                        user_servers.update(config["mcp"])
 
                 except Exception as e:
                     print(f"Warning: Failed to read {config_path}: {e}")
@@ -346,39 +282,19 @@ class OpenCodeMCPClient(MCPClient):
 
         content_lines = []
 
-        show_user = scope in ["all", "user"]
-        show_project = scope in ["all", "project"]
-
-        if show_user and user_servers:
+        if user_servers:
             content_lines.append("User-level servers:")
             for name, config in user_servers.items():
                 content_lines.append(f"  {name}: {config}")
-            if show_project and project_servers:
-                content_lines.append("")
 
-        if show_project and project_servers:
-            content_lines.append("Project-level servers:")
-            for name, config in project_servers.items():
-                content_lines.append(f"  {name}: {config}")
-
-        servers_to_show = (show_user and user_servers) or (
-            show_project and project_servers
-        )
+        servers_to_show = bool(user_servers)
 
         if servers_to_show:
             content = "\n".join(content_lines)
             print_squared_frame(f"{self.tool_name.upper()} MCP SERVERS", content)
             return True
         else:
-            level_desc = (
-                ""
-                if scope == "all"
-                else (
-                    "user-level"
-                    if scope == "user"
-                    else "project-level" if scope == "project" else "configuration"
-                )
-            )
+            level_desc = "user-level" if scope != "all" else ""
             if level_desc:
                 content = f"No MCP servers configured in {level_desc} configuration"
             else:
@@ -389,32 +305,17 @@ class OpenCodeMCPClient(MCPClient):
     def remove_server(self, server_name: str, scope: str = "user") -> bool:
         """Remove a server from OpenCode config files based on scope."""
         config_locations = self._get_config_locations(self.tool_name)
-        if scope == "user":
-            target_locations = [config_locations[0]]  # User-level only
-        elif scope == "project":
-            target_locations = config_locations[1:]  # Project only
-        else:
-            target_locations = config_locations
+        target_locations = config_locations
 
         success = False
         for config_path in target_locations:
             if self._remove_server_from_config(config_path, server_name):
-                level = (
-                    "user-level"
-                    if config_path == config_locations[0]
-                    else "project-level"
-                )
-                print(f"  Removed {server_name} from {level} configuration")
+                print(f"  Removed {server_name} from user-level configuration")
                 success = True
                 break  # Remove from first found location
 
         if not success:
-            level = (
-                "user-level"
-                if scope == "user"
-                else "project-level" if scope == "project" else "configuration"
-            )
-            print(f"  {server_name} not found in {level} configuration")
+            print(f"  {server_name} not found in user-level configuration")
 
         return success
 
@@ -424,19 +325,7 @@ class OpenCodeMCPClient(MCPClient):
             config = {}
             if config_path.exists():
                 with open(config_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    # Basic JSONC parsing
-                    lines = content.split('\n')
-                    clean_lines = []
-                    for line in lines:
-                        if line.strip().startswith('//'):
-                            continue
-                        if '//' in line:
-                            line = line.split('//')[0]
-                        clean_lines.append(line)
-                    clean_content = '\n'.join(clean_lines)
-                    if clean_content.strip():
-                        config = json.loads(clean_content)
+                    config = json.load(f)
 
             # Remove from mcp section
             if "mcp" in config and isinstance(config["mcp"], dict):
@@ -446,8 +335,6 @@ class OpenCodeMCPClient(MCPClient):
                     # Write back
                     config_path.parent.mkdir(parents=True, exist_ok=True)
                     with open(config_path, "w", encoding="utf-8") as f:
-                        f.write("// OpenCode configuration file\n")
-                        f.write("// This file contains MCP server configurations\n\n")
                         json.dump(config, f, indent=2, ensure_ascii=False)
                     return True
 

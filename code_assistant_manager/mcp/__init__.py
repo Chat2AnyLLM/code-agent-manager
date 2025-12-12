@@ -10,6 +10,7 @@ from .clients import (
     ClaudeMCPClient,
     CodeBuddyMCPClient,
     CodexMCPClient,
+    ContinueMCPClient,
     CopilotMCPClient,
     CrushMCPClient,
     CursorAgentMCPClient,
@@ -42,4 +43,5 @@ __all__ = [
     "QoderCLIMCPClient",
     "NeovateMCPClient",
     "OpenCodeMCPClient",
+    "ContinueMCPClient",
 ]
