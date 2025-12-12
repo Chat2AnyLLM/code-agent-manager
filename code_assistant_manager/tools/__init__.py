@@ -12,6 +12,7 @@ from . import (  # noqa: F401
     claude,
     codebuddy,
     codex,
+    continue_tool,
     copilot,
     crush,
     cursor,
@@ -62,6 +63,7 @@ def select_model(
 from .claude import ClaudeTool  # noqa: F401,E402
 from .codebuddy import CodeBuddyTool  # noqa: F401,E402
 from .codex import CodexTool  # noqa: F401,E402
+from .continue_tool import ContinueTool  # noqa: F401,E402
 from .copilot import CopilotTool  # noqa: F401,E402
 from .crush import CrushTool  # noqa: F401,E402
 from .cursor import CursorTool  # noqa: F401,E402
