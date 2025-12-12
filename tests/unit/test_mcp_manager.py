@@ -42,6 +42,8 @@ class TestMCPManagerInitialization:
     @patch("code_assistant_manager.mcp.clients.NeovateMCPClient")
     @patch("code_assistant_manager.mcp.clients.CrushMCPClient")
     @patch("code_assistant_manager.mcp.clients.CursorAgentMCPClient")
+    @patch("code_assistant_manager.mcp.clients.OpenCodeMCPClient")
+    @patch("code_assistant_manager.mcp.clients.ContinueMCPClient")
     def test_manager_initializes_all_clients(self, *mock_clients):
         """Test that manager initializes all expected clients."""
         manager = MCPManager()
@@ -60,6 +62,8 @@ class TestMCPManagerInitialization:
             "neovate",
             "crush",
             "cursor-agent",
+            "opencode",
+            "continue",
         ]
 
         assert len(manager.clients) == len(expected_clients)

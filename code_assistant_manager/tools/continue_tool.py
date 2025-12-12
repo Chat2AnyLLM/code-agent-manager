@@ -36,12 +36,18 @@ class ContinueTool(CLITool):
         if "list_models_cmd" in endpoint_config:
             try:
                 import subprocess
+
+                env = os.environ.copy()
+                env["endpoint"] = endpoint_config.get("endpoint", "")
+                env["api_key"] = endpoint_config.get("actual_api_key", "")
+
                 result = subprocess.run(
                     endpoint_config["list_models_cmd"],
                     shell=True,
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=30,
+                    env=env,
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     models = [line.strip() for line in result.stdout.split('\n') if line.strip()]
@@ -79,7 +85,7 @@ class ContinueTool(CLITool):
             "name": "Code Assistant Manager Config",
             "version": "0.0.1",
             "schema": "v1",
-            "models": []
+            "models": [],
         }
 
         # Create models from selected endpoints
@@ -106,11 +112,20 @@ class ContinueTool(CLITool):
 
             continue_config["models"].append(model_entry)
 
-        # Write the config
+        # Preserve existing MCP servers (if any)
         config_file = Path.home() / ".continue" / "config.yaml"
+        if config_file.exists():
+            try:
+                existing = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
+                if isinstance(existing, dict) and isinstance(existing.get("mcpServers"), dict):
+                    continue_config["mcpServers"] = existing["mcpServers"]
+            except Exception:
+                pass
+
+        # Write the config
         config_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(config_file, "w") as f:
-            yaml.dump(continue_config, f, default_flow_style=False, sort_keys=False)
+        with open(config_file, "w", encoding="utf-8") as f:
+            yaml.safe_dump(continue_config, f, sort_keys=False)
 
         return config_file
 

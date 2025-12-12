@@ -39,12 +39,18 @@ class OpenCodeTool(CLITool):
         if "list_models_cmd" in endpoint_config:
             try:
                 import subprocess
+
+                env = os.environ.copy()
+                env["endpoint"] = endpoint_config.get("endpoint", "")
+                env["api_key"] = endpoint_config.get("actual_api_key", "")
+
                 result = subprocess.run(
                     endpoint_config["list_models_cmd"],
                     shell=True,
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=30,
+                    env=env,
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     models = [line.strip() for line in result.stdout.split('\n') if line.strip()]
@@ -78,7 +84,7 @@ class OpenCodeTool(CLITool):
             return None
 
     def _write_opencode_config(self, selected_models_by_endpoint: Dict[str, List[str]]) -> Path:
-        """Write OpenCode.ai configuration to ~/opencode.jsonc."""
+        """Write OpenCode.ai configuration to ~/.config/opencode/opencode.json."""
         # Set default model to the first selected model with provider prefix
         default_model = None
         for endpoint_name, selected_models in selected_models_by_endpoint.items():
@@ -92,7 +98,7 @@ class OpenCodeTool(CLITool):
         opencode_config = {
             "$schema": "https://opencode.ai/config.json",
             "provider": {},
-            "mcp": {}
+            "mcp": {},
         }
 
         if default_model:
@@ -137,11 +143,20 @@ class OpenCodeTool(CLITool):
 
             opencode_config["provider"][provider_id] = provider
 
-        # Write the config
+        # Preserve existing MCP servers (if any)
         config_file = Path.home() / ".config" / "opencode" / "opencode.json"
+        if config_file.exists():
+            try:
+                existing = json.loads(config_file.read_text(encoding="utf-8"))
+                if isinstance(existing, dict) and isinstance(existing.get("mcp"), dict):
+                    opencode_config["mcp"] = existing["mcp"]
+            except Exception:
+                pass
+
+        # Write the config
         config_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(config_file, "w") as f:
-            json.dump(opencode_config, f, indent=2)
+        with open(config_file, "w", encoding="utf-8") as f:
+            json.dump(opencode_config, f, indent=2, ensure_ascii=False)
 
         return config_file
 
