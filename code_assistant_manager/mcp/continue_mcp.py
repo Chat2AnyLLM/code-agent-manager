@@ -34,6 +34,33 @@ class ContinueMCPClient(MCPClient):
         # Continue uses the standard MCP "mcpServers" format (stdio/http)
         return super()._convert_server_config_to_client_format(server_config)
 
+    def _normalize_mcp_servers(self, servers):
+        """Normalize Continue's mcpServers to the list-of-objects format.
+
+        Continue's newer format:
+          mcpServers:
+            - name: foo
+              command: ...
+
+        We also accept the legacy dict format:
+          mcpServers:
+            foo: {command: ...}
+        """
+        if isinstance(servers, list):
+            return [s for s in servers if isinstance(s, dict)]
+
+        if isinstance(servers, dict):
+            normalized = []
+            for name, cfg in servers.items():
+                if not isinstance(cfg, dict):
+                    continue
+                item = {"name": name}
+                item.update(cfg)
+                normalized.append(item)
+            return normalized
+
+        return []
+
     def _add_server_config_to_file(
         self, config_path, server_name: str, client_config: dict
     ) -> bool:
@@ -46,12 +73,22 @@ class ContinueMCPClient(MCPClient):
                     if isinstance(loaded, dict):
                         config = loaded
 
-            if "mcpServers" not in config or not isinstance(
-                config.get("mcpServers"), dict
-            ):
-                config["mcpServers"] = {}
+            servers = self._normalize_mcp_servers(config.get("mcpServers"))
 
-            config["mcpServers"][server_name] = client_config
+            new_entry = {"name": server_name}
+            new_entry.update(client_config)
+
+            updated = False
+            for i, item in enumerate(servers):
+                if item.get("name") == server_name:
+                    servers[i] = new_entry
+                    updated = True
+                    break
+
+            if not updated:
+                servers.append(new_entry)
+
+            config["mcpServers"] = servers
 
             config_path.parent.mkdir(parents=True, exist_ok=True)
             with open(config_path, "w", encoding="utf-8") as f:
@@ -103,9 +140,25 @@ class ContinueMCPClient(MCPClient):
                 if not isinstance(config, dict):
                     continue
 
-                if "mcpServers" in config and isinstance(config["mcpServers"], dict):
-                    if server_name in config["mcpServers"]:
-                        del config["mcpServers"][server_name]
+                servers = config.get("mcpServers")
+
+                if isinstance(servers, dict):
+                    if server_name in servers:
+                        del servers[server_name]
+                        config["mcpServers"] = servers
+                        with open(config_path, "w", encoding="utf-8") as f:
+                            yaml.safe_dump(config, f, sort_keys=False)
+                        removed_any = True
+                        break
+
+                if isinstance(servers, list):
+                    new_servers = [
+                        s
+                        for s in servers
+                        if not (isinstance(s, dict) and s.get("name") == server_name)
+                    ]
+                    if len(new_servers) != len(servers):
+                        config["mcpServers"] = new_servers
                         with open(config_path, "w", encoding="utf-8") as f:
                             yaml.safe_dump(config, f, sort_keys=False)
                         removed_any = True
@@ -142,13 +195,25 @@ class ContinueMCPClient(MCPClient):
                 if not isinstance(config, dict):
                     continue
                 servers = config.get("mcpServers")
-                if not isinstance(servers, dict):
+
+                parsed = {}
+                if isinstance(servers, dict):
+                    parsed = servers
+                elif isinstance(servers, list):
+                    for item in servers:
+                        if not isinstance(item, dict):
+                            continue
+                        name = item.get("name")
+                        if not name:
+                            continue
+                        parsed[name] = {k: v for k, v in item.items() if k != "name"}
+                else:
                     continue
 
                 if config_path == home / ".continue" / "config.yaml":
-                    user_servers.update(servers)
+                    user_servers.update(parsed)
                 elif config_path == cwd / ".continue" / "config.yaml":
-                    project_servers.update(servers)
+                    project_servers.update(parsed)
             except Exception:
                 continue
 

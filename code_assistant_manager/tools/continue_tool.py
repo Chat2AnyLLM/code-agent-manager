@@ -117,8 +117,20 @@ class ContinueTool(CLITool):
         if config_file.exists():
             try:
                 existing = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
-                if isinstance(existing, dict) and isinstance(existing.get("mcpServers"), dict):
-                    continue_config["mcpServers"] = existing["mcpServers"]
+                if isinstance(existing, dict) and "mcpServers" in existing:
+                    existing_servers = existing.get("mcpServers")
+                    if isinstance(existing_servers, dict):
+                        # Convert legacy dict format to Continue's list-of-objects format
+                        converted = []
+                        for name, cfg in existing_servers.items():
+                            if not isinstance(cfg, dict):
+                                continue
+                            item = {"name": name}
+                            item.update(cfg)
+                            converted.append(item)
+                        continue_config["mcpServers"] = converted
+                    elif isinstance(existing_servers, list):
+                        continue_config["mcpServers"] = existing_servers
             except Exception:
                 pass
 
