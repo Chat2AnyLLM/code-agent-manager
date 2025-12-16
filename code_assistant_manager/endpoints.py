@@ -505,22 +505,32 @@ class EndpointManager:
         # 1. Check api_key_env variable
         api_key_env = endpoint_config.get("api_key_env", "")
         if api_key_env and api_key_env in os.environ:
-            return os.environ[api_key_env]
+            val = os.environ.get(api_key_env, "")
+            if val:
+                return val
 
         # 2. Check dynamic env var API_KEY_<ENDPOINT_NAME>
         dynamic_var = f"API_KEY_{endpoint_name.upper().replace('-', '_')}"
         if dynamic_var in os.environ:
-            return os.environ[dynamic_var]
+            val = os.environ.get(dynamic_var, "")
+            if val:
+                return val
 
         # 3. Check special cases
         if endpoint_name == "copilot-api" and "API_KEY_COPILOT" in os.environ:
-            return os.environ["API_KEY_COPILOT"]
+            val = os.environ.get("API_KEY_COPILOT", "")
+            if val:
+                return val
         if endpoint_name == "litellm" and "API_KEY_LITELLM" in os.environ:
-            return os.environ["API_KEY_LITELLM"]
+            val = os.environ.get("API_KEY_LITELLM", "")
+            if val:
+                return val
 
         # 4. Check generic API_KEY
         if "API_KEY" in os.environ:
-            return os.environ["API_KEY"]
+            val = os.environ.get("API_KEY", "")
+            if val:
+                return val
 
         # 5. Check config file value
         return endpoint_config.get("api_key", "")

@@ -100,12 +100,11 @@ class TestCodexToolCompleteFlow:
                                 False  # Skip installation (tool already installed)
                             )
 
-                        # Mock the model selector to use key providers
+                        # Mock menus (model selection)
                         with patch(
-                            "code_assistant_manager.menu.model_selector.ModelSelector.select_model_with_endpoint_info"
-                        ) as mock_select_model:
-                            mock_select_model.return_value = (True, "model1")
-
+                            "code_assistant_manager.menu.menus.display_centered_menu",
+                            return_value=(True, 0),
+                        ):
                             # Create and run the tool
                             tool = CodexTool(self.config)
                             result = tool.run([])
@@ -114,9 +113,6 @@ class TestCodexToolCompleteFlow:
                             assert result == 0
 
                             # Verify that the expected methods were called
-                            mock_em_instance.select_endpoint.assert_called_once_with(
-                                "codex"
-                            )
                             mock_em_instance.get_endpoint_config.assert_called_once_with(
                                 "test_endpoint"
                             )
@@ -183,11 +179,11 @@ class TestCodexToolCompleteFlow:
                                     False  # Skip installation (tool already installed)
                                 )
 
-                            # Mock the model selector to use key providers
+                            # Mock menus (model selection)
                             with patch(
-                                "code_assistant_manager.menu.model_selector.ModelSelector.select_model_with_endpoint_info"
-                            ) as mock_select_model:
-                                mock_select_model.return_value = (True, "model1")
+                                "code_assistant_manager.menu.menus.display_centered_menu",
+                                return_value=(True, 0),
+                            ):
 
                                 # Create and run the tool
                                 tool = CodexTool(self.config)
@@ -232,11 +228,7 @@ class TestCodexToolCompleteFlow:
                             mock_em_instance = MagicMock()
                             mock_endpoint_manager.return_value = mock_em_instance
 
-                            # Mock endpoint selection - select first endpoint
-                            mock_em_instance.select_endpoint.return_value = (
-                                True,
-                                "test_endpoint",
-                            )
+                            # Codex now iterates endpoints one-by-one (no select_endpoint call)
 
                             # Mock endpoint config retrieval
                             mock_em_instance.get_endpoint_config.return_value = (
@@ -268,15 +260,11 @@ class TestCodexToolCompleteFlow:
                                         True  # Installation succeeds
                                     )
 
-                                    # Mock the model selector to use key providers
+                                    # Mock menus (model selection)
                                     with patch(
-                                        "code_assistant_manager.menu.model_selector.ModelSelector.select_model_with_endpoint_info"
-                                    ) as mock_select_model:
-                                        mock_select_model.return_value = (
-                                            True,
-                                            "model1",
-                                        )
-
+                                        "code_assistant_manager.menu.menus.display_centered_menu",
+                                        return_value=(True, 0),
+                                    ):
                                         # Create and run the tool
                                         tool = CodexTool(self.config)
                                         result = tool.run([])
@@ -336,12 +324,11 @@ class TestCodexToolCompleteFlow:
                             False  # User chooses to skip upgrade
                         )
 
-                        # Mock the model selector to use key providers
+                        # Mock menus (model selection)
                         with patch(
-                            "code_assistant_manager.menu.model_selector.ModelSelector.select_model_with_endpoint_info"
-                        ) as mock_select_model:
-                            mock_select_model.return_value = (True, "model1")
-
+                            "code_assistant_manager.menu.menus.display_centered_menu",
+                            return_value=(True, 0),
+                        ):
                             # Create and run the tool
                             tool = CodexTool(self.config)
                             result = tool.run([])
@@ -353,9 +340,6 @@ class TestCodexToolCompleteFlow:
                             mock_upgrade.assert_called_once()
 
                             # Verify that the tool continued normally after skipping upgrade
-                            mock_em_instance.select_endpoint.assert_called_once_with(
-                                "codex"
-                            )
                             mock_em_instance.get_endpoint_config.assert_called_once_with(
                                 "test_endpoint"
                             )

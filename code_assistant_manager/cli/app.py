@@ -389,3 +389,178 @@ def list_config():
 # Add list as shorthand commands
 config_app.command(name="ls", hidden=True)(list_config)
 config_app.command(name="l", hidden=True)(list_config)
+
+
+@config_app.command("codex-profile", short_help="Create/update a Codex profile in ~/.codex/config.toml")
+def codex_profile(
+    config: Optional[str] = CONFIG_FILE_OPTION,
+    name: Optional[str] = typer.Option(
+        None, "--name", "-n", help="Profile name to create/update (default: model name)"
+    ),
+    reasoning_effort: str = typer.Option(
+        "low", "--reasoning-effort", help="profiles.<name>.model_reasoning_effort"
+    ),
+):
+    """Interactively select a provider endpoint + model, then write a Codex profile."""
+    from pathlib import Path
+
+    from code_assistant_manager.config import ConfigManager
+    from code_assistant_manager.endpoints import EndpointManager
+    from code_assistant_manager.menu.base import Colors
+    from code_assistant_manager.menu.model_selector import ModelSelector
+
+    try:
+        cm = ConfigManager(config)
+        cm.load_env_file()
+        is_valid, errors = cm.validate_config()
+        if not is_valid:
+            typer.echo(f"{Colors.RED}✗ Configuration validation failed:{Colors.RESET}")
+            for err in errors:
+                typer.echo(f"  - {err}")
+            raise typer.Exit(1)
+
+        em = EndpointManager(cm)
+
+        ok, endpoint_name = em.select_endpoint("codex")
+        if not ok or not endpoint_name:
+            raise typer.Exit(0)
+
+        ok, endpoint_config = em.get_endpoint_config(endpoint_name)
+        if not ok or not endpoint_config:
+            raise typer.Exit(1)
+
+        ok, models = em.fetch_models(endpoint_name, endpoint_config)
+        if not ok or not models:
+            raise typer.Exit(1)
+
+        ok, model = ModelSelector.select_model_with_endpoint_info(
+            models, endpoint_name, endpoint_config, "model", "codex"
+        )
+        if not ok or not model:
+            raise typer.Exit(0)
+
+        profile_name = name or model
+        provider_key = endpoint_name
+        env_key = cm.get_endpoint_config(endpoint_name).get("api_key_env") or "OPENAI_API_KEY"
+
+        from code_assistant_manager.tools.config_writers.codex import upsert_codex_profile
+
+        config_path = Path.home() / ".codex" / "config.toml"
+        try:
+            result = upsert_codex_profile(
+                config_path=config_path,
+                provider=provider_key,
+                base_url=endpoint_config.get("endpoint", ""),
+                env_key=env_key,
+                profile=profile_name,
+                model=model,
+                reasoning_effort=reasoning_effort,
+                project_path=Path.cwd().resolve(),
+            )
+        except Exception as e:
+            typer.echo(f"{Colors.RED}✗ Failed to write {config_path}: {e}{Colors.RESET}")
+            raise typer.Exit(1)
+
+        if result.get("changed"):
+            typer.echo(f"{Colors.GREEN}✓ Wrote Codex profile '{profile_name}'{Colors.RESET}")
+        else:
+            typer.echo(f"{Colors.GREEN}✓ Codex profile already up to date: '{profile_name}'{Colors.RESET}")
+        typer.echo(f"  Config: {config_path}")
+        typer.echo(f"  Run: codex -p {profile_name}")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        typer.echo(f"{Colors.RED}✗ Unexpected error: {e}{Colors.RESET}")
+        raise typer.Exit(1)
+
+
+@config_app.command(
+    "codex-profiles",
+    short_help="Create/update Codex profiles for multiple providers from providers.json",
+)
+def codex_profiles(
+    config: Optional[str] = CONFIG_FILE_OPTION,
+    reasoning_effort: str = typer.Option(
+        "low", "--reasoning-effort", help="profiles.<name>.model_reasoning_effort"
+    ),
+):
+    """Prompt repeatedly to configure provider+model pairs for Codex.
+
+    This is Droid-like: keep selecting a provider and a model (or skip), until you cancel.
+    """
+    from pathlib import Path
+
+    from code_assistant_manager.tools.config_writers.codex import upsert_codex_profile
+    from code_assistant_manager.config import ConfigManager
+    from code_assistant_manager.endpoints import EndpointManager
+    from code_assistant_manager.menu.base import Colors
+    from code_assistant_manager.menu.model_selector import ModelSelector
+
+    cm = ConfigManager(config)
+    cm.load_env_file()
+    is_valid, errors = cm.validate_config()
+    if not is_valid:
+        typer.echo(f"{Colors.RED}✗ Configuration validation failed:{Colors.RESET}")
+        for err in errors:
+            typer.echo(f"  - {err}")
+        raise typer.Exit(1)
+
+    em = EndpointManager(cm)
+
+    endpoints = cm.get_sections(exclude_common=True)
+    endpoints = [ep for ep in endpoints if em._is_client_supported(ep, "codex")]
+    if not endpoints:
+        typer.echo(f"{Colors.RED}✗ No endpoints configured for codex{Colors.RESET}")
+        raise typer.Exit(1)
+
+    config_path = Path.home() / ".codex" / "config.toml"
+    changed_any = False
+    configured = 0
+
+    # Prompt providers one by one (like Droid): pick one model per provider (or skip).
+    for endpoint_name in endpoints:
+        ok, endpoint_config = em.get_endpoint_config(endpoint_name)
+        if not ok or not endpoint_config:
+            continue
+
+        ok, models = em.fetch_models(
+            endpoint_name, endpoint_config, use_cache_if_available=False
+        )
+        if not ok or not models:
+            continue
+
+        ok, model = ModelSelector.select_model_with_endpoint_info(
+            models, endpoint_name, endpoint_config, "model", "codex"
+        )
+        if not ok or not model:
+            typer.echo(f"Skipped {endpoint_name}")
+            continue
+
+        profile_name = model
+        env_key = cm.get_endpoint_config(endpoint_name).get("api_key_env") or "OPENAI_API_KEY"
+
+        result = upsert_codex_profile(
+            config_path=config_path,
+            provider=endpoint_name,
+            base_url=endpoint_config.get("endpoint", ""),
+            env_key=env_key,
+            profile=profile_name,
+            model=model,
+            reasoning_effort=reasoning_effort,
+            project_path=Path.cwd().resolve(),
+        )
+
+        changed_any = changed_any or bool(result.get("changed"))
+        configured += 1
+
+    if configured == 0:
+        typer.echo(f"{Colors.YELLOW}! No profiles configured{Colors.RESET}")
+        raise typer.Exit(0)
+
+    if changed_any:
+        typer.echo(f"{Colors.GREEN}✓ Updated Codex profiles ({configured}){Colors.RESET}")
+    else:
+        typer.echo(f"{Colors.GREEN}✓ Codex config already up to date ({configured}){Colors.RESET}")
+
+    typer.echo(f"  Config: {config_path}")
