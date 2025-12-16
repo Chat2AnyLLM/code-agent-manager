@@ -49,6 +49,28 @@ class CodexTool(CLITool):
 
         return config_path
 
+    def _read_existing_profiles(self, config_path: Path) -> list[str]:
+        """Read existing profiles from Codex config.toml."""
+        try:
+            import tomllib
+        except ImportError:
+            try:
+                import tomli as tomllib
+            except ImportError:
+                return []
+
+        if not config_path.exists():
+            return []
+
+        try:
+            with open(config_path, "rb") as f:
+                config = tomllib.load(f)
+            profiles = list(config.get("profiles", {}).keys())
+            return profiles
+        except Exception as e:
+            logger.debug(f"Failed to read existing profiles from {config_path}: {e}")
+            return []
+
     def run(self, args: List[str] = None) -> int:
         args = args or []
 
@@ -85,6 +107,9 @@ class CodexTool(CLITool):
         ]
         if not endpoints:
             return self._handle_error("No endpoints configured for codex")
+
+        config_path = Path.home() / ".codex" / "config.toml"
+        existing_profiles = self._read_existing_profiles(config_path)
 
         configured_profiles: list[str] = []
         profile_env: dict[str, tuple[str, str]] = {}
@@ -140,10 +165,12 @@ class CodexTool(CLITool):
             if endpoint_config.get("actual_api_key"):
                 profile_env[profile_name] = (env_key, endpoint_config.get("actual_api_key"))
 
-        if not configured_profiles:
+        all_profiles = sorted(set(existing_profiles + configured_profiles))
+        
+        if not all_profiles:
             return 0
 
-        profiles = sorted(set(configured_profiles))
+        profiles = all_profiles
         if len(profiles) == 1:
             selected_profile = profiles[0]
         elif os.environ.get("CODE_ASSISTANT_MANAGER_NONINTERACTIVE") == "1":
