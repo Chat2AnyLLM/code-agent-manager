@@ -19,6 +19,7 @@ import pytest
 from code_assistant_manager.skills.base import BaseSkillHandler
 from code_assistant_manager.skills.claude import ClaudeSkillHandler
 from code_assistant_manager.skills.codex import CodexSkillHandler
+from code_assistant_manager.skills.copilot import CopilotSkillHandler
 from code_assistant_manager.skills.droid import DroidSkillHandler
 from code_assistant_manager.skills.gemini import GeminiSkillHandler
 from code_assistant_manager.skills.models import Skill
@@ -105,6 +106,21 @@ class TestCodexSkillHandler:
         """Test that _default_skills_dir returns the correct path."""
         handler = CodexSkillHandler()
         expected_path = Path.home() / ".codex" / "skills"
+        assert handler._default_skills_dir == expected_path
+
+
+class TestCopilotSkillHandler:
+    """Tests for CopilotSkillHandler."""
+
+    def test_app_name(self):
+        """Test that app_name returns 'copilot'."""
+        handler = CopilotSkillHandler()
+        assert handler.app_name == "copilot"
+
+    def test_default_skills_dir(self):
+        """Test that _default_skills_dir returns the correct path."""
+        handler = CopilotSkillHandler()
+        expected_path = Path.home() / ".copilot" / "skills"
         assert handler._default_skills_dir == expected_path
 
 

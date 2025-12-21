@@ -2,6 +2,8 @@
 
 This module provides functionality to manage plugins for AI coding assistants:
 - Claude Code: ~/.claude/plugins/
+- Codex: ~/.codex/plugins/
+- Copilot: ~/.copilot/plugins/
 
 Plugins are installed from GitHub repositories or local directories.
 """
@@ -10,6 +12,7 @@ from .base import BasePluginHandler
 from .claude import ClaudePluginHandler
 from .codebuddy import CodebuddyPluginHandler
 from .codex import CodexPluginHandler
+from .copilot import CopilotPluginHandler
 from .droid import DroidPluginHandler
 from .fetch import (
     FetchedRepoInfo,
@@ -37,6 +40,7 @@ __all__ = [
     # App-specific handlers
     "ClaudePluginHandler",
     "CodexPluginHandler",
+    "CopilotPluginHandler",
     "GeminiPluginHandler",
     "DroidPluginHandler",
     "CodebuddyPluginHandler",

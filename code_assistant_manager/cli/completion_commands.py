@@ -676,7 +676,7 @@ _code_assistant_manager() {
                     else
                         case $words[2] in
                             list|installed)
-                                _values 'option' '--app-type[Application type]:app:(claude codex gemini qwen codebuddy)' '--help[Show help]'
+                                _values 'option' '--app-type[Application type]:app:(claude codex copilot gemini qwen codebuddy)' '--help[Show help]'
                                 ;;
                             fetch|repos|view|delete)
                                 _values 'option' '--help[Show help]'
@@ -685,7 +685,7 @@ _code_assistant_manager() {
                                 _values 'option' '--title[Skill title]' '--content[Skill content]' '--description[Skill description]' '--tags[Skill tags]' '--help[Show help]'
                                 ;;
                             install|uninstall|uninstall-all)
-                                _values 'option' '--app-type[Application type]:app:(claude codex gemini qwen codebuddy)' '--help[Show help]'
+                                _values 'option' '--app-type[Application type]:app:(claude codex copilot gemini qwen codebuddy)' '--help[Show help]'
                                 ;;
                             add-repo|remove-repo)
                                 _values 'option' '--owner[Repository owner]' '--repo[Repository name]' '--help[Show help]'
@@ -714,7 +714,7 @@ _code_assistant_manager() {
                                 _values 'option' '--owner[Repository owner]' '--repo[Repository name]' '--help[Show help]'
                                 ;;
                             install|uninstall|enable|disable|validate)
-                                _values 'option' '--app[Application type]:app:(claude codebuddy)' '--help[Show help]'
+                                _values 'option' '--app[Application type]:app:(claude codebuddy codex copilot)' '--help[Show help]'
                                 ;;
                             browse|view|status)
                                 _values 'option' '--help[Show help]'

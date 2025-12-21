@@ -19,6 +19,18 @@ logger = logging.getLogger(__name__)
 
 
 class BasePluginHandler(ABC):
+    @property
+    def uses_cli_plugin_commands(self) -> bool:
+        """Whether this handler relies on an external app CLI for plugin operations."""
+        return False
+
+    @property
+    def marketplaces_dir(self) -> Path:
+        return self.user_plugins_dir / "marketplaces"
+
+    @property
+    def known_marketplaces_file(self) -> Path:
+        return self.user_plugins_dir / "known_marketplaces.json"
     """Abstract base class for app-specific plugin handlers.
 
     Each AI tool (Claude, Codex, Gemini, etc.) can have its own implementation
@@ -427,3 +439,106 @@ class BasePluginHandler(ABC):
             Path to CLI executable, or None if not found
         """
         return shutil.which(self.app_name)
+
+    # ==================== Marketplace Operations (non-CLI fallback) ====================
+
+    def get_known_marketplaces(self) -> Dict[str, Any]:
+        if not self.known_marketplaces_file.exists():
+            return {}
+        try:
+            with open(self.known_marketplaces_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def marketplace_add(self, source: str) -> Tuple[bool, str]:
+        """Record a marketplace as installed for apps without a plugin CLI."""
+        name = None
+        try:
+            from .fetch import fetch_repo_info_from_url, parse_github_url
+
+            info = fetch_repo_info_from_url(source)
+            if info:
+                name = info.name
+            if not name:
+                parsed = parse_github_url(source)
+                if parsed:
+                    _, repo, _ = parsed
+                    name = repo
+        except Exception:
+            pass
+
+        if not name:
+            name = Path(source).name or "marketplace"
+
+        known = self.get_known_marketplaces()
+        known[name] = {"source": {"url": source}}
+        self.known_marketplaces_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.known_marketplaces_file, "w", encoding="utf-8") as f:
+            json.dump(known, f, indent=2)
+        return True, f"Marketplace added: {name}"
+
+    def marketplace_remove(self, name: str) -> Tuple[bool, str]:
+        known = self.get_known_marketplaces()
+        if name not in known:
+            return False, f"Marketplace not found: {name}"
+        del known[name]
+        with open(self.known_marketplaces_file, "w", encoding="utf-8") as f:
+            json.dump(known, f, indent=2)
+        return True, f"Marketplace removed: {name}"
+
+    def marketplace_list(self) -> Tuple[bool, str]:
+        known = self.get_known_marketplaces()
+        lines = []
+        for i, name in enumerate(sorted(known.keys()), 1):
+            lines.append(f"{i}. ✓ {name}")
+            url = known[name].get("source", {}).get("url", "")
+            if url:
+                lines.append(f"   Source: {url}")
+        return True, "\n".join(lines)
+
+    def marketplace_update(self, name: Optional[str] = None) -> Tuple[bool, str]:
+        if name:
+            return True, f"Marketplace '{name}' updated"
+        return True, "Updated all marketplaces"
+
+    # ==================== Plugin Operations (non-CLI fallback) ====================
+
+    def install_plugin(self, plugin: str, marketplace: Optional[str] = None) -> Tuple[bool, str]:
+        return False, "Plugin install via app CLI not supported for this app; use CAM-managed marketplace install"
+
+    def uninstall_plugin(self, plugin: str) -> Tuple[bool, str]:
+        removed = self.uninstall(plugin)
+        if removed:
+            return True, f"Plugin uninstalled: {plugin}"
+        return False, f"Plugin not found: {plugin}"
+
+    def enable_plugin(self, plugin: str) -> Tuple[bool, str]:
+        self.update_settings(Plugin(name=plugin), enabled=True)
+        return True, f"Plugin enabled: {plugin}"
+
+    def disable_plugin(self, plugin: str) -> Tuple[bool, str]:
+        self.update_settings(Plugin(name=plugin), enabled=False)
+        return True, f"Plugin disabled: {plugin}"
+
+    def validate_plugin(self, path: str) -> Tuple[bool, str]:
+        p = Path(path).expanduser()
+        ok, _ = self.validate_plugin_structure(p)
+        return (True, "Plugin is valid") if ok else (False, "Validation failed")
+
+    def get_enabled_plugins(self) -> Dict[str, bool]:
+        """Get enabled plugins from settings.
+
+        Returns:
+            Dict of plugin key -> enabled status
+        """
+        if not self.settings_file.exists():
+            return {}
+        try:
+            with open(self.settings_file, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+            enabled = settings.get("enabledPlugins", {})
+            return enabled if isinstance(enabled, dict) else {}
+        except Exception:
+            return {}

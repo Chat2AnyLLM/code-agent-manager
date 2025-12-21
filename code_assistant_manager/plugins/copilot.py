@@ -1,20 +1,26 @@
-"""Codex plugin handler."""
+"""Copilot plugin handler."""
 
 from pathlib import Path
 
 from .base import BasePluginHandler
 
 
-class CodexPluginHandler(BasePluginHandler):
-    """Plugin handler for OpenAI Codex CLI."""
+class CopilotPluginHandler(BasePluginHandler):
+    """Plugin handler for GitHub Copilot CLI.
+
+    Copilot CLI does not currently provide a native `plugin` subcommand like Claude.
+    We support plugin installation by copying plugin directories into:
+      ~/.copilot/plugins/
+    and tracking enabled state in ~/.copilot/settings.json.
+    """
 
     @property
     def app_name(self) -> str:
-        return "codex"
+        return "copilot"
 
     @property
     def _default_home_dir(self) -> Path:
-        return Path.home() / ".codex"
+        return Path.home() / ".copilot"
 
     @property
     def _default_user_plugins_dir(self) -> Path:

@@ -19,7 +19,7 @@ from code_assistant_manager.skills import (
 logger = logging.getLogger(__name__)
 
 skill_app = typer.Typer(
-    help="Manage skills for AI assistants (Claude, Codex, Gemini, Droid, CodeBuddy)",
+    help="Manage skills for AI assistants (Claude, Codex, Copilot, Gemini, Droid, CodeBuddy)",
     no_args_is_help=True,
 )
 
@@ -35,7 +35,7 @@ def list_skills(
         "claude",
         "--app",
         "-a",
-        help="App type(s) to check installed status (claude, codex, gemini, all)",
+        help="App type(s) to check installed status (claude, codex, copilot, gemini, all)",
     ),
 ):
     """List all skills."""

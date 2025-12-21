@@ -155,9 +155,10 @@ When you install a skill, it's copied to the corresponding app's skills director
 
 | App    | Directory               |
 |--------|-------------------------|
-| Claude | `~/.claude/skills/`     |
-| Codex  | `~/.codex/skills/`      |
-| Gemini | `~/.gemini/skills/`     |
+| Claude  | `~/.claude/skills/`     |
+| Codex   | `~/.codex/skills/`      |
+| Copilot | `~/.copilot/skills/`    |
+| Gemini  | `~/.gemini/skills/`     |
 
 ### Default Skill Repositories
 

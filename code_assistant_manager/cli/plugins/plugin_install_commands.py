@@ -27,9 +27,9 @@ def _get_handler(app_type: str = "claude") -> BasePluginHandler:
 
 
 def _check_app_cli(app_type: str = "claude"):
-    """Check if app CLI is available."""
+    """Check if app CLI is available when required by the handler."""
     handler = _get_handler(app_type)
-    if not handler.get_cli_path():
+    if getattr(handler, "uses_cli_plugin_commands", False) and not handler.get_cli_path():
         typer.echo(
             f"{Colors.RED}✗ {app_type.capitalize()} CLI not found. Please install {app_type.capitalize()} first.{Colors.RESET}"
         )
@@ -371,7 +371,53 @@ def install_plugin(
     display_ref = f"{marketplace}:{plugin}" if marketplace else plugin
     typer.echo(f"{Colors.CYAN}Installing plugin: {display_ref}...{Colors.RESET}")
 
-    success, msg = handler.install_plugin(plugin, marketplace)
+    if getattr(handler, "uses_cli_plugin_commands", False):
+        success, msg = handler.install_plugin(plugin, marketplace)
+    else:
+        # Install directly from CAM-configured marketplace (no app CLI required)
+        from code_assistant_manager.plugins import PluginManager
+        from code_assistant_manager.plugins.fetch import fetch_repo_info
+
+        manager = PluginManager()
+        repo = manager.get_repo(marketplace) if marketplace else None
+        if not repo or not repo.repo_owner or not repo.repo_name:
+            typer.echo(
+                f"{Colors.RED}✗ Marketplace '{marketplace}' not found in CAM configuration.{Colors.RESET}"
+            )
+            raise typer.Exit(1)
+
+        info = fetch_repo_info(repo.repo_owner, repo.repo_name, repo.repo_branch or "main")
+        if not info or not info.plugins:
+            typer.echo(
+                f"{Colors.RED}✗ Could not fetch plugins from marketplace '{marketplace}'.{Colors.RESET}"
+            )
+            raise typer.Exit(1)
+
+        match = next(
+            (p for p in info.plugins if p.get("name", "").lower() == plugin.lower()),
+            None,
+        )
+        plugin_path = None
+        source = match.get("source") if isinstance(match, dict) else None
+        if isinstance(source, str):
+            plugin_path = source.lstrip("./")
+        elif isinstance(source, dict):
+            plugin_path = source.get("path") or source.get("dir")
+
+        if not plugin_path:
+            plugin_path = f"plugins/{plugin}"
+
+        try:
+            handler.install_from_github(
+                repo.repo_owner,
+                repo.repo_name,
+                repo.repo_branch or "main",
+                plugin_path=plugin_path,
+                marketplace_name=marketplace,
+            )
+            success, msg = True, f"Plugin installed: {display_ref}"
+        except Exception as e:
+            success, msg = False, str(e)
 
     if success:
         typer.echo(f"{Colors.GREEN}✓ {msg}{Colors.RESET}")
