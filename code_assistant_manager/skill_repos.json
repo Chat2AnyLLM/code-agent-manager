@@ -16,8 +16,7 @@
     "owner": "anthropics",
     "name": "skills",
     "branch": "main",
-    "enabled": true,
-    "skillsPath": "/"
+    "enabled": true
   },
   "diet103/claude-code-infrastructure-showcase": {
     "owner": "diet103",
@@ -49,6 +48,19 @@
   "weipanux/seo-geo-blog-writer": {
     "owner": "weipanux",
     "name": "seo-geo-blog-writer",
+    "branch": "main",
+    "enabled": true
+  },
+  "wshobson/agents": {
+    "owner": "wshobson",
+    "name": "agents",
+    "branch": "main",
+    "enabled": true,
+    "skillsPath": "/plugins"
+  },
+  "ccplugins/awesome-claude-code-plugins": {
+    "owner": "ccplugins",
+    "name": "awesome-claude-code-plugins",
     "branch": "main",
     "enabled": true
   }

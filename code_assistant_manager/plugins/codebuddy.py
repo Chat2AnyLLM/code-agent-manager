@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 class CodebuddyPluginHandler(BasePluginHandler):
+    @property
+    def uses_cli_plugin_commands(self) -> bool:
+        return True
+
     """Plugin handler for CodeBuddy CLI.
 
     Uses the `codebuddy` CLI to manage plugins and marketplaces.
