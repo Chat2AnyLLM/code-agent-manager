@@ -156,6 +156,13 @@ class TestSkillManager:
         with tempfile.TemporaryDirectory() as tmpdir:
             yield Path(tmpdir)
 
+    def test_manager_get_handler_copilot(self, temp_config_dir):
+        """SkillManager registers copilot handler."""
+        manager = SkillManager(temp_config_dir)
+        handler = manager.get_handler("copilot")
+        assert handler.app_name == "copilot"
+        assert str(handler.skills_dir).endswith("/.copilot/skills")
+
     def test_manager_create_skill(self, temp_config_dir):
         """Test creating a skill."""
         manager = SkillManager(temp_config_dir)

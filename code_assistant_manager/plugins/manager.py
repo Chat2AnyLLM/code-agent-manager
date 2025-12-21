@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Optional, Type
 from .base import BasePluginHandler
 from .claude import ClaudePluginHandler
 from .codebuddy import CodebuddyPluginHandler
+from .codex import CodexPluginHandler
+from .copilot import CopilotPluginHandler
 from .models import Marketplace, Plugin, PluginRepo
 
 logger = logging.getLogger(__name__)
@@ -43,10 +45,11 @@ def _load_builtin_plugin_repos() -> Dict[str, PluginRepo]:
 
 
 # Registry of all available plugin handlers
-# Note: Only claude and codebuddy currently support plugins
 PLUGIN_HANDLERS: Dict[str, Type[BasePluginHandler]] = {
     "claude": ClaudePluginHandler,
     "codebuddy": CodebuddyPluginHandler,
+    "codex": CodexPluginHandler,
+    "copilot": CopilotPluginHandler,
 }
 
 # Valid app types that support plugins

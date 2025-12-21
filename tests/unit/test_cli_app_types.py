@@ -24,8 +24,8 @@ class TestSupportedAppTypes:
     """Test that each module exposes the correct supported app types."""
 
     def test_skill_valid_app_types(self):
-        """Test skill module supports all 5 app types."""
-        expected = {"claude", "codex", "gemini", "droid", "codebuddy"}
+        """Test skill module supports all 6 app types."""
+        expected = {"claude", "codex", "copilot", "gemini", "droid", "codebuddy"}
         assert set(SKILL_APP_TYPES) == expected
 
     def test_agent_valid_app_types(self):
@@ -34,8 +34,8 @@ class TestSupportedAppTypes:
         assert set(AGENT_APP_TYPES) == expected
 
     def test_plugin_valid_app_types(self):
-        """Test plugin module only supports claude and codebuddy."""
-        expected = {"claude", "codebuddy"}
+        """Test plugin module supports claude, codebuddy, codex, and copilot."""
+        expected = {"claude", "codebuddy", "codex", "copilot"}
         assert set(PLUGIN_APP_TYPES) == expected
 
 
@@ -55,7 +55,7 @@ class TestSkillAppTypeValidation:
             mock_manager.return_value = mock_instance
 
             # Should accept all valid app types
-            for app in ["claude", "codex", "gemini", "droid", "codebuddy"]:
+            for app in ["claude", "codex", "copilot", "gemini", "droid", "codebuddy"]:
                 result = runner.invoke(skill_app, ["install", "test-skill", "-a", app])
                 # Should not fail with "Invalid value" error
                 assert "Invalid value" not in result.output
@@ -169,13 +169,50 @@ class TestPluginAppTypeValidation:
                     )
                     assert "Invalid" not in result.output
 
-    def test_plugin_install_rejects_codex(self, runner):
-        """Test plugin install rejects codex (not supported for plugins)."""
+    def test_plugin_install_accepts_codex(self, runner):
+        """Test plugin install accepts codex app type."""
         from code_assistant_manager.cli.plugin_commands import plugin_app
 
-        result = runner.invoke(plugin_app, ["install", "test-plugin", "-a", "codex"])
-        assert result.exit_code != 0
-        assert "Invalid value" in result.output
+        with patch(
+            "code_assistant_manager.cli.plugins.plugin_install_commands._get_handler"
+        ) as mock_handler:
+            with patch(
+                "code_assistant_manager.cli.plugins.plugin_install_commands._check_app_cli"
+            ):
+                with patch("code_assistant_manager.plugins.PluginManager") as mock_manager:
+                    handler = MagicMock()
+                    # Local-install codepath calls install_from_github; CLI codepath calls install_plugin
+                    handler.uses_cli_plugin_commands = False
+                    handler.install_from_github.return_value = MagicMock()
+                    mock_handler.return_value = handler
+                    mock_manager.return_value.get_repo.return_value = None
+
+                    result = runner.invoke(
+                        plugin_app, ["install", "test-plugin", "-a", "codex"]
+                    )
+                    assert "Invalid value" not in result.output
+
+    def test_plugin_install_accepts_copilot(self, runner):
+        """Test plugin install accepts copilot app type."""
+        from code_assistant_manager.cli.plugin_commands import plugin_app
+
+        with patch(
+            "code_assistant_manager.cli.plugins.plugin_install_commands._get_handler"
+        ) as mock_handler:
+            with patch(
+                "code_assistant_manager.cli.plugins.plugin_install_commands._check_app_cli"
+            ):
+                with patch("code_assistant_manager.plugins.PluginManager") as mock_manager:
+                    handler = MagicMock()
+                    handler.uses_cli_plugin_commands = False
+                    handler.install_from_github.return_value = MagicMock()
+                    mock_handler.return_value = handler
+                    mock_manager.return_value.get_repo.return_value = None
+
+                    result = runner.invoke(
+                        plugin_app, ["install", "test-plugin", "-a", "copilot"]
+                    )
+                    assert "Invalid value" not in result.output
 
     def test_plugin_install_rejects_gemini(self, runner):
         """Test plugin install rejects gemini (not supported for plugins)."""

@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 class ClaudePluginHandler(BasePluginHandler):
+    @property
+    def uses_cli_plugin_commands(self) -> bool:
+        return True
+
     """Plugin handler for Claude Code.
 
     Uses the `claude` CLI to manage plugins and marketplaces.

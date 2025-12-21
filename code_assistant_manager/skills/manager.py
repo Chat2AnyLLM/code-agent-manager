@@ -14,6 +14,7 @@ from .base import BaseSkillHandler
 from .claude import ClaudeSkillHandler
 from .codebuddy import CodebuddySkillHandler
 from .codex import CodexSkillHandler
+from .copilot import CopilotSkillHandler
 from .droid import DroidSkillHandler
 from .gemini import GeminiSkillHandler
 from .models import Skill, SkillRepo
@@ -68,6 +69,7 @@ DEFAULT_SKILL_REPOS = _load_builtin_skill_repos()
 SKILL_HANDLERS: Dict[str, Type[BaseSkillHandler]] = {
     "claude": ClaudeSkillHandler,
     "codex": CodexSkillHandler,
+    "copilot": CopilotSkillHandler,
     "gemini": GeminiSkillHandler,
     "droid": DroidSkillHandler,
     "codebuddy": CodebuddySkillHandler,
