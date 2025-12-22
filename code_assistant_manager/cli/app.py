@@ -724,14 +724,16 @@ def load_app_config(app_name: str) -> tuple[dict, str]:
 
 @config_app.command("show", short_help="Show configuration in dotted format")
 def show_config(
+    key_path: Optional[str] = typer.Argument(None, help="Specific config key path to show (optional)"),
     app: str = typer.Option("claude", "-a", "--app", help="App to show config for (default: claude)"),
 ):
     """Show configuration for an AI editor app in dotted notation format.
 
     Examples:
-        cam config show                    # Show claude config
-        cam config show -a codex          # Show codex config
-        cam config show --app cursor-agent # Show cursor config
+        cam config show                    # Show all claude config
+        cam config show -a codex          # Show all codex config
+        cam config show --app cursor-agent # Show all cursor config
+        cam config show claude.tipsHistory.config-thinking-mode  # Show specific key
     """
     from code_assistant_manager.menu.base import Colors
 
@@ -746,7 +748,56 @@ def show_config(
         # Flatten the config
         flattened = flatten_config(config_data, app)
 
-        # Display the config
+        # If a specific key path is requested
+        if key_path:
+            if key_path in flattened:
+                value = flattened[key_path]
+                typer.echo(f"{Colors.GREEN}{key_path}{Colors.RESET} = {value}")
+            else:
+                matching_keys = []
+
+                # Check for wildcard patterns (containing '*')
+                if "*" in key_path:
+                    import re
+                    # Convert wildcard pattern to regex: * becomes [^.]+
+                    # Escape regex special characters and replace * with [^.]+
+                    pattern = re.escape(key_path).replace(r"\*", "[^.]+")
+                    regex = re.compile(f"^{pattern}$")
+
+                    matching_keys = [k for k in flattened.keys() if regex.match(k)]
+                    match_type = "pattern"
+                else:
+                    # Check for prefix matches (e.g., 'codex.profiles' should show all profiles)
+                    prefix = key_path + "."
+                    matching_keys = [k for k in flattened.keys() if k.startswith(prefix)]
+                    match_type = "prefix"
+
+                if matching_keys:
+                    if match_type == "pattern":
+                        typer.echo(f"{Colors.CYAN}{app.upper()} Configuration - Keys matching pattern '{key_path}':{Colors.RESET}")
+                    else:
+                        typer.echo(f"{Colors.CYAN}{app.upper()} Configuration - Keys matching '{key_path}':{Colors.RESET}")
+                    typer.echo(f"Config file: {config_path}")
+                    typer.echo()
+
+                    # Sort matching keys for consistent output
+                    for key in sorted(matching_keys):
+                        value = flattened[key]
+                        typer.echo(f"{Colors.GREEN}{key}{Colors.RESET} = {value}")
+                else:
+                    typer.echo(f"{Colors.RED}✗ Key '{key_path}' not found in {app} configuration{Colors.RESET}")
+                    typer.echo(f"Config file: {config_path}")
+                    available_keys = sorted(flattened.keys())
+                    if available_keys:
+                        typer.echo(f"\nAvailable keys ({len(available_keys)}):")
+                        for key in available_keys[:10]:  # Show first 10 keys
+                            typer.echo(f"  {key}")
+                        if len(available_keys) > 10:
+                            typer.echo(f"  ... and {len(available_keys) - 10} more")
+                    raise typer.Exit(1)
+            return
+
+        # Display all config (original behavior)
         typer.echo(f"{Colors.CYAN}{app.upper()} Configuration:{Colors.RESET}")
         typer.echo(f"File: {config_path}")
         typer.echo()
