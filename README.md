@@ -215,6 +215,11 @@ cam config unset codex.profiles.old-profile
 cam config show codex          # Show Codex configuration
 cam config show claude         # Show Claude configuration
 cam config show                 # Show all configurations
+
+# Wildcard pattern matching (NEW!)
+cam config show "claude.*.*.lastToolDuration"    # Show all lastToolDuration keys
+cam config show "codex.profiles.*.model"         # Show all profile model keys
+cam config show "claude.cachedDynamicConfigs.*.*"  # Show all nested cache keys
 ```
 
 **Supported Configuration Prefixes:**
@@ -222,6 +227,11 @@ cam config show                 # Show all configurations
 - `claude.*` - Claude Code configuration
 - `copilot.*` - GitHub Copilot configuration
 - And more for other supported assistants
+
+**Wildcard Support:**
+- Use `*` as a wildcard in config paths to match flexible patterns
+- `*` matches any sequence of non-dot characters
+- Examples: `"claude.*.*.setting"`, `"codex.profiles.*.model"`
 
 ### Skill Subcommands
 

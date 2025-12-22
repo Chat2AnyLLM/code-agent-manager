@@ -7,6 +7,7 @@
 - **Enhanced Prompt Update Command**: New `cam prompt update` command with `--file` option to update prompt content, description, name, and default status
 - **Improved Prompt Status**: `cam prompt status` now shows file paths alongside app:level information for better visibility
 - **Optional Prompt Names**: `cam prompt add` and `cam prompt import` commands now support optional names with automatic fancy name generation
+- **Wildcard Configuration Support**: Added `*` wildcard support in `cam config show` for flexible pattern matching (e.g., `cam config show "claude.*.*.lastToolDuration"`)
 
 ### Changed
 - **Prompt CLI Commands**: Updated command structure to be more intuitive:
