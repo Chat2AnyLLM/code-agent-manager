@@ -30,8 +30,8 @@
     "repoName": "awesome-claude-code-plugins",
     "repoBranch": "main"
   },
-  "claude-code-marketplace": {
-    "name": "claude-code-marketplace",
+  "cc-marketplace": {
+    "name": "cc-marketplace",
     "description": "A marketplace for Claude Code plugins",
     "enabled": true,
     "type": "marketplace",

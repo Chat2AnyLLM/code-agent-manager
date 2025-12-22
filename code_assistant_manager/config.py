@@ -685,14 +685,6 @@ def _validate_simple_command(value: str) -> bool:
 
 
 def validate_command(value: str) -> bool:
-    """Validate a command string with balanced security and functionality.
-
-    Args:
-        value: Command string to validate
-
-    Returns:
-        True if valid, False otherwise
-    """
     if not value:
         return False
 
@@ -732,3 +724,23 @@ def validate_command(value: str) -> bool:
 
     # Validate simple commands
     return _validate_simple_command(value)
+
+
+def get_config_path() -> Optional[Path]:
+    """Get the path to the main configuration file.
+
+    Returns:
+        Path to the configuration file if found, None otherwise
+    """
+    # Try standard locations in order of preference
+    locations = [
+        Path.home() / ".config" / "code-assistant-manager" / "config.json",
+        Path.home() / ".code-assistant-manager" / "config.json",
+        Path.cwd() / ".code-assistant-manager" / "config.json",
+    ]
+
+    for config_path in locations:
+        if config_path.exists() and config_path.is_file():
+            return config_path
+
+    return None

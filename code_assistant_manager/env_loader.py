@@ -12,6 +12,48 @@ from dotenv import find_dotenv, load_dotenv
 _ENV_LOADED = False
 
 
+class EnvLoader:
+    """Environment variable loader class with prefix filtering support."""
+
+    def __init__(self, prefix: Optional[str] = None):
+        """Initialize EnvLoader with optional prefix filtering.
+
+        Args:
+            prefix: If provided, only environment variables starting with this prefix
+                   will be accessible (prefix will be stripped from keys).
+        """
+        self.prefix = prefix
+
+    def get(self, key: str) -> Optional[str]:
+        """Get environment variable value.
+
+        Args:
+            key: Environment variable name
+
+        Returns:
+            Value of the environment variable, or None if not found
+        """
+        import os
+
+        # Apply prefix filtering
+        if self.prefix:
+            full_key = f"{self.prefix}{key}"
+        else:
+            full_key = key
+
+        # Try exact case first
+        value = os.environ.get(full_key)
+        if value is not None:
+            return value
+
+        # Try case-insensitive lookup
+        for env_key, env_value in os.environ.items():
+            if env_key.lower() == full_key.lower():
+                return env_value
+
+        return None
+
+
 def find_env_file(
     custom_path: Optional[str] = None, strict: bool = False
 ) -> Optional[Path]:

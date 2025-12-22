@@ -60,44 +60,50 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
         k: v for k, v in all_repos.items() if v.type == "marketplace"
     }
 
+    # Check configured marketplaces for the plugin
+    found_in_marketplaces = []
+    unreachable_marketplaces = []
+
     for marketplace_name, repo in configured_marketplaces.items():
-        if not repo.repo_owner or not repo.repo_name:
+        # Handle both PluginRepo objects and installed marketplace dictionaries
+        if hasattr(repo, 'repo_owner'):  # PluginRepo object
+            repo_owner = repo.repo_owner
+            repo_name = repo.repo_name
+            repo_branch = repo.repo_branch or "main"
+        elif isinstance(repo, dict) and 'source' in repo:  # Installed marketplace dict
+            # Skip installed marketplaces - we'll handle them separately
+            continue
+        else:
+            continue
+
+        if not repo_owner or not repo_name:
             continue
 
         try:
             from code_assistant_manager.plugins.fetch import fetch_repo_info
-            info = fetch_repo_info(repo.repo_owner, repo.repo_name, repo.repo_branch or "main")
+            info = fetch_repo_info(repo_owner, repo_name, repo_branch)
             if info and info.plugins:
                 for plugin in info.plugins:
                     if plugin.get("name", "").lower() == plugin_name.lower():
                         found_in_marketplaces.append({
                             "marketplace": marketplace_name,
                             "plugin": plugin,
-                            "source": f"github.com/{repo.repo_owner}/{repo.repo_name}"
+                            "source": f"github.com/{repo_owner}/{repo_name}",
+                            "available": True
                         })
                         break
-        except Exception:
-            # Skip marketplaces that can't be fetched
-            continue
-
-    # Also check installed marketplaces in the app
-    try:
-        installed_marketplaces = handler.get_known_marketplaces()
-        for marketplace_name, marketplace_info in installed_marketplaces.items():
-            # If we already found it in configured marketplaces, skip
-            if any(f["marketplace"] == marketplace_name for f in found_in_marketplaces):
-                continue
-
-            # For installed marketplaces, we can't easily check their contents
-            # without fetching, but we can note they're available
-            source_info = marketplace_info.get("source", {}).get("url", "")
-            found_in_marketplaces.append({
+        except Exception as e:
+            # Log the error but don't skip the marketplace entirely
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Failed to fetch marketplace '{marketplace_name}': {e}")
+            # Mark marketplace as unreachable but still show it
+            unreachable_marketplaces.append({
                 "marketplace": marketplace_name,
-                "plugin": {"name": plugin_name},  # Placeholder
-                "source": source_info or "installed marketplace"
+                "source": f"github.com/{repo_owner}/{repo_name}",
+                "error": str(e),
+                "available": False
             })
-    except Exception:
-        pass
 
     # Handle results
     if not found_in_marketplaces:
@@ -107,6 +113,11 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
         typer.echo(f"\n{Colors.CYAN}Available marketplaces:{Colors.RESET}")
         for name in sorted(configured_marketplaces.keys()):
             typer.echo(f"  • {name}")
+        # Show unreachable marketplaces if any
+        if unreachable_marketplaces:
+            typer.echo(f"\n{Colors.YELLOW}Unreachable marketplaces (temporarily unavailable):{Colors.RESET}")
+            for unreachable in unreachable_marketplaces:
+                typer.echo(f"  • {unreachable['marketplace']} ({unreachable['source']})")
         typer.echo(f"\n{Colors.CYAN}Browse plugins:{Colors.RESET} cam plugin browse")
         raise typer.Exit(1)
 
@@ -125,14 +136,19 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
         )
         typer.echo()
 
-        for i, found in enumerate(found_in_marketplaces, 1):
+        # Combine available and unreachable marketplaces for display
+        all_marketplaces = found_in_marketplaces + unreachable_marketplaces
+
+        for i, found in enumerate(all_marketplaces, 1):
             marketplace = found["marketplace"]
             source = found["source"]
-            plugin_info = found["plugin"]
+            plugin_info = found.get("plugin", {})
+            available = found.get("available", True)
             version = plugin_info.get("version", "")
             description = plugin_info.get("description", "")
 
-            typer.echo(f"  {i}. {Colors.BOLD}{marketplace}{Colors.RESET}")
+            status_indicator = "" if available else f" {Colors.YELLOW}(unreachable){Colors.RESET}"
+            typer.echo(f"  {i}. {Colors.BOLD}{marketplace}{Colors.RESET}{status_indicator}")
             if version:
                 typer.echo(f"     Version: {version}")
             if description:
@@ -140,11 +156,12 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
             typer.echo(f"     Source: {source}")
             typer.echo()
 
-        # Prompt user to choose
+        # Prompt user to choose (only allow selecting available marketplaces)
+        available_marketplaces = [f for f in all_marketplaces if f.get("available", True)]
         while True:
             try:
                 choice = typer.prompt(
-                    f"Choose marketplace (1-{len(found_in_marketplaces)}) or 'cancel'",
+                    f"Choose marketplace (1-{len(all_marketplaces)}) or 'cancel'",
                     type=str
                 ).strip().lower()
 
@@ -152,8 +169,14 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
                     raise typer.Exit(0)
 
                 choice_idx = int(choice) - 1
-                if 0 <= choice_idx < len(found_in_marketplaces):
-                    selected = found_in_marketplaces[choice_idx]
+                if 0 <= choice_idx < len(all_marketplaces):
+                    selected = all_marketplaces[choice_idx]
+                    if not selected.get("available", True):
+                        typer.echo(
+                            f"{Colors.RED}Cannot select unreachable marketplace '{selected['marketplace']}'. Please choose an available marketplace.{Colors.RESET}"
+                        )
+                        continue
+
                     marketplace = selected["marketplace"]
                     typer.echo(
                         f"{Colors.GREEN}Selected: {marketplace}{Colors.RESET}"
@@ -161,11 +184,11 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
                     return marketplace
                 else:
                     typer.echo(
-                        f"{Colors.RED}Invalid choice. Please enter 1-{len(found_in_marketplaces)} or 'cancel'{Colors.RESET}"
+                        f"{Colors.RED}Invalid choice. Please enter 1-{len(all_marketplaces)} or 'cancel'{Colors.RESET}"
                     )
             except ValueError:
                 typer.echo(
-                    f"{Colors.RED}Invalid input. Please enter a number 1-{len(found_in_marketplaces)} or 'cancel'{Colors.RESET}"
+                    f"{Colors.RED}Invalid input. Please enter a number 1-{len(all_marketplaces)} or 'cancel'{Colors.RESET}"
                 )
             except (EOFError, KeyboardInterrupt):
                 typer.echo(f"\n{Colors.YELLOW}Cancelled.{Colors.RESET}")

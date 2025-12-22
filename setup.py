@@ -44,6 +44,7 @@ setup(
             "pytest>=8.0.0",
             "pytest-cov>=4.1.0",
             "pytest-asyncio>=0.23.0",
+            "psutil>=5.9.0",
         ],
     },
     entry_points={
