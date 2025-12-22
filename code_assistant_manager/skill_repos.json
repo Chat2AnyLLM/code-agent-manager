@@ -9,8 +9,7 @@
     "owner": "obra",
     "name": "superpowers",
     "branch": "main",
-    "enabled": true,
-    "skillsPath": "skills"
+    "enabled": true
   },
   "anthropics/skills": {
     "owner": "anthropics",

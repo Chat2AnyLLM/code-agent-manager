@@ -101,5 +101,14 @@
     "repoOwner": "thedotmack",
     "repoName": "claude-mem",
     "repoBranch": "main"
+  },
+  "awesome-claude-skills": {
+    "name": "awesome-claude-skills",
+    "description": "A curated marketplace of practical Claude Skills for enhancing productivity across Claude.ai, Claude Code, and the Claude API",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "ComposioHQ",
+    "repoName": "awesome-claude-skills",
+    "repoBranch": "master"
   }
 }
