@@ -469,13 +469,13 @@ def marketplace_install(
         "claude",
         "--app",
         "-a",
-        help=f"App type to install marketplace to ({', '.join(VALID_APP_TYPES)})",
+        help=f"App type(s) to install marketplace to ({', '.join(VALID_APP_TYPES)}, all). Comma-separated.",
     ),
 ):
     """Install a configured marketplace or all marketplaces to Claude or CodeBuddy.
 
     This installs a marketplace that has been previously configured in CAM
-    to the target AI assistant app. The marketplace must already be configured
+    to the target AI assistant app(s). The marketplace must already be configured
     using 'cam plugin marketplace add' before it can be installed.
 
     After installation, you can browse plugins with 'cam plugin browse <marketplace>'
@@ -485,13 +485,12 @@ def marketplace_install(
         cam plugin marketplace install awesome-claude-code-plugins
         cam plugin marketplace install my-marketplace --app codebuddy
         cam plugin marketplace install --all
-        cam plugin marketplace install --all --app codebuddy
+        cam plugin marketplace install --all --app claude,codebuddy
     """
-    from code_assistant_manager.cli.option_utils import resolve_single_app
+    from code_assistant_manager.cli.option_utils import resolve_app_targets
     from code_assistant_manager.plugins import PluginManager
 
-    app = resolve_single_app(app_type, VALID_APP_TYPES, default="claude")
-    handler = get_handler(app)
+    target_apps = resolve_app_targets(app_type, VALID_APP_TYPES, default="claude")
     manager = PluginManager()
 
     # Get all configured marketplaces
@@ -510,9 +509,6 @@ def marketplace_install(
     # Determine which marketplaces to install
     if all_marketplaces:
         marketplaces_to_install = configured_marketplaces
-        typer.echo(
-            f"{Colors.CYAN}Installing all configured marketplaces to {app}...{Colors.RESET}"
-        )
     elif marketplace:
         # Install single marketplace
         if marketplace not in configured_marketplaces:
@@ -536,64 +532,58 @@ def marketplace_install(
             typer.echo(f"  • {name}")
         raise typer.Exit(1)
 
-    # Install the marketplaces
-    installed_count = 0
-    failed_count = 0
-    already_installed_count = 0
+    # Install the marketplaces to each target app
+    for app in target_apps:
+        typer.echo(f"\n{Colors.BOLD}Installing to {app}...{Colors.RESET}")
+        handler = get_handler(app)
 
-    for name, repo in marketplaces_to_install.items():
-        if repo.type != "marketplace":
+        installed_count = 0
+        failed_count = 0
+        already_installed_count = 0
+
+        for name, repo in marketplaces_to_install.items():
+            if repo.type != "marketplace":
+                continue
+
+            if not repo.repo_owner or not repo.repo_name:
+                typer.echo(
+                    f"{Colors.YELLOW}⚠ Skipping '{name}' (no GitHub source configured){Colors.RESET}"
+                )
+                continue
+
+            repo_url = f"https://github.com/{repo.repo_owner}/{repo.repo_name}"
+
+            typer.echo(f"{Colors.CYAN}Installing marketplace: {name}...{Colors.RESET}")
+            success, msg = handler.marketplace_add(repo_url)
+
+            if success:
+                typer.echo(f"{Colors.GREEN}✓ Marketplace installed: {name}{Colors.RESET}")
+                installed_count += 1
+            elif "already installed" in msg.lower():
+                typer.echo(
+                    f"{Colors.YELLOW}Marketplace '{name}' is already installed.{Colors.RESET}"
+                )
+                already_installed_count += 1
+            else:
+                typer.echo(f"{Colors.RED}✗ Failed to install '{name}': {msg}{Colors.RESET}")
+                failed_count += 1
+
+        # Summary for current app
+        total_attempted = len(marketplaces_to_install)
+        typer.echo(f"  {Colors.BOLD}Summary for {app}:{Colors.RESET}")
+        typer.echo(f"    Installed: {installed_count}")
+        typer.echo(f"    Already installed: {already_installed_count}")
+        typer.echo(f"    Failed: {failed_count}")
+
+    if len(target_apps) == 1:
+        if installed_count > 0 or already_installed_count > 0:
             typer.echo(
-                f"{Colors.YELLOW}⚠ Skipping '{name}' (not a marketplace, type: {repo.type}){Colors.RESET}"
+                f"\n{Colors.CYAN}Browse plugins with:{Colors.RESET} cam plugin marketplace browse <marketplace>"
             )
-            continue
-
-        if not repo.repo_owner or not repo.repo_name:
             typer.echo(
-                f"{Colors.YELLOW}⚠ Skipping '{name}' (no GitHub source configured){Colors.RESET}"
+                f"{Colors.CYAN}Install plugins with:{Colors.RESET} cam plugin install <plugin-name>@<marketplace>"
             )
-            continue
 
-        repo_url = f"https://github.com/{repo.repo_owner}/{repo.repo_name}"
-
-        typer.echo(f"{Colors.CYAN}Installing marketplace: {name}...{Colors.RESET}")
-        success, msg = handler.marketplace_add(repo_url)
-
-        if success:
-            typer.echo(f"{Colors.GREEN}✓ Marketplace installed: {name}{Colors.RESET}")
-            installed_count += 1
-        elif "already installed" in msg.lower():
-            typer.echo(
-                f"{Colors.YELLOW}Marketplace '{name}' is already installed.{Colors.RESET}"
-            )
-            already_installed_count += 1
-        else:
-            typer.echo(f"{Colors.RED}✗ Failed to install '{name}': {msg}{Colors.RESET}")
-            failed_count += 1
-
-    # Summary
-    total_attempted = len(marketplaces_to_install)
-    typer.echo(f"\n{Colors.BOLD}Installation Summary:{Colors.RESET}")
-    typer.echo(f"  Installed: {installed_count}")
-    typer.echo(f"  Already installed: {already_installed_count}")
-    typer.echo(f"  Failed: {failed_count}")
-    typer.echo(
-        f"  Skipped: {total_attempted - installed_count - failed_count - already_installed_count}"
-    )
-
-    if installed_count > 0 or already_installed_count > 0:
-        typer.echo(
-            f"\n{Colors.CYAN}Browse plugins with:{Colors.RESET} cam plugin browse <marketplace>"
-        )
-        typer.echo(
-            f"{Colors.CYAN}Install plugins with:{Colors.RESET} cam plugin install <plugin-name>@<marketplace>"
-        )
-
-    if failed_count > 0:
-        typer.echo(
-            f"\n{Colors.YELLOW}⚠ {failed_count} marketplace(s) failed to install.{Colors.RESET}"
-        )
-        raise typer.Exit(1)
 
 
 @marketplace_app.command("uninstall")
