@@ -1,12 +1,14 @@
-#!/usr/bin/env python3
-"""CLI app setup for Code Assistant Manager."""
-
 import logging
 import sys
 from typing import List, Optional
 
 import typer
 from typer import Context
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 from code_assistant_manager.cli.agents_commands import agent_app
 from code_assistant_manager.cli.plugin_commands import plugin_app
@@ -386,181 +388,374 @@ def list_config():
     typer.echo()
 
 
-# Add list as shorthand commands
-config_app.command(name="ls", hidden=True)(list_config)
-config_app.command(name="l", hidden=True)(list_config)
+def parse_toml_key_path(key_path):
+    """Parse a dotted key path that may contain TOML quoted keys.
+
+    Examples:
+        codex.profiles.myprofile.model -> ['codex', 'profiles', 'myprofile', 'model']
+        codex.profiles."alibaba/glm-4.5".model -> ['codex', 'profiles', 'alibaba/glm-4.5', 'model']
+        codex.profiles."alibaba/deepseek-v3.2-exp" -> ['codex', 'profiles', 'alibaba/deepseek-v3.2-exp']
+    """
+    import re
+
+    # First, split by dots but preserve quoted strings
+    # Use a regex that matches quoted strings OR unquoted parts
+    parts = re.split(r'(?<!\\)"(?:\\.|[^"\\])*"(?:\s*\.\s*|\s*$)|\s*\.\s*', key_path.strip())
+
+    # Clean up the parts - remove empty strings and whitespace
+    cleaned_parts = []
+    for part in parts:
+        part = part.strip()
+        if part and part not in ['.', '']:
+            # Remove surrounding quotes if present
+            if part.startswith('"') and part.endswith('"'):
+                part = part[1:-1].replace('\\"', '"')
+            cleaned_parts.append(part)
+
+    return cleaned_parts
 
 
-@config_app.command("codex-profile", short_help="Create/update a Codex profile in ~/.codex/config.toml")
-def codex_profile(
-    config: Optional[str] = CONFIG_FILE_OPTION,
-    name: Optional[str] = typer.Option(
-        None, "--name", "-n", help="Profile name to create/update (default: model name)"
-    ),
-    reasoning_effort: str = typer.Option(
-        "low", "--reasoning-effort", help="profiles.<name>.model_reasoning_effort"
+@config_app.command("set", short_help="Set a configuration value for code assistants")
+def set_config(
+    key_value: str = typer.Argument(
+        ..., help="Configuration key=value pair (e.g., codex.profiles.grok-code-fast-1.model=qwen3-coder-plus)"
     ),
 ):
-    """Interactively select a provider endpoint + model, then write a Codex profile."""
-    from pathlib import Path
+    """Set a configuration value for code assistants.
 
-    from code_assistant_manager.config import ConfigManager
-    from code_assistant_manager.endpoints import EndpointManager
+    Supports dotted key notation for nested configuration values.
+    Examples:
+        cam config set codex.model=gpt-4
+        cam config set codex.profiles.my-profile.model=qwen3-coder-plus
+        cam config set codex.model_provider=openai
+    """
+    from pathlib import Path
+    import tomli_w
+    import tomllib
+
     from code_assistant_manager.menu.base import Colors
-    from code_assistant_manager.menu.model_selector import ModelSelector
 
     try:
-        cm = ConfigManager(config)
-        cm.load_env_file()
-        is_valid, errors = cm.validate_config()
-        if not is_valid:
-            typer.echo(f"{Colors.RED}✗ Configuration validation failed:{Colors.RESET}")
-            for err in errors:
-                typer.echo(f"  - {err}")
+        # Parse key=value
+        if "=" not in key_value:
+            typer.echo(f"{Colors.RED}✗ Invalid format. Use key=value syntax{Colors.RESET}")
             raise typer.Exit(1)
 
-        em = EndpointManager(cm)
+        key_path, value = key_value.split("=", 1)
+        key_path = key_path.strip()
+        value = value.strip()
 
-        ok, endpoint_name = em.select_endpoint("codex")
-        if not ok or not endpoint_name:
-            raise typer.Exit(0)
-
-        ok, endpoint_config = em.get_endpoint_config(endpoint_name)
-        if not ok or not endpoint_config:
+        # Parse dotted key path using TOML-aware parser
+        parts = parse_toml_key_path(key_path)
+        if len(parts) < 2:
+            typer.echo(f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format{Colors.RESET}")
             raise typer.Exit(1)
 
-        ok, models = em.fetch_models(endpoint_name, endpoint_config)
-        if not ok or not models:
-            raise typer.Exit(1)
+        prefix = parts[0]  # e.g., "codex"
+        config_key_parts = parts[1:]  # e.g., ["profiles", "alibaba/glm-4.5", "model"]
 
-        ok, model = ModelSelector.select_model_with_endpoint_info(
-            models, endpoint_name, endpoint_config, "model", "codex"
-        )
-        if not ok or not model:
-            raise typer.Exit(0)
-
-        profile_name = name or model
-        provider_key = endpoint_name
-        env_key = cm.get_endpoint_config(endpoint_name).get("api_key_env") or "OPENAI_API_KEY"
-
-        from code_assistant_manager.tools.config_writers.codex import upsert_codex_profile
-
-        config_path = Path.home() / ".codex" / "config.toml"
-        try:
-            result = upsert_codex_profile(
-                config_path=config_path,
-                provider=provider_key,
-                base_url=endpoint_config.get("endpoint", ""),
-                env_key=env_key,
-                profile=profile_name,
-                model=model,
-                reasoning_effort=reasoning_effort,
-                project_path=Path.cwd().resolve(),
-            )
-        except Exception as e:
-            typer.echo(f"{Colors.RED}✗ Failed to write {config_path}: {e}{Colors.RESET}")
-            raise typer.Exit(1)
-
-        if result.get("changed"):
-            typer.echo(f"{Colors.GREEN}✓ Wrote Codex profile '{profile_name}'{Colors.RESET}")
+        # Determine config file based on prefix
+        if prefix == "codex":
+            config_path = Path.home() / ".codex" / "config.toml"
         else:
-            typer.echo(f"{Colors.GREEN}✓ Codex profile already up to date: '{profile_name}'{Colors.RESET}")
+            typer.echo(f"{Colors.RED}✗ Unsupported config prefix: {prefix}{Colors.RESET}")
+            typer.echo(f"  Supported prefixes: codex")
+            raise typer.Exit(1)
+
+        # Load existing config
+        config_data = {}
+        if config_path.exists():
+            try:
+                with open(config_path, 'rb') as f:
+                    config_data = tomllib.load(f)
+            except Exception as e:
+                typer.echo(f"{Colors.YELLOW}! Could not load existing config: {e}{Colors.RESET}")
+                typer.echo(f"  Creating new config file")
+
+        # Set the nested value
+        def set_nested_value(data, key_parts, val):
+            if len(key_parts) == 1:
+                data[key_parts[0]] = val
+                return data
+
+            current_key = key_parts[0]
+            if current_key not in data or not isinstance(data[current_key], dict):
+                data[current_key] = {}
+
+            data[current_key] = set_nested_value(data[current_key], key_parts[1:], val)
+            return data
+
+        config_data = set_nested_value(config_data, config_key_parts, value)
+
+        # Write back to file
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(config_data, f)
+
+        typer.echo(f"{Colors.GREEN}✓ Set {key_path} = {value}{Colors.RESET}")
         typer.echo(f"  Config: {config_path}")
-        typer.echo(f"  Run: codex -p {profile_name}")
 
     except typer.Exit:
         raise
     except Exception as e:
-        typer.echo(f"{Colors.RED}✗ Unexpected error: {e}{Colors.RESET}")
+        typer.echo(f"{Colors.RED}✗ Failed to set config value: {e}{Colors.RESET}")
         raise typer.Exit(1)
 
 
-@config_app.command(
-    "codex-profiles",
-    short_help="Create/update Codex profiles for multiple providers from providers.json",
-)
-def codex_profiles(
-    config: Optional[str] = CONFIG_FILE_OPTION,
-    reasoning_effort: str = typer.Option(
-        "low", "--reasoning-effort", help="profiles.<name>.model_reasoning_effort"
+@config_app.command("unset", short_help="Unset a configuration value for code assistants")
+def unset_config(
+    key_path: str = typer.Argument(
+        ..., help="Configuration key path (e.g., codex.profiles.grok-code-fast-1.model)"
     ),
 ):
-    """Prompt repeatedly to configure provider+model pairs for Codex.
+    """Unset a configuration value for code assistants.
 
-    This is Droid-like: keep selecting a provider and a model (or skip), until you cancel.
+    Supports dotted key notation for nested configuration values.
+    Examples:
+        cam config unset codex.model
+        cam config unset codex.profiles.my-profile.model
+        cam config unset codex.model_provider
+    """
+    from pathlib import Path
+    import tomli_w
+    import tomllib
+
+    from code_assistant_manager.menu.base import Colors
+
+    try:
+        key_path = key_path.strip()
+
+        # Parse dotted key path using TOML-aware parser
+        parts = parse_toml_key_path(key_path)
+        if len(parts) < 2:
+            typer.echo(f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format{Colors.RESET}")
+            raise typer.Exit(1)
+
+        prefix = parts[0]  # e.g., "codex"
+        config_key_parts = parts[1:]  # e.g., ["profiles", "alibaba/deepseek-v3", "2-exp"]
+
+        # Special handling for unset: if the key parts seem to be incorrectly split,
+        # try to reconstruct the key name
+        if len(config_key_parts) > 2:
+            # Check if the last parts look like they should be joined
+            # This handles cases like ['profiles', 'alibaba/deepseek-v3', '2-exp']
+            # where it should be ['profiles', 'alibaba/deepseek-v3.2-exp']
+            table_name = config_key_parts[0]
+            key_parts_to_join = config_key_parts[1:]
+            reconstructed_key = '.'.join(key_parts_to_join)
+            config_key_parts = [table_name, reconstructed_key]
+
+        # Determine config file based on prefix
+        if prefix == "codex":
+            config_path = Path.home() / ".codex" / "config.toml"
+        else:
+            typer.echo(f"{Colors.RED}✗ Unsupported config prefix: {prefix}{Colors.RESET}")
+            typer.echo(f"  Supported prefixes: codex")
+            raise typer.Exit(1)
+
+        # Check if config file exists
+        if not config_path.exists():
+            typer.echo(f"{Colors.YELLOW}! Config file not found: {config_path}{Colors.RESET}")
+            raise typer.Exit(0)
+
+        # Load existing config
+        config_data = {}
+        try:
+            with open(config_path, 'rb') as f:
+                config_data = tomllib.load(f)
+        except Exception as e:
+            typer.echo(f"{Colors.RED}✗ Could not load config file: {e}{Colors.RESET}")
+            raise typer.Exit(1)
+
+        # Unset the nested value
+        def unset_nested_value(data, key_parts):
+            if len(key_parts) == 1:
+                key = key_parts[0]
+
+                # Try multiple variations of the key
+                candidates = [key]  # exact match first
+
+                # If key contains special characters, try quoted version
+                if '/' in key or any(c in key for c in '.-'):
+                    candidates.append(f'"{key}"')
+
+                # If key looks like it might have been split incorrectly, try reconstructing
+                # For example, if we have ['alibaba/deepseek-v3', '2-exp'], try 'alibaba/deepseek-v3.2-exp'
+                if len(key_parts) > 1 and len(key_parts) == 1:  # This is the leaf key
+                    # Check if there are more parts that should be joined
+                    pass  # This logic is complex, let's try the candidates approach first
+
+                for candidate in candidates:
+                    if candidate in data:
+                        del data[candidate]
+                        return data, True
+
+                return data, False
+
+            current_key = key_parts[0]
+            if current_key not in data or not isinstance(data[current_key], dict):
+                return data, False
+
+            data[current_key], found = unset_nested_value(data[current_key], key_parts[1:])
+            return data, found
+
+        config_data, found = unset_nested_value(config_data, config_key_parts)
+
+        if not found:
+            typer.echo(f"{Colors.YELLOW}! Key '{key_path}' not found in config{Colors.RESET}")
+            raise typer.Exit(0)
+
+        # Write back to file
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(config_data, f)
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        typer.echo(f"{Colors.RED}✗ Failed to unset config value: {e}{Colors.RESET}")
+        raise typer.Exit(1)
+
+
+def flatten_config(data: dict, prefix: str = "") -> dict:
+    """Flatten nested dictionary into dotted notation."""
+    result = {}
+
+    def _flatten(obj, current_prefix):
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                new_prefix = f"{current_prefix}.{key}" if current_prefix else key
+                _flatten(value, new_prefix)
+        elif isinstance(obj, list):
+            # For lists, convert to string representation
+            result[current_prefix] = str(obj)
+        else:
+            # Convert all values to strings
+            result[current_prefix] = str(obj)
+
+    _flatten(data, prefix)
+    return result
+
+
+def load_app_config(app_name: str) -> tuple[dict, str]:
+    """Load configuration for a specific app.
+
+    Returns:
+        Tuple of (config_dict, config_file_path)
     """
     from pathlib import Path
 
-    from code_assistant_manager.tools.config_writers.codex import upsert_codex_profile
-    from code_assistant_manager.config import ConfigManager
-    from code_assistant_manager.endpoints import EndpointManager
+    # Define config file mappings for each app
+    config_mappings = {
+        "claude": [
+            Path.home() / ".claude" / "settings.json",
+            Path.home() / ".claude.json",
+            Path.home() / ".claude" / "settings.local.json",
+            Path.cwd() / ".claude" / "settings.json",
+            Path.cwd() / ".claude" / "settings.local.json",
+        ],
+        "codex": [
+            Path.home() / ".codex" / "config.toml",
+        ],
+        "cursor-agent": [
+            Path.home() / ".cursor" / "mcp.json",
+            Path.home() / ".cursor" / "settings.json",
+            Path.cwd() / ".cursor" / "mcp.json",
+        ],
+        "gemini": [
+            Path.home() / ".gemini" / "settings.json",
+            Path.cwd() / ".gemini" / "settings.json",
+        ],
+        "copilot": [
+            Path.home() / ".copilot" / "mcp-config.json",
+            Path.home() / ".copilot" / "mcp.json",
+        ],
+        "qwen": [
+            Path.home() / ".qwen" / "settings.json",
+        ],
+        "codebuddy": [
+            Path.home() / ".codebuddy.json",
+            Path.cwd() / ".codebuddy" / "mcp.json",
+        ],
+        "crush": [
+            Path.home() / ".config" / "crush" / "crush.json",
+        ],
+        "droid": [
+            Path.home() / ".factory" / "mcp.json",
+            Path.home() / ".factory" / "config.json",
+        ],
+        "iflow": [
+            Path.home() / ".iflow" / "settings.json",
+            Path.home() / ".iflow" / "config.json",
+        ],
+        "neovate": [
+            Path.home() / ".neovate" / "config.json",
+        ],
+        "qodercli": [
+            Path.home() / ".qodercli" / "config.json",
+        ],
+        "zed": [
+            Path.home() / ".config" / "zed" / "settings.json",
+        ],
+    }
+
+    if app_name not in config_mappings:
+        raise typer.Exit(f"Unknown app: {app_name}. Supported apps: {', '.join(config_mappings.keys())}")
+
+    # Try to load config from the first available file
+    for config_path in config_mappings[app_name]:
+        if config_path.exists():
+            try:
+                if config_path.suffix == ".toml":
+                    with open(config_path, 'rb') as f:
+                        config_data = tomllib.load(f)
+                else:  # JSON files
+                    import json
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        config_data = json.load(f)
+
+                return config_data, str(config_path)
+            except Exception as e:
+                logger.warning(f"Failed to load {config_path}: {e}")
+                continue
+
+    # If no config file found, return empty dict
+    return {}, "No config file found"
+
+
+@config_app.command("show", short_help="Show configuration in dotted format")
+def show_config(
+    app: str = typer.Option("claude", "-a", "--app", help="App to show config for (default: claude)"),
+):
+    """Show configuration for an AI editor app in dotted notation format.
+
+    Examples:
+        cam config show                    # Show claude config
+        cam config show -a codex          # Show codex config
+        cam config show --app cursor-agent # Show cursor config
+    """
     from code_assistant_manager.menu.base import Colors
-    from code_assistant_manager.menu.model_selector import ModelSelector
 
-    cm = ConfigManager(config)
-    cm.load_env_file()
-    is_valid, errors = cm.validate_config()
-    if not is_valid:
-        typer.echo(f"{Colors.RED}✗ Configuration validation failed:{Colors.RESET}")
-        for err in errors:
-            typer.echo(f"  - {err}")
+    try:
+        config_data, config_path = load_app_config(app)
+
+        if not config_data:
+            typer.echo(f"{Colors.YELLOW}No configuration found for {app}{Colors.RESET}")
+            typer.echo(f"Config path: {config_path}")
+            return
+
+        # Flatten the config
+        flattened = flatten_config(config_data, app)
+
+        # Display the config
+        typer.echo(f"{Colors.CYAN}{app.upper()} Configuration:{Colors.RESET}")
+        typer.echo(f"File: {config_path}")
+        typer.echo()
+
+        # Sort keys for consistent output
+        for key in sorted(flattened.keys()):
+            value = flattened[key]
+            typer.echo(f"{Colors.GREEN}{key}{Colors.RESET} = {value}")
+
+    except Exception as e:
+        typer.echo(f"{Colors.RED}✗ Failed to show config: {e}{Colors.RESET}")
         raise typer.Exit(1)
-
-    em = EndpointManager(cm)
-
-    endpoints = cm.get_sections(exclude_common=True)
-    endpoints = [ep for ep in endpoints if em._is_client_supported(ep, "codex")]
-    if not endpoints:
-        typer.echo(f"{Colors.RED}✗ No endpoints configured for codex{Colors.RESET}")
-        raise typer.Exit(1)
-
-    config_path = Path.home() / ".codex" / "config.toml"
-    changed_any = False
-    configured = 0
-
-    # Prompt providers one by one (like Droid): pick one model per provider (or skip).
-    for endpoint_name in endpoints:
-        ok, endpoint_config = em.get_endpoint_config(endpoint_name)
-        if not ok or not endpoint_config:
-            continue
-
-        ok, models = em.fetch_models(
-            endpoint_name, endpoint_config, use_cache_if_available=False
-        )
-        if not ok or not models:
-            continue
-
-        ok, model = ModelSelector.select_model_with_endpoint_info(
-            models, endpoint_name, endpoint_config, "model", "codex"
-        )
-        if not ok or not model:
-            typer.echo(f"Skipped {endpoint_name}")
-            continue
-
-        profile_name = model
-        env_key = cm.get_endpoint_config(endpoint_name).get("api_key_env") or "OPENAI_API_KEY"
-
-        result = upsert_codex_profile(
-            config_path=config_path,
-            provider=endpoint_name,
-            base_url=endpoint_config.get("endpoint", ""),
-            env_key=env_key,
-            profile=profile_name,
-            model=model,
-            reasoning_effort=reasoning_effort,
-            project_path=Path.cwd().resolve(),
-        )
-
-        changed_any = changed_any or bool(result.get("changed"))
-        configured += 1
-
-    if configured == 0:
-        typer.echo(f"{Colors.YELLOW}! No profiles configured{Colors.RESET}")
-        raise typer.Exit(0)
-
-    if changed_any:
-        typer.echo(f"{Colors.GREEN}✓ Updated Codex profiles ({configured}){Colors.RESET}")
-    else:
-        typer.echo(f"{Colors.GREEN}✓ Codex config already up to date ({configured}){Colors.RESET}")
-
-    typer.echo(f"  Config: {config_path}")
