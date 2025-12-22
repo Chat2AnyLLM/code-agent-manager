@@ -7,6 +7,10 @@ help:
 	@echo "  make dev-install      - Install package with development dependencies"
 	@echo "  make clean            - Remove build artifacts and caches"
 	@echo "  make test             - Run test suite"
+	@echo "  make test-cov         - Run tests with coverage (HTML + terminal)"
+	@echo "  make test-cov-xml     - Run tests with coverage (HTML + terminal + XML)"
+	@echo "  make test-comprehensive - Run comprehensive tests with full coverage"
+	@echo "  make test-coverage-summary - Show coverage summary report"
 	@echo "  make lint             - Run linting (flake8)"
 	@echo "  make format           - Format code (black, isort)"
 	@echo "  make type-check       - Run type checking (mypy)"
@@ -46,6 +50,15 @@ test:
 
 test-cov:
 	pytest tests/ -v --cov=code_assistant_manager --cov-report=html --cov-report=term
+
+test-cov-xml:
+	pytest tests/ -v --cov=code_assistant_manager --cov-report=html --cov-report=term --cov-report=xml
+
+test-comprehensive:
+	pytest tests/ -v --cov=code_assistant_manager --cov-report=html --cov-report=term --cov-report=xml --tb=short --maxfail=5
+
+test-coverage-summary:
+	python -m coverage report --include="code_assistant_manager/*" --omit="tests/*" --sort=cover
 
 # Code quality
 lint:
