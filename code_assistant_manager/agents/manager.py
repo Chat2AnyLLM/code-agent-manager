@@ -19,6 +19,7 @@ from .droid import DroidAgentHandler
 from .gemini import GeminiAgentHandler
 from .opencode import OpenCodeAgentHandler
 from .models import Agent, AgentRepo
+from ..fetcher import Fetcher
 
 logger = logging.getLogger(__name__)
 
@@ -314,55 +315,111 @@ class AgentManager:
         Returns:
             List of agents found
         """
-        temp_dir, actual_branch = handler._download_repo(
-            repo.owner, repo.name, repo.branch
-        )
+        # Use the new Fetcher class similar to awesome-claude-agents
+        fetcher = Fetcher()
+
+        repo_data = {
+            "owner": repo.owner,
+            "name": repo.name,
+            "branch": repo.branch,
+            "agentsPath": repo.agents_path or "agents"
+        }
+
+        agents_data = fetcher.fetch_agents_from_repo(repo_data)
         agents = []
 
-        try:
-            scan_dir = temp_dir
-            if repo.agents_path:
-                scan_dir = temp_dir / repo.agents_path.strip("/")
+        for agent_data in agents_data:
+            # Convert to Agent model
+            filename = agent_data["file_path"].split("/")[-1] if "/" in agent_data["file_path"] else agent_data["file_path"]
 
-            if not scan_dir.exists():
-                logger.warning(f"Agents path not found: {scan_dir}")
-                return agents
-
-            for agent_file in scan_dir.glob("*.md"):
-                if not agent_file.is_file():
-                    continue
-
-                # Skip README files
-                if agent_file.name.lower() in ["readme.md", "contributing.md"]:
-                    continue
-
-                meta = handler.parse_agent_metadata(agent_file)
-                filename = agent_file.name
-
-                path_from_repo_root = agent_file.relative_to(temp_dir)
-                readme_path = str(path_from_repo_root).replace("\\", "/")
-
-                agent = Agent(
-                    key=f"{repo.owner}/{repo.name}:{meta.get('name', filename.replace('.md', ''))}",
-                    name=meta.get("name", filename.replace(".md", "")),
-                    description=meta.get("description", ""),
-                    filename=filename,
-                    installed=False,
-                    repo_owner=repo.owner,
-                    repo_name=repo.name,
-                    repo_branch=actual_branch,
-                    agents_path=repo.agents_path,
-                    readme_url=f"https://github.com/{repo.owner}/{repo.name}/blob/{actual_branch}/{readme_path}",
-                    tools=meta.get("tools", []),
-                    color=meta.get("color"),
-                )
-                agents.append(agent)
-                logger.debug(f"Found agent: {agent.key}")
-        finally:
-            if temp_dir.exists():
-                shutil.rmtree(temp_dir)
+            agent = Agent(
+                key=f"{repo.owner}/{repo.name}:{agent_data['name']}",
+                name=agent_data["name"],
+                description=agent_data["description"],
+                filename=filename,
+                installed=False,
+                repo_owner=repo.owner,
+                repo_name=repo.name,
+                repo_branch=repo.branch,
+                agents_path=repo.agents_path,
+                readme_url=f"https://github.com/{repo.owner}/{repo.name}/blob/{repo.branch}/{agent_data['file_path']}",
+                tools=agent_data.get("source_data", {}).get("tools", []),
+                color=agent_data.get("source_data", {}).get("color"),
+            )
+            agents.append(agent)
+            logger.debug(f"Found agent: {agent.key}")
 
         return agents
+
+    def fetch_agents_from_external_sources(self) -> List[Agent]:
+        """Fetch agents from external sources defined in agent_repos.json.
+
+        This uses the same method as awesome-claude-agents for fetching from
+        external JSON sources.
+
+        Returns:
+            List of discovered agents from all sources
+        """
+        # Load the agent_repos.json file
+        package_dir = Path(__file__).parent.parent
+        repos_file = package_dir / "agent_repos.json"
+
+        if not repos_file.exists():
+            logger.warning("agent_repos.json file not found")
+            return []
+
+        try:
+            with open(repos_file, "r", encoding="utf-8") as f:
+                repos_data = json.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to load agent_repos.json: {e}")
+            return []
+
+        # Use the Fetcher to get agents from each repository
+        fetcher = Fetcher()
+        all_agents = []
+        existing_agents = self._load_agents()
+
+        for repo_id, repo_data in repos_data.items():
+            if not repo_data.get("enabled", True):
+                logger.debug(f"Skipping disabled repository: {repo_id}")
+                continue
+
+            try:
+                agents_data = fetcher.fetch_agents_from_repo(repo_data)
+                for agent_data in agents_data:
+                    # Convert to Agent model
+                    filename = agent_data["file_path"].split("/")[-1] if "/" in agent_data["file_path"] else agent_data["file_path"]
+
+                    agent_key = f"{repo_data['owner']}/{repo_data['name']}:{agent_data['name']}"
+
+                    agent = Agent(
+                        key=agent_key,
+                        name=agent_data["name"],
+                        description=agent_data["description"],
+                        filename=filename,
+                        installed=existing_agents.get(agent_key, Agent("", "", "", "", False)).installed,
+                        repo_owner=repo_data["owner"],
+                        repo_name=repo_data["name"],
+                        repo_branch=repo_data.get("branch", "main"),
+                        agents_path=repo_data.get("agentsPath", "agents"),
+                        readme_url=f"https://github.com/{repo_data['owner']}/{repo_data['name']}/blob/{repo_data.get('branch', 'main')}/{agent_data['file_path']}",
+                        tools=agent_data.get("source_data", {}).get("tools", []),
+                        color=agent_data.get("source_data", {}).get("color"),
+                    )
+                    all_agents.append(agent)
+
+                logger.info(f"Found {len(agents_data)} agents in {repo_id}")
+
+            except Exception as e:
+                logger.warning(f"Failed to fetch agents from {repo_id}: {e}")
+
+        # Update existing agents database
+        for agent in all_agents:
+            existing_agents[agent.key] = agent
+        self._save_agents(existing_agents)
+
+        return all_agents
 
     def sync_installed_status(self, app_type: str = "claude") -> None:
         """Sync the installed status of all agents.
