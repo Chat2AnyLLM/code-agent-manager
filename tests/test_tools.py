@@ -17,6 +17,7 @@ from code_assistant_manager.tools import (
     CopilotTool,
     DroidTool,
     GeminiTool,
+    GooseTool,
     QwenTool,
 )
 
@@ -257,6 +258,26 @@ class TestCopilotTool:
     def test_copilot_tool_missing_token(self, mock_install, config_manager):
         """Test Copilot tool without GITHUB_TOKEN."""
         tool = CopilotTool(config_manager)
+        result = tool.run([])
+        assert result == 1
+
+
+class TestGooseTool:
+    """Test GooseTool."""
+
+    @patch("code_assistant_manager.tools.subprocess.run")
+    @patch.object(GooseTool, "_ensure_tool_installed", return_value=True)
+    def test_goose_tool_run_success(self, mock_install, mock_run, config_manager):
+        """Test successful Goose tool execution."""
+        mock_run.return_value.returncode = 0
+        tool = GooseTool(config_manager)
+        result = tool.run([])
+        assert result == 0
+
+    @patch.object(GooseTool, "_ensure_tool_installed", return_value=False)
+    def test_goose_tool_not_installed(self, mock_install, config_manager):
+        """Test Goose tool when not installed."""
+        tool = GooseTool(config_manager)
         result = tool.run([])
         assert result == 1
 
