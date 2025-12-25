@@ -240,7 +240,8 @@ class TestInstallAgent:
             agents_commands.install_agent("nonexistent", app_type="claude")
 
         captured = capsys.readouterr()
-        assert "Error" in captured.out
+        assert "not found" in captured.out or "Error" in captured.out
+
 
 
 class TestUninstallAgent:

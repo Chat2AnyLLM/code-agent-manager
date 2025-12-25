@@ -35,8 +35,8 @@ class DroidTool(CLITool):
             if self.endpoint_manager._is_client_supported(ep, "droid")
         ]
 
-    def _process_endpoint(self, endpoint_name: str) -> Optional[str]:
-        """Process a single endpoint and return selected entry if successful."""
+    def _process_endpoint(self, endpoint_name: str) -> Optional[List[str]]:
+        """Process a single endpoint and return selected entries if successful."""
         success, endpoint_config = self.endpoint_manager.get_endpoint_config(
             endpoint_name
         )
@@ -55,18 +55,30 @@ class DroidTool(CLITool):
         ep_desc = endpoint_config.get("description", "") or ep_url
         endpoint_info = f"{endpoint_name} -> {ep_url} -> {ep_desc}"
 
-        # Import package-level helper so tests can patch code_assistant_manager.tools.select_model
-        from . import select_model
+        # Import helper for multiple model selection
+        from code_assistant_manager.menu.menus import select_multiple_models
 
-        success, model = select_model(
-            models, f"Select model from {endpoint_info} (or skip):"
-        )
-        if success and model:
-            display_name = f"{model} [{endpoint_name}]"
-            return f"{display_name}|{endpoint_config['endpoint']}|{endpoint_config['actual_api_key']}|generic-chat-completion-api|65536"
+        # Non-interactive mode: select first model
+        if os.environ.get("CODE_ASSISTANT_MANAGER_NONINTERACTIVE") == "1":
+            selected_models = [models[0]]
         else:
-            print(f"Skipped {endpoint_name}\n")
-            return None
+            success, selected_models = select_multiple_models(
+                models, 
+                f"Select models from {endpoint_info} (Cancel to skip):",
+                cancel_text="Skip"
+            )
+            if not success or not selected_models:
+                print(f"Skipped {endpoint_name}\n")
+                return None
+
+        # Build entries for each selected model
+        entries = []
+        for model in selected_models:
+            display_name = f"{model} [{endpoint_name}]"
+            entry = f"{display_name}|{endpoint_config['endpoint']}|{endpoint_config['actual_api_key']}|generic-chat-completion-api|65536"
+            entries.append(entry)
+        
+        return entries
 
     def _write_droid_config(self, selected_entries: List[str]) -> Path:
         """Persist Droid config to ~/.factory/config.json."""
@@ -143,9 +155,9 @@ class DroidTool(CLITool):
         # Process each endpoint to collect selected models
         selected_entries: List[str] = []
         for endpoint_name in filtered_endpoints:
-            entry = self._process_endpoint(endpoint_name)
-            if entry:
-                selected_entries.append(entry)
+            entries = self._process_endpoint(endpoint_name)
+            if entries:
+                selected_entries.extend(entries)
 
         if not selected_entries:
             print("No models selected")
