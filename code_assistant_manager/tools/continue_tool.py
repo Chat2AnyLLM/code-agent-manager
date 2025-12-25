@@ -23,8 +23,8 @@ class ContinueTool(CLITool):
             if self.endpoint_manager._is_client_supported(ep, "continue")
         ]
 
-    def _process_endpoint(self, endpoint_name: str) -> Optional[str]:
-        """Process a single endpoint and return selected model if successful."""
+    def _process_endpoint(self, endpoint_name: str) -> Optional[List[str]]:
+        """Process a single endpoint and return selected models if successful."""
         success, endpoint_config = self.endpoint_manager.get_endpoint_config(
             endpoint_name
         )
@@ -66,17 +66,23 @@ class ContinueTool(CLITool):
         ep_desc = endpoint_config.get("description", "") or ep_url
         endpoint_info = f"{endpoint_name} -> {ep_url} -> {ep_desc}"
 
-        # Import package-level helper so tests can patch code_assistant_manager.tools.select_model
-        from . import select_model
+        # Import helper for multiple model selection
+        from code_assistant_manager.menu.menus import select_multiple_models
 
-        success, model = select_model(
-            models, f"Select model from {endpoint_info} (or skip):"
-        )
-        if success and model:
-            return model
+        # Non-interactive mode: select first model
+        if os.environ.get("CODE_ASSISTANT_MANAGER_NONINTERACTIVE") == "1":
+            selected_models = [models[0]]
         else:
-            print(f"Skipped {endpoint_name}\n")
-            return None
+            success, selected_models = select_multiple_models(
+                models, 
+                f"Select models from {endpoint_info} (Cancel to skip):",
+                cancel_text="Skip"
+            )
+            if not success or not selected_models:
+                print(f"Skipped {endpoint_name}\n")
+                return None
+
+        return selected_models
 
     def _write_continue_config(self, selected_models: List[tuple]) -> Path:
         """Write Continue.dev configuration to ~/.continue/config.yaml."""
@@ -174,9 +180,10 @@ class ContinueTool(CLITool):
             # Process each endpoint to collect selected models
             selected_models: List[tuple] = []  # (endpoint_name, model_name)
             for endpoint_name in filtered_endpoints:
-                model = self._process_endpoint(endpoint_name)
-                if model:
-                    selected_models.append((endpoint_name, model))
+                models = self._process_endpoint(endpoint_name)
+                if models:
+                    for model in models:
+                        selected_models.append((endpoint_name, model))
 
             if not selected_models:
                 print("No models selected")

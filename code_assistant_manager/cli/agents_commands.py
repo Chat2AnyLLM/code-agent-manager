@@ -255,22 +255,133 @@ def install_agent(
     agent_key: str = AGENT_KEY_ARGUMENT,
     app_type: str = APP_TYPE_OPTION,
 ):
-    """Install an agent to one or more app's agents directories."""
+    """Install an agent to one or more app's agents directories.
+    
+    Can accept either a registered agent key or a GitHub specification:
+    - Registered key: 'security-auditor'
+    - GitHub spec: 'owner/repo:agent-name' or 'owner/repo:agent-name@branch'
+    """
     target_apps = resolve_app_targets(app_type, VALID_APP_TYPES, default="claude")
-
+    
     manager = _get_agent_manager()
-
-    for app in target_apps:
+    
+    # First check if agent_key matches a registered agent (most common case)
+    all_agents = manager.get_all()
+    if agent_key in all_agents:
+        # Use registered agent configuration
+        for app in target_apps:
+            try:
+                handler = manager.get_handler(app)
+                dest_path = manager.install(agent_key, app)
+                typer.echo(
+                    f"{Colors.GREEN}✓ Agent installed to {app}: {agent_key}{Colors.RESET}"
+                )
+                typer.echo(f"  {Colors.CYAN}Location:{Colors.RESET} {handler.agents_dir}")
+            except ValueError as e:
+                typer.echo(f"{Colors.RED}✗ Error installing to {app}: {e}{Colors.RESET}")
+                raise typer.Exit(1)
+        return
+    
+    # Check if agent_key is a GitHub specification (contains / or :)
+    if "/" in agent_key and ":" in agent_key:
+        # Parse GitHub specification: owner/repo:agent-name[@branch]
         try:
-            handler = manager.get_handler(app)
-            dest_path = manager.install(agent_key, app)
+            parts = agent_key.split(":")
+            branch = "main"
+            
+            if len(parts) == 2:
+                repo_part, agent_name = parts
+                owner, repo = repo_part.split("/")
+            elif len(parts) == 3:
+                repo_part, agent_name, branch = parts
+                owner, repo = repo_part.split("/")
+            else:
+                typer.echo(
+                    f"{Colors.RED}✗ Invalid agent specification: {agent_key}{Colors.RESET}"
+                )
+                typer.echo(
+                    f"  {Colors.CYAN}Use format: owner/repo:agent-name or owner/repo:agent-name@branch{Colors.RESET}"
+                )
+                raise typer.Exit(1)
+            
+            # Check if this exact GitHub spec is registered in agents.json
+            if agent_key in all_agents:
+                agent = all_agents[agent_key]
+            else:
+                # Create a temporary agent object for installation
+                from code_assistant_manager.agents.models import Agent
+                
+                # Determine filename from agent name
+                filename = f"{agent_name}.md"
+                agent = Agent(
+                    key=agent_key,
+                    name=agent_name,
+                    description=f"Installed from {owner}/{repo}",
+                    filename=filename,
+                    repo_owner=owner,
+                    repo_name=repo,
+                    repo_branch=branch,
+                    agents_path=None,  # Try common paths
+                )
+            
+            for app in target_apps:
+                try:
+                    handler = manager.get_handler(app)
+                    dest_path = handler.install(agent)
+                    typer.echo(
+                        f"{Colors.GREEN}✓ Agent installed to {app}: {agent_name}{Colors.RESET}"
+                    )
+                    typer.echo(f"  {Colors.CYAN}Location:{Colors.RESET} {dest_path}")
+                except ValueError as e:
+                    # If agent not found in configured path, try common paths
+                    error_msg = str(e)
+                    if "not found" in error_msg and agent.agents_path is None:
+                        # Try plugins directory
+                        agent.agents_path = "plugins"
+                        try:
+                            dest_path = handler.install(agent)
+                            typer.echo(
+                                f"{Colors.GREEN}✓ Agent installed to {app}: {agent_name}{Colors.RESET}"
+                            )
+                            typer.echo(f"  {Colors.CYAN}Location:{Colors.RESET} {dest_path}")
+                        except ValueError:
+                            # Try agents directory
+                            agent.agents_path = "agents"
+                            try:
+                                dest_path = handler.install(agent)
+                                typer.echo(
+                                    f"{Colors.GREEN}✓ Agent installed to {app}: {agent_name}{Colors.RESET}"
+                                )
+                                typer.echo(f"  {Colors.CYAN}Location:{Colors.RESET} {dest_path}")
+                            except ValueError as e2:
+                                typer.echo(f"{Colors.RED}✗ Error installing to {app}: {e2}{Colors.RESET}")
+                                raise typer.Exit(1)
+                    else:
+                        typer.echo(f"{Colors.RED}✗ Error installing to {app}: {e}{Colors.RESET}")
+                        raise typer.Exit(1)
+        except (ValueError, IndexError) as e:
             typer.echo(
-                f"{Colors.GREEN}✓ Agent installed to {app}: {agent_key}{Colors.RESET}"
+                f"{Colors.RED}✗ Invalid agent specification format: {agent_key}{Colors.RESET}"
             )
-            typer.echo(f"  {Colors.CYAN}Location:{Colors.RESET} {handler.agents_dir}")
-        except ValueError as e:
-            typer.echo(f"{Colors.RED}✗ Error installing to {app}: {e}{Colors.RESET}")
+            typer.echo(
+                f"  {Colors.CYAN}Use format: owner/repo:agent-name or owner/repo:agent-name@branch{Colors.RESET}"
+            )
             raise typer.Exit(1)
+    else:
+        # Not found as registered key and not in GitHub format
+        typer.echo(
+            f"{Colors.RED}✗ Agent '{agent_key}' not found{Colors.RESET}"
+        )
+        typer.echo(
+            f"  {Colors.CYAN}Try one of:{Colors.RESET}"
+        )
+        typer.echo(
+            f"    • cam agent list  (to see available agents)"
+        )
+        typer.echo(
+            f"    • cam agent fetch (to discover agents from repositories)"
+        )
+        raise typer.Exit(1)
 
 
 @agent_app.command("uninstall")

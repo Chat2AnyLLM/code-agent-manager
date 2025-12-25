@@ -77,14 +77,55 @@ class BaseAgentHandler(ABC):
         )
 
         try:
-            # Determine source path
+            # Try to find the agent file using multiple strategies
+            source_path = None
+            
+            # Strategy 1: Try exact path (agents_path + filename)
             if agent.agents_path:
-                source_path = temp_dir / agent.agents_path.strip("/") / agent.filename
-            else:
-                source_path = temp_dir / agent.filename
-
-            if not source_path.exists():
-                raise ValueError(f"Agent file not found in repository: {source_path}")
+                exact_path = temp_dir / agent.agents_path.strip("/") / agent.filename
+                if exact_path.exists():
+                    source_path = exact_path
+                    logger.debug(f"Found agent at exact path: {exact_path}")
+            
+            # Strategy 2: Try root directory
+            if not source_path:
+                root_path = temp_dir / agent.filename
+                if root_path.exists():
+                    source_path = root_path
+                    logger.debug(f"Found agent at root: {root_path}")
+            
+            # Strategy 3: Recursive search in agents_path directory
+            if not source_path and agent.agents_path:
+                search_dir = temp_dir / agent.agents_path.strip("/")
+                if search_dir.exists():
+                    source_path = self._find_file_recursive(search_dir, agent.filename)
+                    if source_path:
+                        logger.debug(f"Found agent via recursive search in {agent.agents_path}: {source_path}")
+            
+            # Strategy 4: Recursive search in plugins directory
+            if not source_path:
+                plugins_dir = temp_dir / "plugins"
+                if plugins_dir.exists():
+                    source_path = self._find_file_recursive(plugins_dir, agent.filename)
+                    if source_path:
+                        logger.debug(f"Found agent via recursive search in plugins: {source_path}")
+            
+            # Strategy 5: Recursive search in agents directory
+            if not source_path:
+                agents_dir = temp_dir / "agents"
+                if agents_dir.exists():
+                    source_path = self._find_file_recursive(agents_dir, agent.filename)
+                    if source_path:
+                        logger.debug(f"Found agent via recursive search in agents: {source_path}")
+            
+            # Strategy 6: Search entire repository
+            if not source_path:
+                source_path = self._find_file_recursive(temp_dir, agent.filename)
+                if source_path:
+                    logger.debug(f"Found agent via full repository search: {source_path}")
+            
+            if not source_path:
+                raise ValueError(f"Agent file not found in repository: {agent.filename}")
 
             # Copy to install directory
             dest_path = self.agents_dir / agent.filename
@@ -94,6 +135,25 @@ class BaseAgentHandler(ABC):
         finally:
             if temp_dir.exists():
                 shutil.rmtree(temp_dir)
+
+    def _find_file_recursive(self, search_dir: Path, filename: str) -> Optional[Path]:
+        """Recursively search for a file in a directory.
+        
+        Args:
+            search_dir: Directory to search in
+            filename: Filename to search for
+            
+        Returns:
+            Path to the file if found, None otherwise
+        """
+        try:
+            for item in search_dir.rglob(filename):
+                if item.is_file():
+                    return item
+        except Exception as e:
+            logger.debug(f"Error searching {search_dir}: {e}")
+        return None
+
 
     def uninstall(self, agent: Agent) -> bool:
         """Uninstall an agent by removing its file.

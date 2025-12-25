@@ -109,3 +109,57 @@ def select_two_models(
         return False, None
 
     return True, (primary, secondary)
+
+
+def select_multiple_models(
+    models: List[str],
+    prompt: str = "Select models (press Cancel to finish):",
+    cancel_text: str = "Cancel",
+    key_provider: Optional[Callable[[], Optional[str]]] = None,
+) -> Tuple[bool, List[str]]:
+    """
+    Select multiple models from a list until user selects Cancel.
+
+    Args:
+        models: List of available models
+        prompt: Selection prompt
+        cancel_text: Text for cancel option
+        key_provider: Optional function to provide keyboard input (for testing)
+
+    Returns:
+        Tuple of (success, list_of_selected_models)
+        If no models selected, returns (False, [])
+        If models selected, returns (True, [models...])
+    """
+    selected_models = []
+    remaining_models = models.copy()
+
+    while remaining_models:
+        # Show current selections if any
+        if selected_models:
+            display_prompt = f"{prompt} (Selected: {len(selected_models)})"
+        else:
+            display_prompt = prompt
+
+        success, idx = display_centered_menu(
+            display_prompt, remaining_models, cancel_text, key_provider=key_provider
+        )
+
+        if not success or idx is None:
+            # User cancelled - return what we have so far
+            break
+
+        # Add selected model to list
+        selected_model = remaining_models[idx]
+        selected_models.append(selected_model)
+
+        # Remove from remaining
+        remaining_models.pop(idx)
+
+        # Brief pause before next iteration
+        if remaining_models:
+            time.sleep(0.5)
+
+    if selected_models:
+        return True, selected_models
+    return False, []
