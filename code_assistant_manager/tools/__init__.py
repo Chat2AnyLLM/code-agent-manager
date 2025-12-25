@@ -18,6 +18,7 @@ from . import (  # noqa: F401
     cursor,
     droid,
     gemini,
+    goose,
     iflow,
     neovate,
     opencode,
@@ -75,6 +76,7 @@ from .endpoint_display import (  # noqa: F401,E402
     display_tool_endpoints,
 )
 from .gemini import GeminiTool  # noqa: F401,E402
+from .goose import GooseTool  # noqa: F401,E402
 from .iflow import IfLowTool  # noqa: F401,E402
 from .neovate import NeovateTool  # noqa: F401,E402
 from .opencode import OpenCodeTool  # noqa: F401,E402

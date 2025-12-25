@@ -345,3 +345,19 @@ tools:
     filesystem:
       generated:
         - "~/.continue/config.yaml (Continue configuration file)"
+
+  goose:
+    enabled: true
+    install_cmd: curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash
+    cli_command: goose
+    description: "Block Goose - open-source, extensible AI agent"
+    env:
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      notes:
+        - "Goose is an open-source AI agent that automates development tasks."
+        - "It runs locally and supports multiple LLM providers."
+        - "Configuration and extensions via Model Context Protocol (MCP)."
+    cli_parameters:
+      injected: []
