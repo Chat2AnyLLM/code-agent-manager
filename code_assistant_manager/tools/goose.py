@@ -19,8 +19,17 @@ class GooseTool(CLITool):
     DEFAULT_CONTEXT_LIMIT = 128000
 
     def _sanitize_provider_name(self, endpoint_name: str) -> str:
-        """Sanitize endpoint name to be used as provider name."""
-        return endpoint_name.replace(":", "_").replace("-", "_").replace(".", "_").lower()
+        """Sanitize endpoint name to be used as Goose provider id.
+
+        Keep '-' (common in provider ids) but replace characters that are awkward for filenames.
+        """
+        return endpoint_name.replace(":", "-").replace(".", "-").lower()
+
+    def _sanitize_env_var_suffix(self, name: str) -> str:
+        """Sanitize name for use in environment variable identifiers."""
+        import re
+
+        return re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_").upper()
 
     def _determine_engine_type(self, endpoint_config: Dict[str, str], endpoint_name: str) -> str:
         """Determine appropriate engine type based on endpoint configuration.
@@ -380,7 +389,7 @@ class GooseTool(CLITool):
                 continue
 
             provider_name = self._sanitize_provider_name(endpoint_name)
-            # Ensure name starts with a letter if strictly needed, but usually fine
+            provider_env_suffix = self._sanitize_env_var_suffix(provider_name)
 
             # Determine API key env var name
             api_key_env_var = ""
@@ -388,11 +397,11 @@ class GooseTool(CLITool):
                 api_key_env_var = endpoint_config["api_key_env"]
             elif "actual_api_key" in endpoint_config and endpoint_config["actual_api_key"]:
                 # Generate a specific env var for this provider
-                api_key_env_var = f"CAM_GOOSE_{provider_name.upper()}_KEY"
+                api_key_env_var = f"CAM_GOOSE_{provider_env_suffix}_KEY"
                 extra_env_vars[api_key_env_var] = endpoint_config["actual_api_key"]
 
-            # Determine appropriate engine based on endpoint configuration
-            engine_type = self._determine_engine_type(endpoint_config, endpoint_name)
+            # Goose custom providers should use OpenAI engine for compatibility.
+            engine_type = "openai"
 
             # Construct provider config
             provider_config = {
@@ -438,6 +447,13 @@ class GooseTool(CLITool):
         
         # Get existing custom providers
         custom_models = self._get_custom_providers()
+
+        # Avoid duplicate display: just-configured endpoints are also written as custom providers.
+        if endpoint_models and custom_models:
+            endpoint_provider_names = {self._sanitize_provider_name(ep) for ep in endpoint_models.keys()}
+            for provider_name in list(custom_models.keys()):
+                if provider_name in endpoint_provider_names:
+                    del custom_models[provider_name]
         
         # If no options available, return
         if not endpoint_models and not custom_models:
@@ -624,7 +640,8 @@ class GooseTool(CLITool):
                     # Set default provider in global config
                     self._set_default_provider(selected_models_by_endpoint)
                 else:
-                    print("No models selected, skipping configuration update.\n")
+                    print("No models selected; you can still choose a default from existing Goose custom providers.\n")
+                    self._set_default_provider({})
 
 
         # Use environment variables directly
