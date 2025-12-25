@@ -37,6 +37,11 @@ class GooseTool(CLITool):
         if engine_from_config:
             return engine_from_config
 
+        # Check if endpoint name suggests OpenAI compatibility
+        endpoint_name_lower = endpoint_name.lower()
+        if any(pattern in endpoint_name_lower for pattern in ["openai", "gpt", "azure", "compatible", "openrouter", "anyscale", "fireworks", "together", "perplexity", "openai-compatible", "dashscope", "qwen"]):
+            return "openai"
+
         # Try to determine from supported_client field
         supported_client = endpoint_config.get("supported_client", "").lower()
         if supported_client:
@@ -57,7 +62,7 @@ class GooseTool(CLITool):
         # Try to determine from endpoint URL
         endpoint_url = endpoint_config.get("endpoint", "").lower()
         if endpoint_url:
-            if "openai" in endpoint_url or "azure" in endpoint_url and "openai" in endpoint_url:
+            if any(pattern in endpoint_url for pattern in ["openai", "azure", "openrouter", "anyscale", "fireworks", "together", "perplexity", "openai-compatible", "dashscope", "qwen"]):
                 return "openai"
             elif "anthropic" in endpoint_url or "claude" in endpoint_url:
                 return "anthropic"
@@ -68,8 +73,15 @@ class GooseTool(CLITool):
             elif "huggingface" in endpoint_url:
                 return "huggingface"
 
-        # Default to "openai" as it's the most common case in CAM
-        # But make it more generic for other compatible APIs
+        # For many OpenAI-compatible endpoints, if they have certain characteristics,
+        # assume they are OpenAI compatible
+        # Check for common patterns that indicate OpenAI compatibility
+        if any(key in endpoint_config for key in ["api_key", "api_base", "model", "stream"]):
+            # Many OpenAI-compatible endpoints use standard OpenAI patterns
+            return "openai"
+
+        # Default to "openai" as it's the most common case for API-compatible endpoints
+        # OpenAI-compatible APIs are very common for custom endpoints
         return "openai"
 
     def _get_filtered_endpoints(self) -> List[str]:
