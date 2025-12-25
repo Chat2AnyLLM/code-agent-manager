@@ -2,6 +2,24 @@ import os
 from typing import Dict, Optional
 
 
+class SecureAPIKeyHandler:
+    """Handles API keys securely without exposing them in environment variables directly."""
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.masked_key = self._mask_api_key(api_key)
+
+    def _mask_api_key(self, api_key: str) -> str:
+        """Mask the API key for safe display/logging."""
+        if len(api_key) > 8:
+            return api_key[:4] + "..." + api_key[-4:]
+        return "***"
+
+    def get_masked(self) -> str:
+        """Get the masked version for logging/display."""
+        return self.masked_key
+
+
 class ToolEnvironmentBuilder:
     """
     Builder class for constructing environment variables for CLI tools.
@@ -26,6 +44,11 @@ class ToolEnvironmentBuilder:
         self.endpoint_config = endpoint_config
         self.model_vars = model_vars or {}
         self.env = os.environ.copy()
+        # Store API key handler for secure access
+        if "actual_api_key" in endpoint_config:
+            self.api_key_handler = SecureAPIKeyHandler(endpoint_config["actual_api_key"])
+        else:
+            self.api_key_handler = None
 
     def set_base_url(self, env_var: str) -> "ToolEnvironmentBuilder":
         """Set base URL environment variable."""
@@ -34,8 +57,21 @@ class ToolEnvironmentBuilder:
 
     def set_api_key(self, env_var: str) -> "ToolEnvironmentBuilder":
         """Set API key environment variable."""
-        self.env[env_var] = self.endpoint_config["actual_api_key"]
+        if "actual_api_key" in self.endpoint_config:
+            self.env[env_var] = self.endpoint_config["actual_api_key"]
         return self
+
+    def get_secure_api_key(self) -> Optional[str]:
+        """Get the API key through secure handler."""
+        if self.api_key_handler:
+            return self.api_key_handler.api_key
+        return None
+
+    def get_masked_api_key(self) -> Optional[str]:
+        """Get the masked API key for logging."""
+        if self.api_key_handler:
+            return self.api_key_handler.get_masked()
+        return None
 
     def set_model(
         self, env_var: str, model_key: str = "primary_model"
