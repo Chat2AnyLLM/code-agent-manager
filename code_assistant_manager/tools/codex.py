@@ -132,36 +132,39 @@ class CodexTool(CLITool):
             if os.environ.get("CODE_ASSISTANT_MANAGER_NONINTERACTIVE") == "1":
                 if not models:
                     continue
-                model = models[0]
+                selected_models = [models[0]]
             else:
-                ok, idx = display_centered_menu(
-                    f"Select model from {endpoint_info} (or skip):",
+                from code_assistant_manager.menu.menus import select_multiple_models
+                
+                ok, selected_models = select_multiple_models(
                     models,
+                    f"Select models from {endpoint_info} (Cancel to skip):",
                     cancel_text="Skip",
                 )
-                if not ok or idx is None:
+                if not ok or not selected_models:
                     print(f"Skipped {endpoint_name}\n")
                     continue
 
-                model = models[idx]
-            profile_name = model
             env_key = (
                 self.config.get_endpoint_config(endpoint_name).get("api_key_env")
                 or "OPENAI_API_KEY"
             )
 
-            try:
-                self._write_profile(
-                    endpoint_name=endpoint_name,
-                    endpoint_config=endpoint_config,
-                    model=model,
-                    profile_name=profile_name,
-                    env_key=env_key,
-                )
-            except Exception as e:
-                return self._handle_error("Failed to write ~/.codex/config.toml", e)
+            # Create profiles for each selected model
+            for model in selected_models:
+                profile_name = model
+                try:
+                    self._write_profile(
+                        endpoint_name=endpoint_name,
+                        endpoint_config=endpoint_config,
+                        model=model,
+                        profile_name=profile_name,
+                        env_key=env_key,
+                    )
+                except Exception as e:
+                    return self._handle_error("Failed to write ~/.codex/config.toml", e)
 
-            configured_profiles.append(profile_name)
+                configured_profiles.append(profile_name)
             if endpoint_config.get("actual_api_key"):
                 profile_env[profile_name] = (env_key, endpoint_config.get("actual_api_key"))
 

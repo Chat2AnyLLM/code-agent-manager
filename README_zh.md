@@ -8,7 +8,7 @@
 
 **一个 CLI 统一管理所有 AI 编码助手**
 <br>
-厌倦了在多个 AI 编码助手之间切换？**CAM** 是一个统一的 Python CLI 工具，可以从单一、优雅的终端界面管理 **13 个 AI 助手**（包括 Claude、Codex、Gemini、Qwen、Copilot 等）的配置、提示词、技能和插件。
+厌倦了在多个 AI 编码助手之间切换？**CAM** 是一个统一的 Python CLI 工具，可以从单一、优雅的终端界面管理 **16 个 AI 助手**（包括 Claude、Codex、Gemini、Qwen、Copilot、Goose、Continue 等）的配置、提示词、技能和插件。
 
 </div>
 
@@ -40,7 +40,7 @@ CAM 通过提供单一、一致的界面来管理所有内容，将混乱的工�
 
 ## 支持的 AI 助手
 
-CAM 支持 **13 个 AI 编码助手**：
+CAM 支持 **16 个 AI 编码助手**：
 
 | 助手 | 命令 | 描述 | 安装方式 |
 | :--- | :--- | :--- | :--- |
@@ -57,6 +57,9 @@ CAM 支持 **13 个 AI 编码助手**：
 | **Neovate** | `neovate` | Neovate Code CLI | npm |
 | **Qoder** | `qodercli` | Qoder CLI | npm |
 | **Zed** | `zed` | Zed 编辑器 | Shell 脚本 |
+| **Goose** | `goose` | Block Goose CLI | Shell 脚本 |
+| **Continue** | `continue` | Continue.dev CLI | npm |
+| **OpenCode** | `opencode` | OpenCode CLI | npm |
 
 ## 功能支持矩阵
 
@@ -68,7 +71,7 @@ CAM 支持 **13 个 AI 编码助手**：
 | **插件**支持 | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | **MCP** 集成 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-**MCP 集成**支持所有 13 个助手，包括：Claude、Codex、Gemini、Qwen、Copilot、CodeBuddy、Droid、iFlow、Zed、Qoder、Neovate、Crush 和 Cursor。
+**MCP 集成**支持所有 16 个助手，包括：Claude、Codex、Gemini、Qwen、Copilot、CodeBuddy、Droid、iFlow、Zed、Qoder、Neovate、Crush、Cursor、Goose、Continue 和 OpenCode。
 
 > **注意：** 部分工具（Zed、Qoder、Neovate）默认在菜单中隐藏，因为它们仍在开发中。您可以在 `tools.yaml` 中设置 `enabled: true` 来启用它们。
 

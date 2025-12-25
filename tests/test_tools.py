@@ -4,19 +4,19 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from code_assistant_manager.config import ConfigManager
 from code_assistant_manager.tools import (
     ClaudeTool,
-    CLITool,
     CodeBuddyTool,
     CodexTool,
     CopilotTool,
     DroidTool,
     GeminiTool,
+    GooseTool,
     QwenTool,
 )
 
@@ -148,7 +148,6 @@ class TestAllTools:
 
         if tool_name == "claude":
             mock_em.fetch_models.return_value = (True, ["claude-3", "claude-2"])
-            from code_assistant_manager.tools import select_two_models
 
             with patch(
                 "code_assistant_manager.tools.select_two_models",
@@ -160,7 +159,6 @@ class TestAllTools:
                     assert result == 0
         else:
             mock_em.fetch_models.return_value = (True, ["model1", "model2"])
-            from code_assistant_manager.tools import select_model
 
             with patch(
                 "code_assistant_manager.tools.select_model",
@@ -261,6 +259,93 @@ class TestCopilotTool:
         assert result == 1
 
 
+class TestGooseTool:
+    """Test GooseTool."""
+
+    @patch("code_assistant_manager.tools.subprocess.run")
+    @patch.object(GooseTool, "_ensure_tool_installed", return_value=True)
+    def test_goose_tool_run_success(self, mock_install, mock_run, config_manager):
+        """Test successful Goose tool execution."""
+        mock_run.return_value.returncode = 0
+        tool = GooseTool(config_manager)
+        result = tool.run([])
+        assert result == 0
+
+    @patch.object(GooseTool, "_ensure_tool_installed", return_value=False)
+    def test_goose_tool_not_installed(self, mock_install, config_manager):
+        """Test Goose tool when not installed."""
+        tool = GooseTool(config_manager)
+        result = tool.run([])
+        assert result == 1
+
+    @patch("code_assistant_manager.tools.subprocess.run")
+    @patch("code_assistant_manager.menu.menus.select_multiple_models")
+    @patch("code_assistant_manager.menu.menus.display_centered_menu")
+    @patch.object(GooseTool, "_ensure_tool_installed", return_value=True)
+    @patch("code_assistant_manager.tools.EndpointManager")
+    @patch("pathlib.Path.home")
+    def test_goose_tool_config_creation(
+        self, mock_home, mock_em_class, mock_install, mock_display_menu, mock_select_multiple, mock_run, config_manager
+    ):
+        """Test that Goose tool creates configuration files."""
+        # Setup mock home directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_home.return_value = Path(temp_dir)
+
+            # Setup mock endpoint manager
+            mock_em = MagicMock()
+            mock_em_class.return_value = mock_em
+
+            # Mock config.get_sections to return endpoints
+            with patch.object(config_manager, 'get_sections', return_value=["endpoint1"]):
+                mock_em.select_endpoint = MagicMock()
+                mock_em.get_endpoint_config.return_value = (
+                    True,
+                    {
+                        "endpoint": "https://api.example.com",
+                        "actual_api_key": "key123",
+                        "description": "Test Endpoint",
+                    },
+                )
+                mock_em.fetch_models.return_value = (True, ["model1"])
+                mock_select_multiple.return_value = (True, ["model1"])
+                mock_display_menu.return_value = (True, 1)  # Select first option in display menu
+                mock_em._is_client_supported.return_value = True
+
+                # Mock subprocess.run to return success
+                mock_run.return_value.returncode = 0
+
+                tool = GooseTool(config_manager)
+                result = tool.run([])
+                assert result == 0
+
+                # Check if config file was created
+                config_file = Path(temp_dir) / ".config" / "goose" / "custom_providers" / "endpoint1.json"
+                assert config_file.exists()
+
+                # Verify content
+                with open(config_file, "r") as f:
+                    data = json.load(f)
+                    assert data["name"] == "endpoint1"
+                    assert data["base_url"] == "https://api.example.com"
+                    assert data["models"][0]["name"] == "model1"
+                    assert data["api_key_env"] == "CAM_GOOSE_ENDPOINT1_KEY"
+
+                # Check if default provider config was set in config.yaml
+                main_config_file = Path(temp_dir) / ".config" / "goose" / "config.yaml"
+                assert main_config_file.exists()
+
+                with open(main_config_file, "r") as f:
+                    import yaml
+                    main_config = yaml.safe_load(f)
+                    assert main_config["GOOSE_PROVIDER"] == "endpoint1"
+                    assert main_config["GOOSE_MODEL"] == "model1"
+
+                # Verify env var was set in run call
+                env_used = mock_run.call_args[1]["env"]
+                assert env_used["CAM_GOOSE_ENDPOINT1_KEY"] == "key123"
+
+
 class TestGeminiTool:
     """Test GeminiTool."""
 
@@ -285,8 +370,10 @@ class TestGeminiTool:
         mock_em.fetch_models.return_value = (True, ["gemini-1.5"])
 
         # Mock the model selector
-        with patch("code_assistant_manager.menu.model_selector.ModelSelector.select_model_with_endpoint_info",
-                   return_value=(True, "gemini-1.5")):
+        with patch(
+            "code_assistant_manager.menu.model_selector.ModelSelector.select_model_with_endpoint_info",
+            return_value=(True, "gemini-1.5"),
+        ):
             # Mock subprocess.run to return success
             mock_run.return_value.returncode = 0
 

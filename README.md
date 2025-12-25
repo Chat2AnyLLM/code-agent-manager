@@ -7,7 +7,7 @@
 
 **One CLI to Rule Them All.**
 <br>
-Tired of juggling multiple AI coding assistants? **CAM** is a unified Python CLI to manage configurations, prompts, skills, and plugins for **13 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, and more from a single, polished terminal interface.
+Tired of juggling multiple AI coding assistants? **CAM** is a unified Python CLI to manage configurations, prompts, skills, and plugins for **16 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, Goose, Continue, and more from a single, polished terminal interface.
 
 </div>
 
@@ -36,14 +36,14 @@ CAM solves this by providing a single, consistent interface to manage everything
   - **Configuration:** Advanced configuration management with set/unset/show commands and TOML support.
 - **MCP Support:** First-class support for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), allowing assistants to connect to external data sources and tools.
 - **Parallel Upgrades:** Concurrent tool upgrades with npm version checking and progress visualization.
-- **Comprehensive Testing:** Enterprise-grade test suite with 1,076+ tests, coverage reporting, and quality assurance.
+- **Comprehensive Testing:** Enterprise-grade test suite with 1,423+ tests, 28.6% coverage (71/248 lines), and quality assurance.
 - **Diagnostics:** A comprehensive `doctor` command to validate your environment, API keys, tool installations, and cache status.
 - **Enterprise Security:** Config-first approach eliminates shell injection vulnerabilities with secure MCP client implementations.
 - **Automated Quality Assurance:** Built-in complexity monitoring, file size limits, and comprehensive CI/CD quality gates.
 
 ## Supported AI Assistants
 
-CAM supports **13 AI coding assistants**:
+CAM supports **16 AI coding assistants**:
 
 | Assistant | Command | Description | Install Method |
 | :--- | :--- | :--- | :--- |
@@ -60,6 +60,9 @@ CAM supports **13 AI coding assistants**:
 | **Neovate** | `neovate` | Neovate Code CLI | npm |
 | **Qoder** | `qodercli` | Qoder CLI | npm |
 | **Zed** | `zed` | Zed Editor | Shell script |
+| **Goose** | `goose` | Block Goose CLI | Shell script |
+| **Continue** | `continue` | Continue.dev CLI | npm |
+| **OpenCode** | `opencode` | OpenCode CLI | npm |
 
 ## Feature Support Matrix
 
@@ -71,7 +74,7 @@ CAM supports **13 AI coding assistants**:
 | **Plugin** Support | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | **MCP** Integration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-**MCP Integration** is supported across all 13 assistants including: Claude, Codex, Gemini, Qwen, Copilot, CodeBuddy, Droid, iFlow, Zed, Qoder, Neovate, Crush, and Cursor.
+**MCP Integration** is supported across all 16 assistants including: Claude, Codex, Gemini, Qwen, Copilot, CodeBuddy, Droid, iFlow, Zed, Qoder, Neovate, Crush, Cursor, Goose, Continue, and OpenCode.
 
 > **Note:** Some tools (Zed, Qoder, Neovate) are disabled by default in the menu as they are still under development. You can enable them in `tools.yaml` by setting `enabled: true`.
 
@@ -426,7 +429,14 @@ This project is licensed under the MIT License.
 
 ## 🏆 Recent Improvements
 
-**Version 1.x.x** introduces significant enhancements to code quality, security, and maintainability:
+**Version 1.0.3** introduces significant enhancements to code quality, security, and new tool support:
+
+### 🆕 New Features
+- **Goose CLI Support:** Added Block Goose CLI tool with dynamic engine type determination and custom provider configuration
+- **Multi-Model Selection:** Enhanced agent installation with support for Goose, Codex, Droid, and Continue multi-model selection
+- **Agent Metadata System:** Implemented agent metadata pulling using awesome-claude-agents approach for better discovery
+- **Multi-App Marketplace:** Support for multiple app targets during marketplace installation
+- **Enhanced Configuration:** Environment loader with flexible config path management
 
 ### 🔧 Technical Debt Resolution
 - **Function Complexity:** Reduced from D-level (21-30 branches) to B-C level (<18 branches)
@@ -445,15 +455,16 @@ This project is licensed under the MIT License.
 ### ⚡ Quality Assurance
 - **Automated Complexity Monitoring:** CI/CD checks using radon cc/mi analysis
 - **File Size Limits:** Enforced 500-line maximum per file
-- **Comprehensive Testing:** 1,076+ tests covering all functionality including integration tests
+- **Comprehensive Testing:** 1,423+ tests covering all functionality including integration tests
 - **Coverage Reporting:** Multiple coverage report formats (HTML, terminal, XML) with detailed analysis
 - **Quality Gates:** Automated checks prevent code quality regression
 
 ### 📊 Current Health Metrics
 - **Code Quality:** A+ grade with enterprise-grade standards
+- **Codebase Size:** 32,087 lines of Python code across 148 files
 - **Security:** Zero known vulnerabilities
-- **Test Coverage:** 48% across 14,200+ statements with comprehensive testing infrastructure
-- **Test Suite:** 1,076+ tests including unit, integration, and interactive tests
+- **Test Coverage:** 28.6% (71/248 lines covered) with comprehensive testing infrastructure
+- **Test Suite:** 1,423+ tests including unit, integration, and interactive tests
 - **Maintainability:** Clean, modular architecture with clear separation of concerns
 
 ### 🎯 Development Standards
