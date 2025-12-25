@@ -80,15 +80,28 @@ class DroidTool(CLITool):
         
         return entries
 
-    def _write_droid_config(self, selected_entries: List[str]) -> Path:
-        """Persist Droid config to ~/.factory/config.json."""
+    def _write_droid_settings(self, selected_entries: List[str]) -> Path:
+        """Persist Droid custom models to ~/.factory/config.json."""
         config_dir = Path.home() / ".factory"
         config_file = config_dir / "config.json"
-        config_dir.mkdir(exist_ok=True)
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Preserve existing settings (plugins, etc) and only update custom_models.
+        settings: dict = {}
+        if config_file.exists():
+            try:
+                with open(config_file, "r", encoding="utf-8") as f:
+                    settings = json.load(f) or {}
+            except Exception:
+                settings = {}
 
         json_models = self._build_models_json(selected_entries)
-        with open(config_file, "w") as f:
-            json.dump({"custom_models": json_models}, f, indent=2)
+
+        # Canonical location for Droid BYOK custom models.
+        settings["custom_models"] = json_models
+
+        with open(config_file, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=2)
 
         return config_file
 
@@ -118,7 +131,7 @@ class DroidTool(CLITool):
         - Loads environment variables
         - Ensures required commands are available
         - Aggregates selected models from configured endpoints
-        - Writes a config.json in ~/.factory and runs the `droid` CLI
+        - Writes custom_models to ~/.factory/config.json and runs the `droid` CLI
 
         Args:
             args: List of arguments to pass to the Droid CLI
@@ -165,9 +178,9 @@ class DroidTool(CLITool):
 
         print(f"Total models selected: {len(selected_entries)}\n")
 
-        # Persist Droid config to ~/.factory/config.json
-        config_file = self._write_droid_config(selected_entries)
-        print(f"Droid config written to {config_file}\n")
+        # Persist Droid custom models to ~/.factory/config.json
+        settings_file = self._write_droid_settings(selected_entries)
+        print(f"Droid settings written to {settings_file}\n")
 
         # Clean proxy env vars for child process and set TLS env
         env = self._prepare_environment()
@@ -185,7 +198,7 @@ class DroidTool(CLITool):
             parts = entry.split("|")
             if len(parts) < 5:
                 continue
-            display, base_url, api_key, provider, max_tokens = parts[:5]
+            display, base_url, api_key, _provider, max_tokens = parts[:5]
             model_id = display.split("[")[0].strip()
             try:
                 max_tokens_val = int(max_tokens)
@@ -197,7 +210,7 @@ class DroidTool(CLITool):
                     "model": model_id,
                     "base_url": base_url,
                     "api_key": api_key,
-                    "provider": provider,
+                    "provider": "generic-chat-completion-api",
                     "max_tokens": max_tokens_val,
                 }
             )

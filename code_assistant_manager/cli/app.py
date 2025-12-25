@@ -347,7 +347,7 @@ def list_config():
             "description": "Factory.ai Droid CLI",
             "paths": [
                 home / ".factory" / "mcp.json",
-                home / ".factory" / "config.json",
+                home / ".factory" / "settings.json",
             ],
         },
         "iflow": {
@@ -681,7 +681,7 @@ def load_app_config(app_name: str) -> tuple[dict, str]:
         ],
         "droid": [
             Path.home() / ".factory" / "mcp.json",
-            Path.home() / ".factory" / "config.json",
+            Path.home() / ".factory" / "settings.json",
         ],
         "iflow": [
             Path.home() / ".iflow" / "settings.json",

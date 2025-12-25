@@ -39,7 +39,7 @@ The Code Assistant Manager Python package now has complete implementations for a
 - Installation from factory.ai (with user confirmation)
 - Optional upgrade to latest version
 - Multi-endpoint model configuration
-- Generates ~/.factory/config.json with selected models
+- Generates ~/.factory/settings.json with selected models
 - JSON format: custom_models array with model display names, base URLs, API keys, providers, max tokens
 - Per-endpoint model selection (with skip option)
 
@@ -177,7 +177,7 @@ exit_code = droid.run([])
 | **Codex** | BASE_URL, OPENAI_API_KEY |
 | **Qwen** | OPENAI_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL |
 | **CodeBuddy** | CODEBUDDY_BASE_URL, CODEBUDDY_API_KEY |
-| **Droid** | Reads from config file ~/.factory/config.json |
+| **Droid** | Reads from settings file ~/.factory/settings.json |
 | **Copilot** | GITHUB_TOKEN, NODE_EXTRA_CA_CERTS (optional) |
 | **Gemini** | GEMINI_API_KEY or (GOOGLE_APPLICATION_CREDENTIALS, GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION, GOOGLE_GENAI_USE_VERTEXAI) |
 
