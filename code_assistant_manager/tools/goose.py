@@ -22,6 +22,56 @@ class GooseTool(CLITool):
         """Sanitize endpoint name to be used as provider name."""
         return endpoint_name.replace(":", "_").replace("-", "_").replace(".", "_").lower()
 
+    def _determine_engine_type(self, endpoint_config: Dict[str, str], endpoint_name: str) -> str:
+        """Determine appropriate engine type based on endpoint configuration.
+
+        Args:
+            endpoint_config: Configuration for the endpoint
+            endpoint_name: Name of the endpoint
+
+        Returns:
+            Appropriate engine type string
+        """
+        # Check if endpoint has an explicit engine configuration
+        engine_from_config = endpoint_config.get("engine", "")
+        if engine_from_config:
+            return engine_from_config
+
+        # Try to determine from supported_client field
+        supported_client = endpoint_config.get("supported_client", "").lower()
+        if supported_client:
+            # Common patterns for different engine types
+            if "openai" in supported_client or "gpt" in supported_client:
+                return "openai"
+            elif "anthropic" in supported_client or "claude" in supported_client:
+                return "anthropic"
+            elif "gemini" in supported_client or "vertexai" in supported_client:
+                return "gemini"
+            elif "ollama" in supported_client:
+                return "ollama"
+            elif "llama" in supported_client or "llama2" in supported_client or "llama3" in supported_client:
+                return "llama"
+            elif "huggingface" in supported_client:
+                return "huggingface"
+
+        # Try to determine from endpoint URL
+        endpoint_url = endpoint_config.get("endpoint", "").lower()
+        if endpoint_url:
+            if "openai" in endpoint_url or "azure" in endpoint_url and "openai" in endpoint_url:
+                return "openai"
+            elif "anthropic" in endpoint_url or "claude" in endpoint_url:
+                return "anthropic"
+            elif "gemini" in endpoint_url or "generativelanguage" in endpoint_url:
+                return "gemini"
+            elif "ollama" in endpoint_url:
+                return "ollama"
+            elif "huggingface" in endpoint_url:
+                return "huggingface"
+
+        # Default to "openai" as it's the most common case in CAM
+        # But make it more generic for other compatible APIs
+        return "openai"
+
     def _get_filtered_endpoints(self) -> List[str]:
         """Collect endpoints that support the goose client."""
         endpoints = self.config.get_sections(exclude_common=True)
@@ -304,10 +354,13 @@ class GooseTool(CLITool):
                 api_key_env_var = f"CAM_GOOSE_{provider_name.upper()}_KEY"
                 extra_env_vars[api_key_env_var] = endpoint_config["actual_api_key"]
 
+            # Determine appropriate engine based on endpoint configuration
+            engine_type = self._determine_engine_type(endpoint_config, endpoint_name)
+
             # Construct provider config
             provider_config = {
                 "name": provider_name,
-                "engine": "openai",  # Assuming OpenAI-compatible for now as CAM mostly deals with those
+                "engine": engine_type,
                 "display_name": endpoint_config.get("description", endpoint_name),
                 "description": f"Configured via Code Assistant Manager from {endpoint_name}",
                 "base_url": endpoint_config["endpoint"],
