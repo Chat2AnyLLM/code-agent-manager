@@ -35,6 +35,27 @@ class GooseTool(CLITool):
         # Check if endpoint has an explicit engine configuration
         engine_from_config = endpoint_config.get("engine", "")
         if engine_from_config:
+            # However, if the configured engine seems incorrect based on endpoint name or URL,
+            # override it with the correct engine type
+            endpoint_name_lower = endpoint_name.lower()
+            endpoint_url = endpoint_config.get("endpoint", "").lower()
+
+            # Override incorrect 'anthropic' engine for OpenAI-compatible endpoints
+            if (engine_from_config == "anthropic" and
+                (any(pattern in endpoint_name_lower for pattern in ["copilot", "litellm", "openai", "compatible", "openrouter", "anyscale", "fireworks", "together", "perplexity", "openai-compatible", "dashscope", "qwen", "azure"]) or
+                 any(pattern in endpoint_url for pattern in ["dashscope", "qwen", "anyscale", "fireworks", "together", "perplexity", "openai-compatible", "litellm", "copilot"]))):
+                return "openai"
+
+            # Override incorrect 'anthropic' engine if it's clearly another type
+            if (engine_from_config == "anthropic" and
+                ("gemini" in endpoint_name_lower or "gemini" in endpoint_url or
+                 "vertexai" in endpoint_name_lower or "vertexai" in endpoint_url or
+                 "ollama" in endpoint_name_lower or "ollama" in endpoint_url)):
+                if "gemini" in endpoint_name_lower or "gemini" in endpoint_url or "vertexai" in endpoint_name_lower or "vertexai" in endpoint_url:
+                    return "gemini"
+                elif "ollama" in endpoint_name_lower or "ollama" in endpoint_url:
+                    return "ollama"
+
             return engine_from_config
 
         # Check if endpoint name suggests OpenAI compatibility
