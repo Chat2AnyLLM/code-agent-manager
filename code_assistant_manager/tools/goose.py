@@ -160,85 +160,6 @@ class GooseTool(CLITool):
         
         return providers
 
-    def _build_model_menu_options(
-        self, 
-        endpoint_models: Dict[str, List[str]], 
-        custom_models: Dict[str, List[str]]
-    ) -> List[str]:
-        """Build formatted menu options from endpoint and custom models.
-        
-        Args:
-            endpoint_models: Dict of endpoint -> models
-            custom_models: Dict of provider -> models
-        
-        Returns:
-            List of formatted menu options
-        """
-        options = []
-        
-        # Add endpoint models
-        if endpoint_models:
-            options.append("═══ FROM ENDPOINTS ═══")
-            for endpoint_name, models in endpoint_models.items():
-                for model in models:
-                    options.append(f"{model} ({endpoint_name})")
-        
-        # Add custom providers
-        if custom_models:
-            if options:
-                options.append("")  # Separator
-            options.append("═══ CUSTOM PROVIDERS ═══")
-            for provider_name, models in custom_models.items():
-                for model in models:
-                    options.append(f"{model} ({provider_name})")
-        
-        return options
-
-    def _show_model_selection_menu(
-        self, 
-        endpoint_models: Dict[str, List[str]], 
-        custom_models: Dict[str, List[str]]
-    ) -> Optional[tuple]:
-        """Show menu to select default model from all available options.
-        
-        Returns:
-            Tuple of (provider_name, model_name) or None if cancelled
-        """
-        from code_assistant_manager.menu.menus import display_centered_menu
-        
-        # Build flat list of all models with their sources
-        all_models = []
-        model_to_source = {}
-        
-        # Add endpoint models
-        for endpoint_name, models in endpoint_models.items():
-            for model in models:
-                label = f"{model} ({endpoint_name})"
-                all_models.append(label)
-                model_to_source[label] = (endpoint_name, model)
-        
-        # Add custom providers
-        for provider_name, models in custom_models.items():
-            for model in models:
-                label = f"{model} ({provider_name})"
-                all_models.append(label)
-                model_to_source[label] = (provider_name, model)
-        
-        if not all_models:
-            return None
-        
-        # Show menu
-        success, idx = display_centered_menu(
-            "Select default Goose provider and model:",
-            all_models,
-            cancel_text="Cancel"
-        )
-        
-        if success and idx is not None and idx < len(all_models):
-            return model_to_source[all_models[idx]]
-        
-        return None
-
     def _get_available_models(self, endpoint_name: str) -> Optional[List[str]]:
         """Get all available models from an endpoint without showing selection menu."""
         success, endpoint_config = self.endpoint_manager.get_endpoint_config(
@@ -298,71 +219,6 @@ class GooseTool(CLITool):
         # Let user select multiple models from this endpoint
         success, selected_models = select_multiple_models(
             available_models,
-            f"Select models from {endpoint_info} (Cancel to skip):",
-            cancel_text="Skip"
-        )
-
-        if success and selected_models:
-            return selected_models
-        else:
-            print(f"Skipped {endpoint_name}\n")
-            return None
-
-    def _process_endpoint(self, endpoint_name: str) -> Optional[List[str]]:
-        """Process a single endpoint and return selected models if successful."""
-        success, endpoint_config = self.endpoint_manager.get_endpoint_config(
-            endpoint_name
-        )
-        if not success:
-            return None
-
-        # Get models from list_models_cmd
-        models = []
-        if "list_models_cmd" in endpoint_config:
-            try:
-                import subprocess
-                import shlex
-
-                env = os.environ.copy()
-                env["endpoint"] = endpoint_config.get("endpoint", "")
-                env["api_key"] = endpoint_config.get("actual_api_key", "")
-
-                cmd_parts = shlex.split(endpoint_config["list_models_cmd"])
-                result = subprocess.run(
-                    cmd_parts,
-                    shell=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    env=env,
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    models = [line.strip() for line in result.stdout.split('\n') if line.strip()]
-            except Exception as e:
-                print(f"Warning: Failed to execute list_models_cmd for {endpoint_name}: {e}")
-                return None
-        else:
-            # Fallback if no list_models_cmd
-            models = [endpoint_name.replace(":", "-").replace("_", "-")]
-
-        if not models:
-            print(f"Warning: No models found for {endpoint_name}\n")
-            return None
-
-        ep_url = endpoint_config.get("endpoint", "")
-        ep_desc = endpoint_config.get("description", "") or ep_url
-        endpoint_info = f"{endpoint_name} -> {ep_url} -> {ep_desc}"
-
-        # Import package-level helper for multiple model selection
-        from code_assistant_manager.menu.menus import select_multiple_models
-
-        # Non-interactive mode: select first model
-        if os.environ.get("CODE_ASSISTANT_MANAGER_NONINTERACTIVE") == "1":
-            return [models[0]]
-
-        # Let user select multiple models from this endpoint
-        success, selected_models = select_multiple_models(
-            models, 
             f"Select models from {endpoint_info} (Cancel to skip):",
             cancel_text="Skip"
         )
@@ -457,6 +313,14 @@ class GooseTool(CLITool):
         
         # If no options available, return
         if not endpoint_models and not custom_models:
+            return
+
+        # If user just selected exactly one model in this run, don't prompt again.
+        if endpoint_models and sum(len(ms) for ms in endpoint_models.values()) == 1:
+            endpoint_name = next(iter(endpoint_models.keys()))
+            model_name = endpoint_models[endpoint_name][0]
+            provider_name = self._sanitize_provider_name(endpoint_name)
+            self._write_default_to_config(provider_name, model_name)
             return
         
         # If only endpoint models and they exist
