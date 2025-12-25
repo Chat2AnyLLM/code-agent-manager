@@ -281,6 +281,57 @@ class TestGooseTool:
         result = tool.run([])
         assert result == 1
 
+    @patch("code_assistant_manager.tools.subprocess.run")
+    @patch("code_assistant_manager.tools.select_model")
+    @patch.object(GooseTool, "_ensure_tool_installed", return_value=True)
+    @patch("code_assistant_manager.tools.EndpointManager")
+    @patch("pathlib.Path.home")
+    def test_goose_tool_config_creation(
+        self, mock_home, mock_em_class, mock_install, mock_select, mock_run, config_manager
+    ):
+        """Test that Goose tool creates configuration files."""
+        # Setup mock home directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_home.return_value = Path(temp_dir)
+            
+            # Setup mock endpoint manager
+            mock_em = MagicMock()
+            mock_em_class.return_value = mock_em
+            
+            # Mock config.get_sections to return endpoints
+            with patch.object(config_manager, 'get_sections', return_value=["endpoint1"]):
+                mock_em.select_endpoint = MagicMock()
+                mock_em.get_endpoint_config.return_value = (
+                    True,
+                    {"endpoint": "https://api.example.com", "actual_api_key": "key123", "description": "Test Endpoint"},
+                )
+                mock_em.fetch_models.return_value = (True, ["model1"])
+                mock_select.return_value = (True, "model1")
+                mock_em._is_client_supported.return_value = True
+
+                # Mock subprocess.run to return success
+                mock_run.return_value.returncode = 0
+
+                tool = GooseTool(config_manager)
+                result = tool.run([])
+                assert result == 0
+                
+                # Check if config file was created
+                config_file = Path(temp_dir) / ".config" / "goose" / "custom_providers" / "endpoint1.json"
+                assert config_file.exists()
+                
+                # Verify content
+                with open(config_file, "r") as f:
+                    data = json.load(f)
+                    assert data["name"] == "endpoint1"
+                    assert data["base_url"] == "https://api.example.com"
+                    assert data["models"][0]["name"] == "model1"
+                    assert data["api_key_env"] == "CAM_GOOSE_ENDPOINT1_KEY"
+
+                # Verify env var was set in run call
+                env_used = mock_run.call_args[1]["env"]
+                assert env_used["CAM_GOOSE_ENDPOINT1_KEY"] == "key123"
+
 
 class TestGeminiTool:
     """Test GeminiTool."""

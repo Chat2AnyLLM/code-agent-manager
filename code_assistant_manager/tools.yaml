@@ -348,7 +348,7 @@ tools:
 
   goose:
     enabled: true
-    install_cmd: curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash
+    install_cmd: curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash
     cli_command: goose
     description: "Block Goose - open-source, extensible AI agent"
     env:
