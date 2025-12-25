@@ -19,8 +19,17 @@ class GooseTool(CLITool):
     DEFAULT_CONTEXT_LIMIT = 128000
 
     def _sanitize_provider_name(self, endpoint_name: str) -> str:
-        """Sanitize endpoint name to be used as provider name."""
-        return endpoint_name.replace(":", "_").replace("-", "_").replace(".", "_").lower()
+        """Sanitize endpoint name to be used as Goose provider id.
+
+        Keep '-' (common in provider ids) but replace characters that are awkward for filenames.
+        """
+        return endpoint_name.replace(":", "-").replace(".", "-").lower()
+
+    def _sanitize_env_var_suffix(self, name: str) -> str:
+        """Sanitize name for use in environment variable identifiers."""
+        import re
+
+        return re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_").upper()
 
     def _determine_engine_type(self, endpoint_config: Dict[str, str], endpoint_name: str) -> str:
         """Determine appropriate engine type based on endpoint configuration.
@@ -35,7 +44,33 @@ class GooseTool(CLITool):
         # Check if endpoint has an explicit engine configuration
         engine_from_config = endpoint_config.get("engine", "")
         if engine_from_config:
+            # However, if the configured engine seems incorrect based on endpoint name or URL,
+            # override it with the correct engine type
+            endpoint_name_lower = endpoint_name.lower()
+            endpoint_url = endpoint_config.get("endpoint", "").lower()
+
+            # Override incorrect 'anthropic' engine for OpenAI-compatible endpoints
+            if (engine_from_config == "anthropic" and
+                (any(pattern in endpoint_name_lower for pattern in ["copilot", "litellm", "openai", "compatible", "openrouter", "anyscale", "fireworks", "together", "perplexity", "openai-compatible", "dashscope", "qwen", "azure"]) or
+                 any(pattern in endpoint_url for pattern in ["dashscope", "qwen", "anyscale", "fireworks", "together", "perplexity", "openai-compatible", "litellm", "copilot"]))):
+                return "openai"
+
+            # Override incorrect 'anthropic' engine if it's clearly another type
+            if (engine_from_config == "anthropic" and
+                ("gemini" in endpoint_name_lower or "gemini" in endpoint_url or
+                 "vertexai" in endpoint_name_lower or "vertexai" in endpoint_url or
+                 "ollama" in endpoint_name_lower or "ollama" in endpoint_url)):
+                if "gemini" in endpoint_name_lower or "gemini" in endpoint_url or "vertexai" in endpoint_name_lower or "vertexai" in endpoint_url:
+                    return "gemini"
+                elif "ollama" in endpoint_name_lower or "ollama" in endpoint_url:
+                    return "ollama"
+
             return engine_from_config
+
+        # Check if endpoint name suggests OpenAI compatibility
+        endpoint_name_lower = endpoint_name.lower()
+        if any(pattern in endpoint_name_lower for pattern in ["openai", "gpt", "azure", "compatible", "openrouter", "anyscale", "fireworks", "together", "perplexity", "openai-compatible", "dashscope", "qwen"]):
+            return "openai"
 
         # Try to determine from supported_client field
         supported_client = endpoint_config.get("supported_client", "").lower()
@@ -57,7 +92,7 @@ class GooseTool(CLITool):
         # Try to determine from endpoint URL
         endpoint_url = endpoint_config.get("endpoint", "").lower()
         if endpoint_url:
-            if "openai" in endpoint_url or "azure" in endpoint_url and "openai" in endpoint_url:
+            if any(pattern in endpoint_url for pattern in ["openai", "azure", "openrouter", "anyscale", "fireworks", "together", "perplexity", "openai-compatible", "dashscope", "qwen"]):
                 return "openai"
             elif "anthropic" in endpoint_url or "claude" in endpoint_url:
                 return "anthropic"
@@ -68,8 +103,15 @@ class GooseTool(CLITool):
             elif "huggingface" in endpoint_url:
                 return "huggingface"
 
-        # Default to "openai" as it's the most common case in CAM
-        # But make it more generic for other compatible APIs
+        # For many OpenAI-compatible endpoints, if they have certain characteristics,
+        # assume they are OpenAI compatible
+        # Check for common patterns that indicate OpenAI compatibility
+        if any(key in endpoint_config for key in ["api_key", "api_base", "model", "stream"]):
+            # Many OpenAI-compatible endpoints use standard OpenAI patterns
+            return "openai"
+
+        # Default to "openai" as it's the most common case for API-compatible endpoints
+        # OpenAI-compatible APIs are very common for custom endpoints
         return "openai"
 
     def _get_filtered_endpoints(self) -> List[str]:
@@ -117,85 +159,6 @@ class GooseTool(CLITool):
             print(f"Warning: Failed to read custom providers: {e}")
         
         return providers
-
-    def _build_model_menu_options(
-        self, 
-        endpoint_models: Dict[str, List[str]], 
-        custom_models: Dict[str, List[str]]
-    ) -> List[str]:
-        """Build formatted menu options from endpoint and custom models.
-        
-        Args:
-            endpoint_models: Dict of endpoint -> models
-            custom_models: Dict of provider -> models
-        
-        Returns:
-            List of formatted menu options
-        """
-        options = []
-        
-        # Add endpoint models
-        if endpoint_models:
-            options.append("═══ FROM ENDPOINTS ═══")
-            for endpoint_name, models in endpoint_models.items():
-                for model in models:
-                    options.append(f"{model} ({endpoint_name})")
-        
-        # Add custom providers
-        if custom_models:
-            if options:
-                options.append("")  # Separator
-            options.append("═══ CUSTOM PROVIDERS ═══")
-            for provider_name, models in custom_models.items():
-                for model in models:
-                    options.append(f"{model} ({provider_name})")
-        
-        return options
-
-    def _show_model_selection_menu(
-        self, 
-        endpoint_models: Dict[str, List[str]], 
-        custom_models: Dict[str, List[str]]
-    ) -> Optional[tuple]:
-        """Show menu to select default model from all available options.
-        
-        Returns:
-            Tuple of (provider_name, model_name) or None if cancelled
-        """
-        from code_assistant_manager.menu.menus import display_centered_menu
-        
-        # Build flat list of all models with their sources
-        all_models = []
-        model_to_source = {}
-        
-        # Add endpoint models
-        for endpoint_name, models in endpoint_models.items():
-            for model in models:
-                label = f"{model} ({endpoint_name})"
-                all_models.append(label)
-                model_to_source[label] = (endpoint_name, model)
-        
-        # Add custom providers
-        for provider_name, models in custom_models.items():
-            for model in models:
-                label = f"{model} ({provider_name})"
-                all_models.append(label)
-                model_to_source[label] = (provider_name, model)
-        
-        if not all_models:
-            return None
-        
-        # Show menu
-        success, idx = display_centered_menu(
-            "Select default Goose provider and model:",
-            all_models,
-            cancel_text="Cancel"
-        )
-        
-        if success and idx is not None and idx < len(all_models):
-            return model_to_source[all_models[idx]]
-        
-        return None
 
     def _get_available_models(self, endpoint_name: str) -> Optional[List[str]]:
         """Get all available models from an endpoint without showing selection menu."""
@@ -266,71 +229,6 @@ class GooseTool(CLITool):
             print(f"Skipped {endpoint_name}\n")
             return None
 
-    def _process_endpoint(self, endpoint_name: str) -> Optional[List[str]]:
-        """Process a single endpoint and return selected models if successful."""
-        success, endpoint_config = self.endpoint_manager.get_endpoint_config(
-            endpoint_name
-        )
-        if not success:
-            return None
-
-        # Get models from list_models_cmd
-        models = []
-        if "list_models_cmd" in endpoint_config:
-            try:
-                import subprocess
-                import shlex
-
-                env = os.environ.copy()
-                env["endpoint"] = endpoint_config.get("endpoint", "")
-                env["api_key"] = endpoint_config.get("actual_api_key", "")
-
-                cmd_parts = shlex.split(endpoint_config["list_models_cmd"])
-                result = subprocess.run(
-                    cmd_parts,
-                    shell=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    env=env,
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    models = [line.strip() for line in result.stdout.split('\n') if line.strip()]
-            except Exception as e:
-                print(f"Warning: Failed to execute list_models_cmd for {endpoint_name}: {e}")
-                return None
-        else:
-            # Fallback if no list_models_cmd
-            models = [endpoint_name.replace(":", "-").replace("_", "-")]
-
-        if not models:
-            print(f"Warning: No models found for {endpoint_name}\n")
-            return None
-
-        ep_url = endpoint_config.get("endpoint", "")
-        ep_desc = endpoint_config.get("description", "") or ep_url
-        endpoint_info = f"{endpoint_name} -> {ep_url} -> {ep_desc}"
-
-        # Import package-level helper for multiple model selection
-        from code_assistant_manager.menu.menus import select_multiple_models
-
-        # Non-interactive mode: select first model
-        if os.environ.get("CODE_ASSISTANT_MANAGER_NONINTERACTIVE") == "1":
-            return [models[0]]
-
-        # Let user select multiple models from this endpoint
-        success, selected_models = select_multiple_models(
-            models, 
-            f"Select models from {endpoint_info} (Cancel to skip):",
-            cancel_text="Skip"
-        )
-
-        if success and selected_models:
-            return selected_models
-        else:
-            print(f"Skipped {endpoint_name}\n")
-            return None
-
     def _write_goose_config(self, selected_models_by_endpoint: Dict[str, List[str]]) -> Dict[str, str]:
         """
         Write Goose configuration files for custom providers.
@@ -347,7 +245,7 @@ class GooseTool(CLITool):
                 continue
 
             provider_name = self._sanitize_provider_name(endpoint_name)
-            # Ensure name starts with a letter if strictly needed, but usually fine
+            provider_env_suffix = self._sanitize_env_var_suffix(provider_name)
 
             # Determine API key env var name
             api_key_env_var = ""
@@ -355,11 +253,11 @@ class GooseTool(CLITool):
                 api_key_env_var = endpoint_config["api_key_env"]
             elif "actual_api_key" in endpoint_config and endpoint_config["actual_api_key"]:
                 # Generate a specific env var for this provider
-                api_key_env_var = f"CAM_GOOSE_{provider_name.upper()}_KEY"
+                api_key_env_var = f"CAM_GOOSE_{provider_env_suffix}_KEY"
                 extra_env_vars[api_key_env_var] = endpoint_config["actual_api_key"]
 
-            # Determine appropriate engine based on endpoint configuration
-            engine_type = self._determine_engine_type(endpoint_config, endpoint_name)
+            # Goose custom providers should use OpenAI engine for compatibility.
+            engine_type = "openai"
 
             # Construct provider config
             provider_config = {
@@ -405,9 +303,24 @@ class GooseTool(CLITool):
         
         # Get existing custom providers
         custom_models = self._get_custom_providers()
+
+        # Avoid duplicate display: just-configured endpoints are also written as custom providers.
+        if endpoint_models and custom_models:
+            endpoint_provider_names = {self._sanitize_provider_name(ep) for ep in endpoint_models.keys()}
+            for provider_name in list(custom_models.keys()):
+                if provider_name in endpoint_provider_names:
+                    del custom_models[provider_name]
         
         # If no options available, return
         if not endpoint_models and not custom_models:
+            return
+
+        # If user just selected exactly one model in this run, don't prompt again.
+        if endpoint_models and sum(len(ms) for ms in endpoint_models.values()) == 1:
+            endpoint_name = next(iter(endpoint_models.keys()))
+            model_name = endpoint_models[endpoint_name][0]
+            provider_name = self._sanitize_provider_name(endpoint_name)
+            self._write_default_to_config(provider_name, model_name)
             return
         
         # If only endpoint models and they exist
@@ -591,7 +504,8 @@ class GooseTool(CLITool):
                     # Set default provider in global config
                     self._set_default_provider(selected_models_by_endpoint)
                 else:
-                    print("No models selected, skipping configuration update.\n")
+                    print("No models selected; you can still choose a default from existing Goose custom providers.\n")
+                    self._set_default_provider({})
 
 
         # Use environment variables directly

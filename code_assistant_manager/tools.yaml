@@ -198,7 +198,7 @@ tools:
       injected: []
     filesystem:
       generated:
-        - "~/.factory/config.json containing custom_models entries with base_url, api_key, provider, and max_tokens"
+        - "~/.factory/settings.json containing custom_models entries with base_url, api_key, provider, and max_tokens"
 
   iflow:
     enabled: true
