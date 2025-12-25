@@ -2,6 +2,7 @@
 
 import io
 import logging
+import os
 import shutil
 import tempfile
 import zipfile
@@ -311,6 +312,7 @@ class BaseAgentHandler(ABC):
                     zip_data = response.read()
 
                 temp_dir = Path(tempfile.mkdtemp(prefix="cam-agent-"))
+                temp_dir_path = os.path.realpath(temp_dir)
 
                 with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
                     root_dir = None
@@ -324,7 +326,13 @@ class BaseAgentHandler(ABC):
                             if not rel_path:
                                 continue
 
+                            # Prevent path traversal by validating the target path
                             target_path = temp_dir / rel_path
+                            # Ensure target path stays within extraction directory
+                            target_path_resolved = os.path.realpath(target_path)
+                            if os.path.commonpath([temp_dir_path, target_path_resolved]) != temp_dir_path:
+                                raise ValueError(f"Unsafe path detected: {rel_path}")
+
                             if name_in_zip.endswith("/"):
                                 target_path.mkdir(parents=True, exist_ok=True)
                             else:
@@ -345,6 +353,12 @@ class BaseAgentHandler(ABC):
                 raise
             except URLError as e:
                 logger.error(f"Failed to download repository: {e}")
+                raise
+            except ValueError as e:
+                # Re-raise path traversal errors
+                raise
+            except Exception as e:
+                logger.error(f"Error during repository download/extraction: {e}")
                 raise
 
         raise ValueError(f"Could not download repository {owner}/{name}")
