@@ -1,7 +1,10 @@
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
+
+import yaml
 
 from .base import CLITool
 
@@ -139,6 +142,44 @@ class GooseTool(CLITool):
 
         return extra_env_vars
 
+    def _set_default_provider(self, selected_models_by_endpoint: Dict[str, List[str]]) -> None:
+        """
+        Set the default provider and model in ~/.config/goose/config.yaml.
+        Uses the first selected endpoint and its first model.
+        """
+        if not selected_models_by_endpoint:
+            return
+
+        # Pick the first endpoint and its first model
+        endpoint_name, models = next(iter(selected_models_by_endpoint.items()))
+        if not models:
+            return
+            
+        provider_name = endpoint_name.replace(":", "_").replace("-", "_").replace(".", "_").lower()
+        model_name = models[0]
+        
+        config_file = Path.home() / ".config" / "goose" / "config.yaml"
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        config_data = {}
+        if config_file.exists():
+            try:
+                with open(config_file, "r", encoding="utf-8") as f:
+                    config_data = yaml.safe_load(f) or {}
+            except Exception as e:
+                print(f"Warning: Failed to load existing goose config: {e}")
+
+        # Update or set the provider and model
+        config_data["GOOSE_PROVIDER"] = provider_name
+        config_data["GOOSE_MODEL"] = model_name
+        
+        try:
+            with open(config_file, "w", encoding="utf-8") as f:
+                yaml.safe_dump(config_data, f, sort_keys=False)
+            print(f"✓ Set default provider to '{provider_name}' and model to '{model_name}'")
+        except Exception as e:
+            print(f"Warning: Failed to write default provider to goose config: {e}")
+
     def run(self, args: List[str] = None) -> int:
         args = args or []
 
@@ -174,6 +215,9 @@ class GooseTool(CLITool):
 
                 # Write configs and get extra env vars
                 extra_env_vars = self._write_goose_config(selected_models_by_endpoint)
+                
+                # Set default provider in global config to avoid "No provider configured" error
+                self._set_default_provider(selected_models_by_endpoint)
             else:
                 print("No models selected, skipping configuration update.\n")
 

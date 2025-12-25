@@ -327,6 +327,16 @@ class TestGooseTool:
                     assert data["base_url"] == "https://api.example.com"
                     assert data["models"][0]["name"] == "model1"
                     assert data["api_key_env"] == "CAM_GOOSE_ENDPOINT1_KEY"
+                
+                # Check if default provider config was set in config.yaml
+                main_config_file = Path(temp_dir) / ".config" / "goose" / "config.yaml"
+                assert main_config_file.exists()
+                
+                with open(main_config_file, "r") as f:
+                    import yaml
+                    main_config = yaml.safe_load(f)
+                    assert main_config["GOOSE_PROVIDER"] == "endpoint1"
+                    assert main_config["GOOSE_MODEL"] == "model1"
 
                 # Verify env var was set in run call
                 env_used = mock_run.call_args[1]["env"]
