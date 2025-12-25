@@ -210,14 +210,16 @@ class GooseTool(CLITool):
         if "list_models_cmd" in endpoint_config:
             try:
                 import subprocess
+                import shlex
 
                 env = os.environ.copy()
                 env["endpoint"] = endpoint_config.get("endpoint", "")
                 env["api_key"] = endpoint_config.get("actual_api_key", "")
 
+                cmd_parts = shlex.split(endpoint_config["list_models_cmd"])
                 result = subprocess.run(
-                    endpoint_config["list_models_cmd"],
-                    shell=True,
+                    cmd_parts,
+                    shell=False,
                     capture_output=True,
                     text=True,
                     timeout=30,
@@ -277,14 +279,16 @@ class GooseTool(CLITool):
         if "list_models_cmd" in endpoint_config:
             try:
                 import subprocess
+                import shlex
 
                 env = os.environ.copy()
                 env["endpoint"] = endpoint_config.get("endpoint", "")
                 env["api_key"] = endpoint_config.get("actual_api_key", "")
 
+                cmd_parts = shlex.split(endpoint_config["list_models_cmd"])
                 result = subprocess.run(
-                    endpoint_config["list_models_cmd"],
-                    shell=True,
+                    cmd_parts,
+                    shell=False,
                     capture_output=True,
                     text=True,
                     timeout=30,
@@ -378,9 +382,10 @@ class GooseTool(CLITool):
                     "context_limit": self.DEFAULT_CONTEXT_LIMIT
                 })
 
-            # Write config file
+            # Write config file with secure permissions (read/write for owner only)
+            import os
             config_file = config_dir / f"{provider_name}.json"
-            with open(config_file, "w", encoding="utf-8") as f:
+            with open(config_file, "w", encoding="utf-8", opener=lambda path, flags: os.open(path, flags, 0o600)) as f:
                 json.dump(provider_config, f, indent=2)
 
             print(f"✓ Configured provider '{provider_name}' in {config_file}")
@@ -519,7 +524,8 @@ class GooseTool(CLITool):
         config_data["GOOSE_MODEL"] = model_name
 
         try:
-            with open(config_file, "w", encoding="utf-8") as f:
+            import os
+            with open(config_file, "w", encoding="utf-8", opener=lambda path, flags: os.open(path, flags, 0o600)) as f:
                 yaml.safe_dump(config_data, f, sort_keys=False)
             print(f"✓ Set default provider to '{provider_name}' and model to '{model_name}'")
         except Exception as e:
