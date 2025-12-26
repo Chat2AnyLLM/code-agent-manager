@@ -108,7 +108,7 @@ Create a `providers.json` file in `~/.config/code-assistant-manager/` or your pr
     "my-litellm": {
       "endpoint": "https://api.example.com:4142",
       "api_key_env": "API_KEY_LITELLM",
-      "list_models_cmd": "python -m code_assistant_manager.litellm_models",
+      "list_models_cmd": "python -m code_assistant_manager.v1_models",
       "supported_client": "claude,codex,qwen,copilot",
       "description": "My LiteLLM Proxy"
     }
