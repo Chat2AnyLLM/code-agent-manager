@@ -60,7 +60,7 @@ class TestAgentIntegrationWorkflows:
             mock_config_path.return_value = config_file
 
             # Test agent-specific configuration access
-            with patch("code_assistant_manager.cli.agent.get_agent_config") as mock_get_agent:
+            with patch("code_assistant_manager.cli.agents_commands.get_agent_config") as mock_get_agent:
                 mock_get_agent.return_value = config_data["agents"]["claude"]
 
                 result = runner.invoke(app, ["agent", "status", "claude"])
