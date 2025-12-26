@@ -371,31 +371,21 @@ class GooseTool(CLITool):
         """Show menu to select and set default model from all available options."""
         from code_assistant_manager.menu.menus import display_centered_menu
         
-        # Build menu options
+        # Build menu options - unified list of all available models
         all_options = []
         option_to_provider = {}
-        
+
         # Add endpoint models
         if endpoint_models:
-            all_options.append("═══ FROM ENDPOINTS ═══")
-            option_to_provider[len(all_options) - 1] = None  # Separator entry
-            
             for endpoint_name, models in endpoint_models.items():
                 for model in models:
                     provider_name = self._sanitize_provider_name(endpoint_name)
                     display = f"{model} ({provider_name})"
                     all_options.append(display)
                     option_to_provider[len(all_options) - 1] = (provider_name, model)
-        
+
         # Add custom providers
         if custom_models:
-            if all_options:
-                all_options.append("")  # Empty separator
-                option_to_provider[len(all_options) - 1] = None
-            
-            all_options.append("═══ CUSTOM PROVIDERS ═══")
-            option_to_provider[len(all_options) - 1] = None  # Separator entry
-            
             for provider_name, models in custom_models.items():
                 for model in models:
                     display = f"{model} ({provider_name})"
@@ -407,16 +397,14 @@ class GooseTool(CLITool):
         
         # Show menu
         success, idx = display_centered_menu(
-            "Select default Goose provider and model:",
+            "Select default Goose provider/model:",
             all_options,
             "Cancel"
         )
         
         if success and idx is not None and idx in option_to_provider:
-            result = option_to_provider[idx]
-            if result:  # Not a separator
-                provider_name, model_name = result
-                self._write_default_to_config(provider_name, model_name)
+            provider_name, model_name = option_to_provider[idx]
+            self._write_default_to_config(provider_name, model_name)
 
 
     def _write_default_to_config(self, provider_name: str, model_name: str) -> None:
