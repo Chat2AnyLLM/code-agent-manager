@@ -119,8 +119,7 @@ class EndpointManager:
 
     # Supported internal modules for model listing
     INTERNAL_MODEL_MODULES = (
-        "code_assistant_manager.litellm_models",
-        "code_assistant_manager.copilot_models",
+        "code_assistant_manager.v1_models",
     )
 
     # Proxy environment variables to manage

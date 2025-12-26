@@ -9,7 +9,7 @@
     "litellm": {
       "endpoint": "https://192.168.1.100:4142",
       "api_key_env": "API_KEY_LITELLM",
-      "list_models_cmd": "python -m code_assistant_manager.litellm_models",
+      "list_models_cmd": "python -m code_assistant_manager.v1_models",
       "keep_proxy_config": false,
       "use_proxy": false,
       "description": "Litellm support OpenAI compatible API calls",
@@ -18,7 +18,7 @@
     "copilot-api": {
       "endpoint": "https://192.168.1.100:5000",
       "api_key_env": "API_KEY_COPILOT",
-      "list_models_cmd": "python -m code_assistant_manager.copilot_models",
+      "list_models_cmd": "python -m code_assistant_manager.v1_models",
       "supported_client": "claude,copilot,droid,codebuddy,codex,qwen,neovate,crush",
       "description": "Github Copilot API Proxy"
     },
