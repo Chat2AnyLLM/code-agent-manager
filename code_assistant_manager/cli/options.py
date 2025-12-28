@@ -19,6 +19,12 @@ KEEP_CONFIG_OPTION = typer.Option(
     False, "--keep-config", "-k", help="Keep configuration files (don't backup)"
 )
 SHELL_OPTION = typer.Argument(..., help="Shell type (bash, zsh)")
+SCOPE_OPTION = typer.Option(
+    "user",
+    "--scope",
+    "-s",
+    help="Configuration scope (user, project)",
+)
 TARGET_OPTION = typer.Argument("all", help="Tool to upgrade or 'all'")
 TOOL_ARGS_OPTION = typer.Argument(None, help="Arguments for the editor")
 TOOL_NAME_OPTION = typer.Argument(None, help="Tool to launch")
