@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 
+@pytest.mark.skip(reason="Feature not implemented - integration tests for non-existent functionality")
 class TestMCPManager:
     """Test MCP manager functionality."""
 

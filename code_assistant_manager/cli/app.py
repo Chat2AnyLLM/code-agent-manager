@@ -27,6 +27,7 @@ from .options import (
     CONFIG_FILE_OPTION,
     CONFIG_OPTION,
     DEBUG_OPTION,
+    SCOPE_OPTION,
     TOOL_ARGS_OPTION,
     VALIDATE_VERBOSE_OPTION,
 )
@@ -416,397 +417,775 @@ def parse_toml_key_path(key_path):
 
 
 @config_app.command("set", short_help="Set a configuration value for code assistants")
+
+
 def set_config(
+
+
     key_value: str = typer.Argument(
-        ..., help="Configuration key=value pair (e.g., codex.profiles.grok-code-fast-1.model=qwen3-coder-plus)"
+
+
+        ...,
+
+
+        help="Configuration key=value pair (e.g., codex.profiles.grok-code-fast-1.model=qwen3-coder-plus)",
+
+
     ),
+
+
+    scope: str = SCOPE_OPTION,
+
+
 ):
+
+
     """Set a configuration value for code assistants.
 
+
+
+
+
     Supports dotted key notation for nested configuration values.
+
+
     Examples:
+
+
         cam config set codex.model=gpt-4
+
+
+        cam config set --scope project claude.theme=dark
+
+
         cam config set codex.profiles.my-profile.model=qwen3-coder-plus
-        cam config set codex.model_provider=openai
+
+
     """
-    from pathlib import Path
-    import tomli_w
-    import tomllib
+
+
+    from code_assistant_manager.configs import get_tool_config
+
 
     from code_assistant_manager.menu.base import Colors
 
+
+
+
+
     try:
+
+
         # Parse key=value
+
+
         if "=" not in key_value:
-            typer.echo(f"{Colors.RED}✗ Invalid format. Use key=value syntax{Colors.RESET}")
+
+
+            typer.echo(
+
+
+                f"{Colors.RED}✗ Invalid format. Use key=value syntax{Colors.RESET}"
+
+
+            )
+
+
             raise typer.Exit(1)
+
+
+
+
 
         key_path, value = key_value.split("=", 1)
+
+
         key_path = key_path.strip()
+
+
         value = value.strip()
 
+
+
+
+
         # Parse dotted key path using TOML-aware parser
+
+
+        # We need to extract the prefix (tool name) first
+
+
+        # But wait, BaseToolConfig._parse_key_path does splitting too.
+
+
+        # However, we need to know WHICH tool to load first.
+
+
+        # So we reuse the parse_toml_key_path helper here for now or duplicate logic.
+
+
         parts = parse_toml_key_path(key_path)
+
+
         if len(parts) < 2:
-            typer.echo(f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format{Colors.RESET}")
+
+
+            typer.echo(
+
+
+                f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format{Colors.RESET}"
+
+
+            )
+
+
             raise typer.Exit(1)
+
+
+
+
 
         prefix = parts[0]  # e.g., "codex"
-        config_key_parts = parts[1:]  # e.g., ["profiles", "alibaba/glm-4.5", "model"]
 
-        # Determine config file based on prefix
-        if prefix == "codex":
-            config_path = Path.home() / ".codex" / "config.toml"
-        else:
-            typer.echo(f"{Colors.RED}✗ Unsupported config prefix: {prefix}{Colors.RESET}")
-            typer.echo(f"  Supported prefixes: codex")
+
+        config_key = ".".join(parts[1:])  # Reconstruct the key without prefix
+
+
+
+
+
+        # Get tool config
+
+
+        tool_config = get_tool_config(prefix)
+
+
+        if not tool_config:
+
+
+            typer.echo(
+
+
+                f"{Colors.RED}✗ Unsupported config prefix (tool): {prefix}{Colors.RESET}"
+
+
+            )
+
+
             raise typer.Exit(1)
 
-        # Load existing config
-        config_data = {}
-        if config_path.exists():
-            try:
-                with open(config_path, 'rb') as f:
-                    config_data = tomllib.load(f)
-            except Exception as e:
-                typer.echo(f"{Colors.YELLOW}! Could not load existing config: {e}{Colors.RESET}")
-                typer.echo(f"  Creating new config file")
 
-        # Set the nested value
-        def set_nested_value(data, key_parts, val):
-            if len(key_parts) == 1:
-                data[key_parts[0]] = val
-                return data
 
-            current_key = key_parts[0]
-            if current_key not in data or not isinstance(data[current_key], dict):
-                data[current_key] = {}
 
-            data[current_key] = set_nested_value(data[current_key], key_parts[1:], val)
-            return data
 
-        config_data = set_nested_value(config_data, config_key_parts, value)
+        # Set value
 
-        # Write back to file
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(config_path, 'wb') as f:
-            tomli_w.dump(config_data, f)
 
-        typer.echo(f"{Colors.GREEN}✓ Set {key_path} = {value}{Colors.RESET}")
-        typer.echo(f"  Config: {config_path}")
+        saved_path = tool_config.set_value(config_key, value, scope)
+
+
+
+
+
+        typer.echo(
+
+
+            f"{Colors.GREEN}✓ Set {key_path} = {value} ({scope} scope){Colors.RESET}"
+
+
+        )
+
+
+        typer.echo(f"  Config: {saved_path}")
+
+
+
+
 
     except typer.Exit:
+
+
         raise
+
+
     except Exception as e:
+
+
         typer.echo(f"{Colors.RED}✗ Failed to set config value: {e}{Colors.RESET}")
+
+
         raise typer.Exit(1)
+
+
+
+
+
+
 
 
 @config_app.command("unset", short_help="Unset a configuration value for code assistants")
+
+
 def unset_config(
+
+
     key_path: str = typer.Argument(
+
+
         ..., help="Configuration key path (e.g., codex.profiles.grok-code-fast-1.model)"
+
+
     ),
+
+
+    scope: str = SCOPE_OPTION,
+
+
 ):
+
+
     """Unset a configuration value for code assistants.
 
+
+
+
+
     Supports dotted key notation for nested configuration values.
+
+
     Examples:
+
+
         cam config unset codex.model
+
+
+        cam config unset --scope project claude.theme
+
+
         cam config unset codex.profiles.my-profile.model
-        cam config unset codex.model_provider
+
+
     """
-    from pathlib import Path
-    import tomli_w
-    import tomllib
+
+
+    from code_assistant_manager.configs import get_tool_config
+
 
     from code_assistant_manager.menu.base import Colors
 
+
+
+
+
     try:
+
+
         key_path = key_path.strip()
 
-        # Parse dotted key path using TOML-aware parser
+
+
+
+
+        # Parse dotted key path
+
+
         parts = parse_toml_key_path(key_path)
+
+
         if len(parts) < 2:
-            typer.echo(f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format{Colors.RESET}")
+
+
+            typer.echo(
+
+
+                f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format{Colors.RESET}"
+
+
+            )
+
+
             raise typer.Exit(1)
 
-        prefix = parts[0]  # e.g., "codex"
-        config_key_parts = parts[1:]  # e.g., ["profiles", "alibaba/deepseek-v3", "2-exp"]
 
-        # Special handling for unset: if the key parts seem to be incorrectly split,
-        # try to reconstruct the key name
-        if len(config_key_parts) > 2:
-            # Check if the last parts look like they should be joined
-            # This handles cases like ['profiles', 'alibaba/deepseek-v3', '2-exp']
-            # where it should be ['profiles', 'alibaba/deepseek-v3.2-exp']
-            table_name = config_key_parts[0]
-            key_parts_to_join = config_key_parts[1:]
-            reconstructed_key = '.'.join(key_parts_to_join)
-            config_key_parts = [table_name, reconstructed_key]
 
-        # Determine config file based on prefix
-        if prefix == "codex":
-            config_path = Path.home() / ".codex" / "config.toml"
-        else:
-            typer.echo(f"{Colors.RED}✗ Unsupported config prefix: {prefix}{Colors.RESET}")
-            typer.echo(f"  Supported prefixes: codex")
+
+
+        prefix = parts[0]
+
+
+        config_key = ".".join(parts[1:])
+
+
+
+
+
+        # Get tool config
+
+
+        tool_config = get_tool_config(prefix)
+
+
+        if not tool_config:
+
+
+            typer.echo(
+
+
+                f"{Colors.RED}✗ Unsupported config prefix (tool): {prefix}{Colors.RESET}"
+
+
+            )
+
+
             raise typer.Exit(1)
 
-        # Check if config file exists
-        if not config_path.exists():
-            typer.echo(f"{Colors.YELLOW}! Config file not found: {config_path}{Colors.RESET}")
-            raise typer.Exit(0)
 
-        # Load existing config
-        config_data = {}
-        try:
-            with open(config_path, 'rb') as f:
-                config_data = tomllib.load(f)
-        except Exception as e:
-            typer.echo(f"{Colors.RED}✗ Could not load config file: {e}{Colors.RESET}")
-            raise typer.Exit(1)
 
-        # Unset the nested value
-        def unset_nested_value(data, key_parts):
-            if len(key_parts) == 1:
-                key = key_parts[0]
 
-                # Try multiple variations of the key
-                candidates = [key]  # exact match first
 
-                # If key contains special characters, try quoted version
-                if '/' in key or any(c in key for c in '.-'):
-                    candidates.append(f'"{key}"')
+        found = tool_config.unset_value(config_key, scope)
 
-                # If key looks like it might have been split incorrectly, try reconstructing
-                # For example, if we have ['alibaba/deepseek-v3', '2-exp'], try 'alibaba/deepseek-v3.2-exp'
-                if len(key_parts) > 1 and len(key_parts) == 1:  # This is the leaf key
-                    # Check if there are more parts that should be joined
-                    pass  # This logic is complex, let's try the candidates approach first
 
-                for candidate in candidates:
-                    if candidate in data:
-                        del data[candidate]
-                        return data, True
 
-                return data, False
 
-            current_key = key_parts[0]
-            if current_key not in data or not isinstance(data[current_key], dict):
-                return data, False
-
-            data[current_key], found = unset_nested_value(data[current_key], key_parts[1:])
-            return data, found
-
-        config_data, found = unset_nested_value(config_data, config_key_parts)
 
         if not found:
-            typer.echo(f"{Colors.YELLOW}! Key '{key_path}' not found in config{Colors.RESET}")
+
+
+            typer.echo(
+
+
+                f"{Colors.YELLOW}! Key '{key_path}' not found in {scope} config{Colors.RESET}"
+
+
+            )
+
+
             raise typer.Exit(0)
 
-        # Write back to file
-        with open(config_path, 'wb') as f:
-            tomli_w.dump(config_data, f)
+
+
+
+
+        typer.echo(
+
+
+            f"{Colors.GREEN}✓ Unset {key_path} from {scope} scope{Colors.RESET}"
+
+
+        )
+
+
+
+
 
     except typer.Exit:
+
+
         raise
+
+
     except Exception as e:
+
+
         typer.echo(f"{Colors.RED}✗ Failed to unset config value: {e}{Colors.RESET}")
+
+
         raise typer.Exit(1)
+
+
+
+
+
+
 
 
 def flatten_config(data: dict, prefix: str = "") -> dict:
+
+
     """Flatten nested dictionary into dotted notation."""
+
+
     result = {}
 
+
+
+
+
     def _flatten(obj, current_prefix):
+
+
         if isinstance(obj, dict):
+
+
             for key, value in obj.items():
+
+
                 new_prefix = f"{current_prefix}.{key}" if current_prefix else key
+
+
                 _flatten(value, new_prefix)
+
+
         elif isinstance(obj, list):
+
+
             # For lists, convert to string representation
-            result[current_prefix] = str(obj)
-        else:
-            # Convert all values to strings
+
+
             result[current_prefix] = str(obj)
 
+
+        else:
+
+
+            # Convert all values to strings
+
+
+            result[current_prefix] = str(obj)
+
+
+
+
+
     _flatten(data, prefix)
+
+
     return result
 
 
-def load_app_config(app_name: str) -> tuple[dict, str]:
-    """Load configuration for a specific app.
 
-    Returns:
-        Tuple of (config_dict, config_file_path)
-    """
-    from pathlib import Path
 
-    # Define config file mappings for each app
-    config_mappings = {
-        "claude": [
-            Path.home() / ".claude" / "settings.json",
-            Path.home() / ".claude.json",
-            Path.home() / ".claude" / "settings.local.json",
-            Path.cwd() / ".claude" / "settings.json",
-            Path.cwd() / ".claude" / "settings.local.json",
-        ],
-        "codex": [
-            Path.home() / ".codex" / "config.toml",
-        ],
-        "cursor-agent": [
-            Path.home() / ".cursor" / "mcp.json",
-            Path.home() / ".cursor" / "settings.json",
-            Path.cwd() / ".cursor" / "mcp.json",
-        ],
-        "gemini": [
-            Path.home() / ".gemini" / "settings.json",
-            Path.cwd() / ".gemini" / "settings.json",
-        ],
-        "copilot": [
-            Path.home() / ".copilot" / "mcp-config.json",
-            Path.home() / ".copilot" / "mcp.json",
-        ],
-        "qwen": [
-            Path.home() / ".qwen" / "settings.json",
-        ],
-        "codebuddy": [
-            Path.home() / ".codebuddy.json",
-            Path.cwd() / ".codebuddy" / "mcp.json",
-        ],
-        "crush": [
-            Path.home() / ".config" / "crush" / "crush.json",
-        ],
-        "droid": [
-            Path.home() / ".factory" / "mcp.json",
-            Path.home() / ".factory" / "settings.json",
-        ],
-        "iflow": [
-            Path.home() / ".iflow" / "settings.json",
-            Path.home() / ".iflow" / "config.json",
-        ],
-        "neovate": [
-            Path.home() / ".neovate" / "config.json",
-        ],
-        "qodercli": [
-            Path.home() / ".qodercli" / "config.json",
-        ],
-        "zed": [
-            Path.home() / ".config" / "zed" / "settings.json",
-        ],
-    }
 
-    if app_name not in config_mappings:
-        raise typer.Exit(f"Unknown app: {app_name}. Supported apps: {', '.join(config_mappings.keys())}")
 
-    # Try to load config from the first available file
-    for config_path in config_mappings[app_name]:
-        if config_path.exists():
-            try:
-                if config_path.suffix == ".toml":
-                    with open(config_path, 'rb') as f:
-                        config_data = tomllib.load(f)
-                else:  # JSON files
-                    import json
-                    with open(config_path, 'r', encoding='utf-8') as f:
-                        config_data = json.load(f)
-
-                return config_data, str(config_path)
-            except Exception as e:
-                logger.warning(f"Failed to load {config_path}: {e}")
-                continue
-
-    # If no config file found, return empty dict
-    return {}, "No config file found"
 
 
 @config_app.command("show", short_help="Show configuration in dotted format")
+
+
 def show_config(
-    key_path: Optional[str] = typer.Argument(None, help="Specific config key path to show (optional)"),
-    app: str = typer.Option("claude", "-a", "--app", help="App to show config for (default: claude)"),
+
+
+    key_path: Optional[str] = typer.Argument(
+
+
+        None, help="Specific config key path to show (optional)"
+
+
+    ),
+
+
+    app: str = typer.Option(
+
+
+        "claude", "-a", "--app", help="App to show config for (default: claude)"
+
+
+    ),
+
+
+    scope: Optional[str] = typer.Option(
+
+
+        None, "--scope", "-s", help="Filter by scope (user, project)"
+
+
+    ),
+
+
 ):
+
+
     """Show configuration for an AI editor app in dotted notation format.
 
+
+
+
+
     Examples:
+
+
         cam config show                    # Show all claude config
+
+
         cam config show -a codex          # Show all codex config
-        cam config show --app cursor-agent # Show all cursor config
+
+
+        cam config show --scope project    # Show only project config
+
+
         cam config show claude.tipsHistory.config-thinking-mode  # Show specific key
+
+
     """
+
+
+    from code_assistant_manager.configs import get_tool_config
+
+
     from code_assistant_manager.menu.base import Colors
 
+
+
+
+
     try:
-        config_data, config_path = load_app_config(app)
 
-        if not config_data:
+
+        tool_config = get_tool_config(app)
+
+
+        if not tool_config:
+
+
+            typer.echo(f"{Colors.RED}✗ Unknown app: {app}{Colors.RESET}")
+
+
+            raise typer.Exit(1)
+
+
+
+
+
+        # Load configs
+
+
+        # If specific scope requested, we get a dict with just that scope (BaseToolConfig returns same structure if scope arg is passed? No, check implementation)
+
+
+        # BaseToolConfig.load_config(scope) returns JUST the data dict for that scope if scope is provided.
+
+
+        # But existing logic expects a structure mapping scope -> {data, path}.
+
+
+        # So I need to adapt the usage or the BaseToolConfig.load_config behavior.
+
+
+        # BaseToolConfig.load_config(None) returns scope mapping. That fits.
+
+
+        
+
+
+        if scope:
+
+
+             # Just load all and filter here to keep consistent structure for display logic below
+
+
+             all_configs = tool_config.load_config()
+
+
+             if scope not in all_configs:
+
+
+                typer.echo(
+
+
+                    f"{Colors.YELLOW}No configuration found for {app} in scope '{scope}'{Colors.RESET}"
+
+
+                )
+
+
+                return
+
+
+             configs_to_show = {scope: all_configs[scope]}
+
+
+        else:
+
+
+             all_configs = tool_config.load_config()
+
+
+             configs_to_show = all_configs
+
+
+
+
+
+        if not configs_to_show:
+
+
             typer.echo(f"{Colors.YELLOW}No configuration found for {app}{Colors.RESET}")
-            typer.echo(f"Config path: {config_path}")
+
+
             return
 
-        # Flatten the config
-        flattened = flatten_config(config_data, app)
 
-        # If a specific key path is requested
-        if key_path:
-            if key_path in flattened:
-                value = flattened[key_path]
-                typer.echo(f"{Colors.GREEN}{key_path}{Colors.RESET} = {value}")
-            else:
-                matching_keys = []
 
-                # Check for wildcard patterns (containing '*')
-                if "*" in key_path:
-                    import re
-                    # Convert wildcard pattern to regex: * becomes [^.]+
-                    # Escape regex special characters and replace * with [^.]+
-                    pattern = re.escape(key_path).replace(r"\*", "[^.]+")
-                    regex = re.compile(f"^{pattern}$")
 
-                    matching_keys = [k for k in flattened.keys() if regex.match(k)]
-                    match_type = "pattern"
-                else:
-                    # Check for prefix matches (e.g., 'codex.profiles' should show all profiles)
-                    prefix = key_path + "."
-                    matching_keys = [k for k in flattened.keys() if k.startswith(prefix)]
-                    match_type = "prefix"
 
-                if matching_keys:
-                    if match_type == "pattern":
-                        typer.echo(f"{Colors.CYAN}{app.upper()} Configuration - Keys matching pattern '{key_path}':{Colors.RESET}")
-                    else:
-                        typer.echo(f"{Colors.CYAN}{app.upper()} Configuration - Keys matching '{key_path}':{Colors.RESET}")
-                    typer.echo(f"Config file: {config_path}")
-                    typer.echo()
+        # Collect and flatten all requested configs
 
-                    # Sort matching keys for consistent output
-                    for key in sorted(matching_keys):
-                        value = flattened[key]
-                        typer.echo(f"{Colors.GREEN}{key}{Colors.RESET} = {value}")
-                else:
-                    typer.echo(f"{Colors.RED}✗ Key '{key_path}' not found in {app} configuration{Colors.RESET}")
-                    typer.echo(f"Config file: {config_path}")
-                    available_keys = sorted(flattened.keys())
-                    if available_keys:
-                        typer.echo(f"\nAvailable keys ({len(available_keys)}):")
-                        for key in available_keys[:10]:  # Show first 10 keys
-                            typer.echo(f"  {key}")
-                        if len(available_keys) > 10:
-                            typer.echo(f"  ... and {len(available_keys) - 10} more")
-                    raise typer.Exit(1)
+
+        merged_flattened = {}
+
+
+        key_sources = {}
+
+
+
+
+
+        # Sort scopes so that project overrides user in the merged view
+
+
+        for s_name in ["user", "project"]:
+
+
+            if s_name in configs_to_show:
+
+
+                s_data = configs_to_show[s_name]["data"]
+
+
+                s_path = configs_to_show[s_name]["path"]
+
+
+                flattened = flatten_config(s_data, app)
+
+
+                for k, v in flattened.items():
+
+
+                    merged_flattened[k] = v
+
+
+                    key_sources[k] = (s_name, s_path)
+
+
+
+
+
+        if not merged_flattened:
+
+
+            typer.echo(f"{Colors.YELLOW}No keys found in requested scope(s){Colors.RESET}")
+
+
             return
 
-        # Display all config (original behavior)
+
+
+
+
+        # Header
+
+
         typer.echo(f"{Colors.CYAN}{app.upper()} Configuration:{Colors.RESET}")
-        typer.echo(f"File: {config_path}")
+
+
+        for s_name, s_info in configs_to_show.items():
+
+
+            typer.echo(f"  {Colors.BOLD}[{s_name}]{Colors.RESET} {s_info['path']}")
+
+
         typer.echo()
 
-        # Sort keys for consistent output
-        for key in sorted(flattened.keys()):
-            value = flattened[key]
-            typer.echo(f"{Colors.GREEN}{key}{Colors.RESET} = {value}")
+
+
+
+
+        # Filter by key_path if provided
+
+
+        keys_to_show = sorted(merged_flattened.keys())
+
+
+        if key_path:
+
+
+            import re
+
+
+
+
+
+            if "*" in key_path:
+
+
+                pattern = re.escape(key_path).replace(r"\*", "[^.]+")
+
+
+                regex = re.compile(f"^{pattern}$")
+
+
+                keys_to_show = [k for k in keys_to_show if regex.match(k)]
+
+
+            else:
+
+
+                # Direct match or prefix match
+
+
+                keys_to_show = [
+
+
+                    k
+
+
+                    for k in keys_to_show
+
+
+                    if k == key_path or k.startswith(key_path + ".")
+
+
+                ]
+
+
+
+
+
+            if not keys_to_show:
+
+
+                typer.echo(
+
+
+                    f"{Colors.RED}✗ Key '{key_path}' not found in {app} configuration{Colors.RESET}"
+
+
+                )
+
+
+                raise typer.Exit(1)
+
+
+
+
+
+        # Display keys
+
+
+        for key in keys_to_show:
+
+
+            value = merged_flattened[key]
+
+
+            s_name, s_path = key_sources[key]
+
+
+            scope_tag = f" {Colors.DIM}({s_name}){Colors.RESET}" if not scope else ""
+
+
+            typer.echo(f"{Colors.GREEN}{key}{Colors.RESET} = {value}{scope_tag}")
+
+
+
+
 
     except Exception as e:
+
+
         typer.echo(f"{Colors.RED}✗ Failed to show config: {e}{Colors.RESET}")
+
+
         raise typer.Exit(1)
+
