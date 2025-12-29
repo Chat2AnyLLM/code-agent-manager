@@ -191,7 +191,9 @@ def browse_marketplace(
         help=f"App type ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
-    """Browse plugins in configured marketplaces or a specific one.
+    """[DEPRECATED] Browse plugins in configured marketplaces or a specific one.
+
+    ⚠️  This command is deprecated. Use 'cam plugin list' instead.
 
     Without a marketplace name: Shows all plugins from all marketplaces and standalone plugins.
     With a marketplace name: Fetches the marketplace manifest from GitHub and lists available plugins.
@@ -199,6 +201,11 @@ def browse_marketplace(
     """
     from code_assistant_manager.cli.option_utils import resolve_single_app
     from code_assistant_manager.plugins.fetch import fetch_repo_info
+
+    # Show deprecation warning
+    typer.echo(f"{Colors.YELLOW}⚠️  Warning: 'cam plugin browse' is deprecated.{Colors.RESET}")
+    typer.echo(f"{Colors.CYAN}   Use 'cam plugin list' instead to view installed and available plugins.{Colors.RESET}")
+    typer.echo()
 
     app = resolve_single_app(app_type, VALID_APP_TYPES, default="claude")
     manager = PluginManager()
