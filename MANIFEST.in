@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include INSTALL.md
+include requirements.txt
+recursive-include code_assistant_manager *.json
+recursive-include code_assistant_manager *.yaml
+recursive-include code_assistant_manager *.txt

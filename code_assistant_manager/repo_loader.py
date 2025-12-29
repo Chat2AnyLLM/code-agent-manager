@@ -45,14 +45,15 @@ class RepoConfigLoader:
         self.cache_enabled = cache_config.get("enabled", True)
 
     def _load_config(self) -> Dict:
-        """Load config.yaml file."""
-        # Try user config first
+        """Load config.yaml file.
+        
+        Tries user config first, then falls back to bundled config.
+        """
         user_config_path = self.config_dir / "config.yaml"
-
-        # Try bundled config as fallback
         package_dir = Path(__file__).parent
         bundled_config_path = package_dir / "config.yaml"
 
+        # Try to load user config first, fallback to bundled
         config_path = user_config_path if user_config_path.exists() else bundled_config_path
 
         if not config_path.exists():
@@ -62,6 +63,7 @@ class RepoConfigLoader:
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
+                logger.debug(f"Loaded config from: {config_path}")
                 return config or {}
         except Exception as e:
             logger.error(f"Failed to load config from {config_path}: {e}")

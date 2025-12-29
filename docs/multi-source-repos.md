@@ -2,6 +2,15 @@
 
 Code Assistant Manager now supports loading repository configurations from multiple sources, allowing you to use both local custom repos and community-maintained remote repos.
 
+## Installation
+
+When you install code-assistant-manager, the `config.yaml` file is automatically copied to:
+```
+~/.config/code-assistant-manager/config.yaml
+```
+
+You can edit this file to customize repository sources, add your own remote sources, or disable sources you don't need.
+
 ## How It Works
 
 Repository configurations (for skills, agents, and plugins) are loaded from multiple sources in priority order:
