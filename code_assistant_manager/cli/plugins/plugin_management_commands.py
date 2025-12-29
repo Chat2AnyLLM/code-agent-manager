@@ -26,10 +26,14 @@ plugin_app = typer.Typer(
 
 @plugin_app.command("list")
 def list_plugins(
+    marketplace: Optional[str] = typer.Argument(
+        None,
+        help="Marketplace name to browse (from 'cam plugin repos'). If not specified, shows all plugins from all marketplaces.",
+    ),
     show_all: bool = typer.Option(
         False,
         "--all",
-        help="Show all plugins from marketplaces (not just enabled)",
+        help="Show all plugins from marketplaces (not just enabled). Deprecated: use without marketplace argument instead.",
     ),
     app_type: Optional[str] = typer.Option(
         None,
@@ -37,12 +41,84 @@ def list_plugins(
         "-a",
         help=f"App type to show plugins for ({', '.join(VALID_APP_TYPES)}). Shows all apps if not specified.",
     ),
+    query: Optional[str] = typer.Option(
+        None,
+        "--query",
+        "-q",
+        help="Filter plugins by name or description",
+    ),
+    category: Optional[str] = typer.Option(
+        None,
+        "--category",
+        "-c",
+        help="Filter plugins by category",
+    ),
+    limit: int = typer.Option(
+        50,
+        "--limit",
+        "-n",
+        help="Maximum number of plugins to show",
+    ),
 ):
-    """List installed/enabled plugins."""
-    from code_assistant_manager.plugins import VALID_APP_TYPES, get_handler
+    """List installed and available plugins from configured marketplaces.
 
+    Without arguments: Shows installed plugins for all apps plus available plugins from all marketplaces.
+    With marketplace name: Shows plugins from the specified marketplace.
+    Use --query to search by name/description, --category to filter by category.
+    """
+    from code_assistant_manager.plugins import VALID_APP_TYPES, get_handler
+    from code_assistant_manager.plugins.fetch import fetch_repo_info
+    from code_assistant_manager.cli.plugins.plugin_discovery_commands import (
+        _filter_plugins,
+        _display_plugin,
+        _display_marketplace_header,
+        _display_marketplace_footer,
+        _resolve_marketplace_repo,
+        _display_marketplace_not_found,
+    )
+
+    # Handle marketplace-specific browsing (replaces browse functionality)
+    if marketplace:
+        from code_assistant_manager.cli.option_utils import resolve_single_app
+
+        app = resolve_single_app(app_type or "claude", VALID_APP_TYPES, default="claude")
+        manager = PluginManager()
+        handler = get_handler(app)
+
+        # Resolve marketplace to repo info
+        repo_owner, repo_name, repo_branch = _resolve_marketplace_repo(
+            manager, handler, marketplace
+        )
+
+        if not repo_owner or not repo_name:
+            _display_marketplace_not_found(manager, handler, marketplace)
+            raise typer.Exit(1)
+
+        # Fetch plugins
+        typer.echo(f"{Colors.CYAN}Fetching plugins from {marketplace}...{Colors.RESET}")
+        info = fetch_repo_info(repo_owner, repo_name, repo_branch)
+
+        if not info or not info.plugins:
+            typer.echo(f"{Colors.RED}✗ Could not fetch plugins from repo.{Colors.RESET}")
+            raise typer.Exit(1)
+
+        # Filter and display
+        plugins = _filter_plugins(info.plugins, query, category)
+        total = len(plugins)
+        plugins = plugins[:limit]
+
+        _display_marketplace_header(info, query, category, total)
+        typer.echo(f"\n{Colors.BOLD}Plugins:{Colors.RESET}\n")
+
+        for plugin in plugins:
+            _display_plugin(plugin)
+
+        _display_marketplace_footer(info, marketplace, total, limit)
+        return
+
+    # Show both installed and available plugins (default behavior)
     if app_type:
-        # Show plugins for specific app (original behavior)
+        # Show plugins for specific app
         if app_type not in VALID_APP_TYPES:
             typer.echo(
                 f"{Colors.RED}✗ Invalid app type: {app_type}. Valid: {', '.join(VALID_APP_TYPES)}{Colors.RESET}"
@@ -50,9 +126,11 @@ def list_plugins(
             raise typer.Exit(1)
 
         handler = get_handler(app_type)
-        _show_app_plugins(app_type, handler, show_all)
+        _show_app_plugins(app_type, handler, True, query, category, limit)  # Always show available now
     else:
-        # Show plugins for all apps
+        # Show plugins for all apps plus available plugins
+        manager = PluginManager()
+
         typer.echo(f"{Colors.BOLD}Plugin Status Across All Apps:{Colors.RESET}\n")
 
         apps_with_plugins = []
@@ -61,22 +139,18 @@ def list_plugins(
             enabled_plugins = handler.get_enabled_plugins()
             if enabled_plugins:
                 apps_with_plugins.append(current_app)
-                _show_app_plugins(current_app, handler, show_all, show_header=False)
+                _show_app_plugins(current_app, handler, True, query, category, limit, show_header=False)
                 typer.echo()  # Add spacing between apps
 
         if not apps_with_plugins:
             typer.echo(f"{Colors.YELLOW}No plugins installed in any app.{Colors.RESET}")
             typer.echo(f"Use 'cam plugin install <plugin>' to install one.")
 
-            # Show available built-in repos
-            if BUILTIN_PLUGIN_REPOS:
-                typer.echo(f"\n{Colors.CYAN}Available built-in plugins:{Colors.RESET}")
-                for name, repo in BUILTIN_PLUGIN_REPOS.items():
-                    typer.echo(f"  • {name}: {repo.description or 'No description'}")
-                typer.echo(f"\nInstall with: cam plugin install <name>")
+        # Show available plugins from all marketplaces
+        _show_available_plugins(manager, query, category, limit)
 
 
-def _show_app_plugins(app_name: str, handler, show_all: bool, show_header: bool = True):
+def _show_app_plugins(app_name: str, handler, show_all: bool, query: Optional[str] = None, category: Optional[str] = None, limit: int = 50, show_header: bool = True):
     """Show plugins for a specific app."""
     # Get enabled plugins from settings
     enabled_plugins = handler.get_enabled_plugins()
@@ -116,6 +190,16 @@ def _show_app_plugins(app_name: str, handler, show_all: bool, show_header: bool 
         # Scan plugins from marketplaces
         plugins = handler.scan_marketplace_plugins()
         if plugins:
+            # Apply filtering if specified
+            if query or category:
+                plugins = [p for p in plugins if
+                          (not query or query.lower() in p.name.lower() or
+                           (p.description and query.lower() in p.description.lower())) and
+                          (not category or category.lower() in (p.category or "").lower())]
+
+            # Apply limit
+            plugins = plugins[:limit]
+
             typer.echo(
                 f"{Colors.BOLD}Available Plugins from Marketplaces ({app_name}):{Colors.RESET}\n"
             )
@@ -134,6 +218,103 @@ def _show_app_plugins(app_name: str, handler, show_all: bool, show_header: bool 
                     f"      {Colors.CYAN}Marketplace:{Colors.RESET} {plugin.marketplace}"
                 )
             typer.echo()
+
+
+def _show_available_plugins(manager: PluginManager, query: Optional[str] = None, category: Optional[str] = None, limit: int = 50):
+    """Show available plugins from all configured marketplaces."""
+    from code_assistant_manager.plugins.fetch import fetch_repo_info
+    from code_assistant_manager.cli.plugins.plugin_discovery_commands import _filter_plugins, _display_plugin
+
+    all_repos = manager.get_all_repos()
+    if not all_repos:
+        return
+
+    typer.echo(f"{Colors.BOLD}Available Plugins from All Marketplaces:{Colors.RESET}")
+
+    all_plugins = []
+    repo_sources = {}  # Track which repo each plugin comes from
+
+    for repo_name, repo in all_repos.items():
+        if not repo.repo_owner or not repo.repo_name:
+            continue
+
+        # Fetch repo info
+        info = fetch_repo_info(
+            repo.repo_owner, repo.repo_name, repo.repo_branch or "main"
+        )
+        if not info:
+            continue
+
+        if info.type == "marketplace":
+            # Add plugins from marketplace with their source
+            for plugin in info.plugins:
+                plugin["marketplace"] = repo_name
+                repo_sources[f"{plugin.get('name', '')}@{repo_name}"] = repo_name
+            all_plugins.extend(info.plugins)
+        else:
+            # Single plugin repository
+            plugin_name = info.name
+            all_plugins.append(
+                {
+                    "name": plugin_name,
+                    "version": info.version or "",
+                    "description": info.description or "",
+                    "category": "",
+                    "marketplace": repo_name,
+                }
+            )
+            repo_sources[f"{plugin_name}@{repo_name}"] = repo_name
+
+    if not all_plugins:
+        typer.echo(f"  {Colors.YELLOW}No plugins found in configured repositories{Colors.RESET}")
+        return
+
+    # Filter and display
+    plugins = _filter_plugins(all_plugins, query, category)
+    total = len(plugins)
+    plugins = plugins[:limit]
+
+    if query or category:
+        typer.echo(f"  Showing {len(plugins)} of {total} matching plugins\n")
+    else:
+        typer.echo(f"  Showing {len(plugins)} plugins\n")
+
+    # Organize plugins by marketplace
+    plugins_by_marketplace = {}
+    for plugin in plugins:
+        marketplace_name = plugin.get("marketplace", "Unknown")
+        if marketplace_name not in plugins_by_marketplace:
+            plugins_by_marketplace[marketplace_name] = []
+        plugins_by_marketplace[marketplace_name].append(plugin)
+
+    # Display plugins organized by marketplace
+    displayed_count = 0
+    for marketplace_name in sorted(plugins_by_marketplace.keys()):
+        marketplace_plugins = plugins_by_marketplace[marketplace_name]
+        typer.echo(f"{Colors.BOLD}{marketplace_name}:{Colors.RESET}")
+
+        for plugin in marketplace_plugins:
+            if displayed_count >= limit:
+                break
+            _display_plugin(plugin)
+            displayed_count += 1
+
+        if displayed_count >= limit:
+            break
+
+    if total > limit:
+        typer.echo(f"\n  ... and {total - limit} more plugins")
+
+    categories = {p.get("category") for p in all_plugins if p.get("category")}
+    if categories:
+        typer.echo(
+            f"\n{Colors.CYAN}Categories:{Colors.RESET} {', '.join(sorted(categories))}"
+        )
+
+    typer.echo(
+        f"\n{Colors.CYAN}Install with:{Colors.RESET} cam plugin install <marketplace>:<plugin-name>"
+    )
+    typer.echo()
 
 
 @plugin_app.command("repos")
