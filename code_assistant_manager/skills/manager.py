@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Type
 
+from ..repo_loader import RepoConfigLoader
 from .base import BaseSkillHandler
 from .claude import ClaudeSkillHandler
 from .codebuddy import CodebuddySkillHandler
@@ -22,8 +23,11 @@ from .models import Skill, SkillRepo
 logger = logging.getLogger(__name__)
 
 
-def _load_builtin_skill_repos() -> List[Dict]:
-    """Load built-in skill repos from the bundled skill_repos.json file."""
+def _load_builtin_skill_repos() -> Dict:
+    """Load built-in skill repos from the bundled skill_repos.json file.
+
+    Returns bundled repos as a dictionary for fallback.
+    """
     package_dir = Path(__file__).parent.parent
     repos_file = package_dir / "skill_repos.json"
 
@@ -31,39 +35,58 @@ def _load_builtin_skill_repos() -> List[Dict]:
         try:
             with open(repos_file, "r", encoding="utf-8") as f:
                 repos_data = json.load(f)
-                return [
-                    {
-                        "owner": repo.get("owner"),
-                        "name": repo.get("name"),
-                        "branch": repo.get("branch", "main"),
-                        "enabled": repo.get("enabled", True),
-                        "skillsPath": repo.get("skillsPath"),
-                    }
-                    for repo in repos_data.values()
-                ]
+                return repos_data
         except Exception as e:
             logger.warning(f"Failed to load builtin skill repos: {e}")
 
     # Fallback defaults
-    return [
-        {
+    return {
+        "ComposioHQ/awesome-claude-skills": {
             "owner": "ComposioHQ",
             "name": "awesome-claude-skills",
             "branch": "main",
             "enabled": True,
             "skillsPath": None,
         },
-        {
+        "obra/superpowers": {
             "owner": "obra",
             "name": "superpowers",
             "branch": "main",
             "enabled": True,
             "skillsPath": "skills",
         },
+    }
+
+
+def _load_skill_repos_from_config(config_dir: Optional[Path] = None) -> List[Dict]:
+    """Load skill repos from config.yaml sources.
+
+    Args:
+        config_dir: Configuration directory
+
+    Returns:
+        List of repository configurations
+    """
+    loader = RepoConfigLoader(config_dir)
+    bundled_fallback = _load_builtin_skill_repos()
+
+    # Get repos from all configured sources
+    repos_dict = loader.get_repos("skills", bundled_fallback)
+
+    # Convert to list format for backward compatibility
+    return [
+        {
+            "owner": repo.get("owner"),
+            "name": repo.get("name"),
+            "branch": repo.get("branch", "main"),
+            "enabled": repo.get("enabled", True),
+            "skillsPath": repo.get("skillsPath"),
+        }
+        for repo in repos_dict.values()
     ]
 
 
-DEFAULT_SKILL_REPOS = _load_builtin_skill_repos()
+DEFAULT_SKILL_REPOS = _load_skill_repos_from_config()
 
 # Registry of available handlers
 SKILL_HANDLERS: Dict[str, Type[BaseSkillHandler]] = {

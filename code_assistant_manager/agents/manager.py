@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Type
 
+from ..repo_loader import RepoConfigLoader
 from .base import BaseAgentHandler
 from .claude import ClaudeAgentHandler
 from .codebuddy import CodebuddyAgentHandler
@@ -24,8 +25,11 @@ from ..fetcher import Fetcher
 logger = logging.getLogger(__name__)
 
 
-def _load_builtin_agent_repos() -> List[Dict]:
-    """Load built-in agent repos from the bundled agent_repos.json file."""
+def _load_builtin_agent_repos() -> Dict:
+    """Load built-in agent repos from the bundled agent_repos.json file.
+
+    Returns bundled repos as a dictionary for fallback.
+    """
     package_dir = Path(__file__).parent.parent
     repos_file = package_dir / "agent_repos.json"
 
@@ -33,32 +37,51 @@ def _load_builtin_agent_repos() -> List[Dict]:
         try:
             with open(repos_file, "r", encoding="utf-8") as f:
                 repos_data = json.load(f)
-                return [
-                    {
-                        "owner": repo.get("owner"),
-                        "name": repo.get("name"),
-                        "branch": repo.get("branch", "main"),
-                        "enabled": repo.get("enabled", True),
-                        "agentsPath": repo.get("agentsPath"),
-                    }
-                    for repo in repos_data.values()
-                ]
+                return repos_data
         except Exception as e:
             logger.warning(f"Failed to load builtin agent repos: {e}")
 
     # Fallback defaults
-    return [
-        {
+    return {
+        "iannuttall/claude-agents": {
             "owner": "iannuttall",
             "name": "claude-agents",
             "branch": "main",
             "enabled": True,
             "agentsPath": "agents",
         },
+    }
+
+
+def _load_agent_repos_from_config(config_dir: Optional[Path] = None) -> List[Dict]:
+    """Load agent repos from config.yaml sources.
+
+    Args:
+        config_dir: Configuration directory
+
+    Returns:
+        List of repository configurations
+    """
+    loader = RepoConfigLoader(config_dir)
+    bundled_fallback = _load_builtin_agent_repos()
+
+    # Get repos from all configured sources
+    repos_dict = loader.get_repos("agents", bundled_fallback)
+
+    # Convert to list format for backward compatibility
+    return [
+        {
+            "owner": repo.get("owner"),
+            "name": repo.get("name"),
+            "branch": repo.get("branch", "main"),
+            "enabled": repo.get("enabled", True),
+            "agentsPath": repo.get("agentsPath"),
+        }
+        for repo in repos_dict.values()
     ]
 
 
-DEFAULT_AGENT_REPOS = _load_builtin_agent_repos()
+DEFAULT_AGENT_REPOS = _load_agent_repos_from_config()
 
 # Registry of available handlers
 AGENT_HANDLERS: Dict[str, Type[BaseAgentHandler]] = {

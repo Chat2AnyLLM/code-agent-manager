@@ -1,0 +1,42 @@
+# Code Assistant Manager - Repository Configuration
+# This file configures sources for skills, agents, and plugins
+
+repositories:
+  # Skill repositories
+  skills:
+    sources:
+      # Local user file (highest priority)
+      - type: local
+        path: ~/.config/code-assistant-manager/skill_repos.json
+      
+      # Remote awesome repository configs
+      - type: remote
+        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/skill_repos.json
+  
+  # Agent repositories
+  agents:
+    sources:
+      # Local user file (highest priority)
+      - type: local
+        path: ~/.config/code-assistant-manager/agent_repos.json
+      
+      # Remote awesome repository configs
+      - type: remote
+        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/agent_repos.json
+  
+  # Plugin repositories
+  plugins:
+    sources:
+      # Local user file (highest priority)
+      - type: local
+        path: ~/.config/code-assistant-manager/plugin_repos.json
+      
+      # Remote awesome repository configs
+      - type: remote
+        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/plugin_repos.json
+
+# Cache settings for remote sources
+cache:
+  enabled: true
+  directory: ~/.cache/code-assistant-manager/repos
+  ttl_seconds: 3600  # Cache remote sources for 1 hour

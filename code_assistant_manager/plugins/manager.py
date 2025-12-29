@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
+from ..repo_loader import RepoConfigLoader
 from .base import BasePluginHandler
 from .claude import ClaudePluginHandler
 from .codebuddy import CodebuddyPluginHandler
@@ -16,7 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 def _load_builtin_plugin_repos() -> Dict[str, PluginRepo]:
-    """Load built-in plugin repos from the bundled plugin_repos.json file."""
+    """Load built-in plugin repos from the bundled plugin_repos.json file.
+
+    Returns bundled repos as PluginRepo objects for fallback.
+    """
     package_dir = Path(__file__).parent.parent
     repos_file = package_dir / "plugin_repos.json"
 
@@ -44,6 +48,54 @@ def _load_builtin_plugin_repos() -> Dict[str, PluginRepo]:
     return repos
 
 
+def _load_plugin_repos_from_config(config_dir: Optional[Path] = None) -> Dict[str, PluginRepo]:
+    """Load plugin repos from config.yaml sources.
+
+    Args:
+        config_dir: Configuration directory
+
+    Returns:
+        Dictionary of PluginRepo objects
+    """
+    loader = RepoConfigLoader(config_dir)
+    bundled_fallback_dict = _load_builtin_plugin_repos()
+
+    # Convert PluginRepo objects to dict for loader
+    bundled_data = {}
+    for key, repo in bundled_fallback_dict.items():
+        bundled_data[key] = {
+            "name": repo.name,
+            "description": repo.description,
+            "repoOwner": repo.repo_owner,
+            "repoName": repo.repo_name,
+            "repoBranch": repo.repo_branch,
+            "pluginPath": repo.plugin_path,
+            "enabled": repo.enabled,
+            "type": repo.type,
+            "aliases": repo.aliases,
+        }
+
+    # Get repos from all configured sources
+    repos_dict = loader.get_repos("plugins", bundled_data)
+
+    # Convert back to PluginRepo objects
+    repos: Dict[str, PluginRepo] = {}
+    for key, repo_data in repos_dict.items():
+        repos[key] = PluginRepo(
+            name=repo_data.get("name", key),
+            description=repo_data.get("description", ""),
+            repo_owner=repo_data.get("repoOwner"),
+            repo_name=repo_data.get("repoName"),
+            repo_branch=repo_data.get("repoBranch", "main"),
+            plugin_path=repo_data.get("pluginPath"),
+            enabled=repo_data.get("enabled", True),
+            type=repo_data.get("type", "plugin"),
+            aliases=repo_data.get("aliases", []),
+        )
+
+    return repos
+
+
 # Registry of all available plugin handlers
 PLUGIN_HANDLERS: Dict[str, Type[BasePluginHandler]] = {
     "claude": ClaudePluginHandler,
@@ -56,7 +108,7 @@ PLUGIN_HANDLERS: Dict[str, Type[BasePluginHandler]] = {
 VALID_APP_TYPES = list(PLUGIN_HANDLERS.keys())
 
 # Built-in plugin repositories
-BUILTIN_PLUGIN_REPOS = _load_builtin_plugin_repos()
+BUILTIN_PLUGIN_REPOS = _load_plugin_repos_from_config()
 
 
 def get_handler(app_type: str) -> BasePluginHandler:
