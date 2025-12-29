@@ -4,9 +4,11 @@ This module provides the SkillManager class that orchestrates skill operations
 across different AI tool handlers.
 """
 
+import concurrent.futures
 import json
 import logging
 import shutil
+import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Type
 
@@ -169,20 +171,28 @@ class SkillManager:
             raise
 
     def _load_repos(self) -> Dict[str, SkillRepo]:
-        """Load skill repos from file."""
-        if not self.repos_file.exists():
-            self._init_default_repos_file()
-
-        try:
-            with open(self.repos_file, "r") as f:
-                data = json.load(f)
-            return {
-                repo_id: SkillRepo.from_dict(repo_data)
-                for repo_id, repo_data in data.items()
-            }
-        except Exception as e:
-            logger.warning(f"Failed to load skill repos: {e}")
-            return {}
+        """Load skill repos from config sources (local + remote).
+        
+        Uses RepoConfigLoader to dynamically load from all configured sources,
+        ensuring we always get the latest repository list from remote sources.
+        """
+        bundled_fallback = _load_builtin_skill_repos()
+        repos_data_list = _load_skill_repos_from_config(self.config_dir)
+        
+        # Convert list format to dict format with SkillRepo objects
+        repos = {}
+        for repo_data in repos_data_list:
+            repo = SkillRepo(
+                owner=repo_data["owner"],
+                name=repo_data["name"],
+                branch=repo_data.get("branch", "main"),
+                enabled=repo_data.get("enabled", True),
+                skills_path=repo_data.get("skillsPath"),
+            )
+            repo_id = f"{repo.owner}/{repo.name}"
+            repos[repo_id] = repo
+        
+        return repos
 
     def _init_default_repos_file(self) -> None:
         """Initialize the repos file with default skill repos."""
@@ -325,8 +335,11 @@ class SkillManager:
         self._save_skills(skills)
         logger.info(f"Uninstalled skill: {skill_key} from {app_type}")
 
-    def fetch_skills_from_repos(self) -> List[Skill]:
-        """Fetch all skills from configured repositories.
+    def fetch_skills_from_repos(self, max_workers: int = 8) -> List[Skill]:
+        """Fetch all skills from configured repositories in parallel.
+
+        Args:
+            max_workers: Maximum number of concurrent repository fetchers
 
         Returns:
             List of discovered skills
@@ -336,32 +349,72 @@ class SkillManager:
             self._init_default_repos_file()
             repos = self._load_repos()
 
+        # Filter enabled repos
+        enabled_repos = {
+            repo_id: repo for repo_id, repo in repos.items() if repo.enabled
+        }
+
+        if not enabled_repos:
+            logger.warning("No enabled repositories found")
+            return []
+
+        logger.info(f"Fetching skills from {len(enabled_repos)} repositories in parallel")
+
         all_skills = []
         existing_skills = self._load_skills()
+
+        # Thread-safe storage for results
+        skills_results = []
+        lock = threading.Lock()
 
         # Use claude handler for fetching (all repos use same format)
         handler = self.get_handler("claude")
 
-        for repo_id, repo in repos.items():
-            if not repo.enabled:
-                logger.debug(f"Skipping disabled repo: {repo_id}")
-                continue
-
+        def process_repository(repo_id: str, repo: SkillRepo):
+            """Process a single repository to extract skills."""
             try:
                 skills = self._fetch_skills_from_repo(repo, handler)
                 for skill in skills:
                     if skill.key in existing_skills:
                         skill.installed = existing_skills[skill.key].installed
-                    all_skills.append(skill)
+
+                with lock:
+                    skills_results.extend(skills)
+
                 logger.info(f"Found {len(skills)} skills in {repo_id}")
+                return len(skills)
             except Exception as e:
                 logger.warning(f"Failed to fetch skills from {repo_id}: {e}")
+                return 0
+
+        # Use ThreadPoolExecutor for parallel processing
+        actual_workers = min(max_workers, len(enabled_repos))
+        logger.debug(f"Using {actual_workers} concurrent workers")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=actual_workers) as executor:
+            # Submit all tasks
+            future_to_repo = {
+                executor.submit(process_repository, repo_id, repo): repo_id
+                for repo_id, repo in enabled_repos.items()
+            }
+
+            # Wait for all tasks to complete
+            for future in concurrent.futures.as_completed(future_to_repo):
+                repo_id = future_to_repo[future]
+                try:
+                    skill_count = future.result()
+                    logger.debug(f"Completed processing {repo_id}: {skill_count} skills")
+                except Exception as e:
+                    logger.error(f"Exception processing {repo_id}: {e}")
+
+        all_skills = skills_results
 
         # Merge and save
         for skill in all_skills:
             existing_skills[skill.key] = skill
         self._save_skills(existing_skills)
 
+        logger.info(f"Total skills fetched: {len(all_skills)}")
         return all_skills
 
     def _fetch_skills_from_repo(

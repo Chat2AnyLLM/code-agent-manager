@@ -4,9 +4,11 @@ This module provides the AgentManager class that orchestrates agent operations
 across different AI tool handlers.
 """
 
+import concurrent.futures
 import json
 import logging
 import shutil
+import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Type
 
@@ -165,20 +167,28 @@ class AgentManager:
             raise
 
     def _load_repos(self) -> Dict[str, AgentRepo]:
-        """Load agent repos from file."""
-        if not self.repos_file.exists():
-            self._init_default_repos_file()
-
-        try:
-            with open(self.repos_file, "r") as f:
-                data = json.load(f)
-            return {
-                repo_id: AgentRepo.from_dict(repo_data)
-                for repo_id, repo_data in data.items()
-            }
-        except Exception as e:
-            logger.warning(f"Failed to load agent repos: {e}")
-            return {}
+        """Load agent repos from config sources (local + remote).
+        
+        Uses RepoConfigLoader to dynamically load from all configured sources,
+        ensuring we always get the latest repository list from remote sources.
+        """
+        bundled_fallback = _load_builtin_agent_repos()
+        repos_data_list = _load_agent_repos_from_config(self.config_dir)
+        
+        # Convert list format to dict format with AgentRepo objects
+        repos = {}
+        for repo_data in repos_data_list:
+            repo = AgentRepo(
+                owner=repo_data["owner"],
+                name=repo_data["name"],
+                branch=repo_data.get("branch", "main"),
+                enabled=repo_data.get("enabled", True),
+                agents_path=repo_data.get("agentsPath"),
+            )
+            repo_id = f"{repo.owner}/{repo.name}"
+            repos[repo_id] = repo
+        
+        return repos
 
     def _init_default_repos_file(self) -> None:
         """Initialize the repos file with default agent repos."""
@@ -287,8 +297,11 @@ class AgentManager:
         self._save_agents(agents)
         logger.info(f"Uninstalled agent: {agent_key} from {app_type}")
 
-    def fetch_agents_from_repos(self) -> List[Agent]:
-        """Fetch all agents from configured repositories.
+    def fetch_agents_from_repos(self, max_workers: int = 8) -> List[Agent]:
+        """Fetch all agents from configured repositories in parallel.
+
+        Args:
+            max_workers: Maximum number of concurrent repository fetchers
 
         Returns:
             List of discovered agents
@@ -298,32 +311,72 @@ class AgentManager:
             self._init_default_repos_file()
             repos = self._load_repos()
 
+        # Filter enabled repos
+        enabled_repos = {
+            repo_id: repo for repo_id, repo in repos.items() if repo.enabled
+        }
+
+        if not enabled_repos:
+            logger.warning("No enabled repositories found")
+            return []
+
+        logger.info(f"Fetching agents from {len(enabled_repos)} repositories in parallel")
+
         all_agents = []
         existing_agents = self._load_agents()
+
+        # Thread-safe storage for results
+        agents_results = []
+        lock = threading.Lock()
 
         # Use claude handler for fetching (all repos use same format)
         handler = self.get_handler("claude")
 
-        for repo_id, repo in repos.items():
-            if not repo.enabled:
-                logger.debug(f"Skipping disabled repo: {repo_id}")
-                continue
-
+        def process_repository(repo_id: str, repo: AgentRepo):
+            """Process a single repository to extract agents."""
             try:
                 agents = self._fetch_agents_from_repo(repo, handler)
                 for agent in agents:
                     if agent.key in existing_agents:
                         agent.installed = existing_agents[agent.key].installed
-                    all_agents.append(agent)
+
+                with lock:
+                    agents_results.extend(agents)
+
                 logger.info(f"Found {len(agents)} agents in {repo_id}")
+                return len(agents)
             except Exception as e:
                 logger.warning(f"Failed to fetch agents from {repo_id}: {e}")
+                return 0
+
+        # Use ThreadPoolExecutor for parallel processing
+        actual_workers = min(max_workers, len(enabled_repos))
+        logger.debug(f"Using {actual_workers} concurrent workers")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=actual_workers) as executor:
+            # Submit all tasks
+            future_to_repo = {
+                executor.submit(process_repository, repo_id, repo): repo_id
+                for repo_id, repo in enabled_repos.items()
+            }
+
+            # Wait for all tasks to complete
+            for future in concurrent.futures.as_completed(future_to_repo):
+                repo_id = future_to_repo[future]
+                try:
+                    agent_count = future.result()
+                    logger.debug(f"Completed processing {repo_id}: {agent_count} agents")
+                except Exception as e:
+                    logger.error(f"Exception processing {repo_id}: {e}")
+
+        all_agents = agents_results
 
         # Merge and save
         for agent in all_agents:
             existing_agents[agent.key] = agent
         self._save_agents(existing_agents)
 
+        logger.info(f"Total agents fetched: {len(all_agents)}")
         return all_agents
 
     def _fetch_agents_from_repo(
