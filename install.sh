@@ -177,6 +177,17 @@ setup_config() {
         pkg_dir=$(python3 -c "import code_assistant_manager; import os; print(os.path.dirname(code_assistant_manager.__file__))" 2>/dev/null || echo "")
     fi
 
+    # Copy config.yaml (multi-source repository configuration)
+    if [ -n "$pkg_dir" ] && [ -f "$pkg_dir/config.yaml" ]; then
+        if [ ! -f ~/.config/code-assistant-manager/config.yaml ]; then
+            cp "$pkg_dir/config.yaml" ~/.config/code-assistant-manager/config.yaml
+            print_success "Created config.yaml (multi-source repo configuration)"
+            print_info "  You can edit ~/.config/code-assistant-manager/config.yaml to customize sources"
+        else
+            print_info "config.yaml already exists, skipping"
+        fi
+    fi
+
     if [ -n "$pkg_dir" ] && [ -f "$pkg_dir/providers.json" ]; then
         cp "$pkg_dir/providers.json" ~/.config/code-assistant-manager/providers.json
         print_success "Created providers.json"
