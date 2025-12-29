@@ -440,6 +440,15 @@ class CrushTool(CLITool):
         print(f"DEBUG: running: crush {' '.join(args)}\n")
 
         command = ["crush"] + args
+
+        # Display the complete command
+        args_str = " ".join(args) if args else ""
+        command_str = f"crush {args_str}".strip()
+        print("")
+        print("Complete command to execute:")
+        print(command_str)
+        print("")
+
         return self._run_tool_with_env(command, env, "crush", interactive=True)
 
     def _handle_mcp_command(self, args: List[str]) -> int:

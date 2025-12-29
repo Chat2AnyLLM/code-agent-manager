@@ -44,6 +44,15 @@ class QoderCLITool(CLITool):
         # Execute the Qoder CLI with the provided arguments
         try:
             command = ["qodercli"] + args
+
+            # Display the complete command
+            args_str = " ".join(args) if args else ""
+            command_str = f"qodercli {args_str}".strip()
+            print("")
+            print("Complete command to execute:")
+            print(command_str)
+            print("")
+
             return self._run_tool_with_env(command, env, "qodercli", interactive=True)
         except Exception as e:
             # This shouldn't happen since _run_tool_with_env handles the try/except

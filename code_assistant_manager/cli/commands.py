@@ -184,6 +184,8 @@ def launch_alias(ctx: Context, tool_name: str = TOOL_NAME_OPTION):
         registered_tools = get_registered_tools()
         if tool_name in registered_tools and tool_name != "mcp":
             config_path = ctx.obj.get("config_path")
+            # Get any extra args passed after the tool name
+            tool_args = ctx.args if hasattr(ctx, 'args') else []
             try:
                 config = ConfigManager(config_path)
                 is_valid, errors = config.validate_config()
@@ -194,7 +196,7 @@ def launch_alias(ctx: Context, tool_name: str = TOOL_NAME_OPTION):
                     return 1
                 tool_class = registered_tools.get(tool_name)
                 tool = tool_class(config)
-                return tool.run([])
+                return tool.run(tool_args)
             except Exception as e:
                 from code_assistant_manager.exceptions import create_error_handler
 

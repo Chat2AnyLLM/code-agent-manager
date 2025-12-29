@@ -63,7 +63,7 @@ class DroidTool(CLITool):
             selected_models = [models[0]]
         else:
             success, selected_models = select_multiple_models(
-                models, 
+                models,
                 f"Select models from {endpoint_info} (Cancel to skip):",
                 cancel_text="Skip"
             )
@@ -77,7 +77,7 @@ class DroidTool(CLITool):
             display_name = f"{model} [{endpoint_name}]"
             entry = f"{display_name}|{endpoint_config['endpoint']}|{endpoint_config['actual_api_key']}|generic-chat-completion-api|65536"
             entries.append(entry)
-        
+
         return entries
 
     def _write_droid_settings(self, selected_entries: List[str]) -> Path:
@@ -189,6 +189,15 @@ class DroidTool(CLITool):
         print("Starting Factory.ai Droid CLI...")
 
         command = ["droid"] + args
+
+        # Display the complete command
+        args_str = " ".join(args) if args else ""
+        command_str = f"droid {args_str}".strip()
+        print("")
+        print("Complete command to execute:")
+        print(command_str)
+        print("")
+
         return self._run_tool_with_env(command, env, "droid", interactive=True)
 
     def _build_models_json(self, entries: List[str]) -> List[dict]:

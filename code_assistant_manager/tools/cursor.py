@@ -43,6 +43,15 @@ class CursorTool(CLITool):
         # Execute cursor-agent with the provided arguments
         try:
             cmd = ["cursor-agent"] + args
+
+            # Display the complete command
+            args_str = " ".join(args) if args else ""
+            command_str = f"cursor-agent {args_str}".strip()
+            print("")
+            print("Complete command to execute:")
+            print(command_str)
+            print("")
+
             logger.info(f"Running command: {' '.join(cmd)}")
             result = subprocess.run(cmd, env=env)
             return result.returncode

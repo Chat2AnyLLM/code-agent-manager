@@ -44,16 +44,18 @@ class IfLowTool(CLITool):
         # Set TLS environment for Node.js
         self._set_node_tls_env(env)
 
+        # Execute the iFlow CLI with the configured environment
+        command = ["iflow", *args]
+
         # Display the complete command that will be executed
+        args_str = " ".join(args) if args else ""
+        command_str = f"iflow {args_str}".strip()
         print("")
         print("Complete command to execute:")
         print(
             "IFLOW_API_KEY=*** "
             f"IFLOW_BASE_URL={env['IFLOW_BASE_URL']} "
-            f"IFLOW_MODEL_NAME={env['IFLOW_MODEL_NAME']} iflow"
+            f"IFLOW_MODEL_NAME={env['IFLOW_MODEL_NAME']} {command_str}"
         )
         print("")
-
-        # Execute the iFlow CLI with the configured environment
-        command = ["iflow", *args]
         return self._run_tool_with_env(command, env, "iflow", interactive=True)

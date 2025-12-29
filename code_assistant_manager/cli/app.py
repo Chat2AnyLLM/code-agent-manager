@@ -28,7 +28,6 @@ from .options import (
     CONFIG_OPTION,
     DEBUG_OPTION,
     SCOPE_OPTION,
-    TOOL_ARGS_OPTION,
     VALIDATE_VERBOSE_OPTION,
 )
 
@@ -61,6 +60,7 @@ from . import commands  # noqa: F401,E402
 editor_app = typer.Typer(
     help="Launch AI code editors: claude, codex, qwen, etc. (alias: l)",
     no_args_is_help=False,
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 
 
@@ -132,7 +132,6 @@ def create_editor_subcommands():
         def command(
             ctx: Context,
             config: Optional[str] = CONFIG_OPTION,
-            tool_args: List[str] = TOOL_ARGS_OPTION,
         ):
             """Launch the specified AI code editor."""
             # Initialize context object
@@ -141,6 +140,9 @@ def create_editor_subcommands():
             ctx.obj["debug"] = False
             ctx.obj["endpoints"] = None
 
+            # Get any extra args passed after the tool name
+            tool_args = ctx.args if hasattr(ctx, 'args') else []
+            
             logger.debug(f"Executing command: {name} with args: {tool_args}")
             config_path = config
             logger.debug(f"Using config path: {config_path}")
@@ -174,7 +176,7 @@ def create_editor_subcommands():
 
             logger.debug(f"Launching tool: {name}")
             tool_instance = cls(config_obj)
-            sys.exit(tool_instance.run(tool_args or []))
+            sys.exit(tool_instance.run(tool_args))
 
         # Set the command name and help text
         command.__name__ = name
@@ -182,8 +184,11 @@ def create_editor_subcommands():
         return command
 
     for tool_name, tool_class in editor_tools.items():
-        # Add the command to the editor app
-        editor_app.command(name=tool_name)(make_command(tool_name, tool_class))
+        # Add the command to the editor app with context settings
+        editor_app.command(
+            name=tool_name,
+            context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+        )(make_command(tool_name, tool_class))
         logger.debug(f"Added command: {tool_name}")
 
 
