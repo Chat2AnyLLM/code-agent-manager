@@ -40,13 +40,20 @@ def legacy_main():
 
         if command in registered_tools and command != "mcp":
             logger.debug(f"Direct tool invocation detected for: {command}")
-            # Extract config path if provided
+            # Extract config path if provided and filter it out from tool args
             config_path = None
-            if "--config" in sys.argv:
-                idx = sys.argv.index("--config")
-                if idx + 1 < len(sys.argv):
-                    config_path = sys.argv[idx + 1]
+            tool_args = list(sys.argv[2:])  # Copy the args after the tool name
+            if "--config" in tool_args:
+                idx = tool_args.index("--config")
+                if idx + 1 < len(tool_args):
+                    config_path = tool_args[idx + 1]
                     logger.debug(f"Config path from args: {config_path}")
+                    # Remove --config and its value from tool args
+                    tool_args.pop(idx)  # Remove --config
+                    tool_args.pop(idx)  # Remove the config path value
+                else:
+                    # Remove just --config if no value follows
+                    tool_args.pop(idx)
 
             try:
                 config = ConfigManager(config_path)
@@ -66,9 +73,9 @@ def legacy_main():
                 return 1
 
             tool_class = registered_tools.get(command)
-            logger.debug(f"Launching tool directly: {command}")
+            logger.debug(f"Launching tool directly: {command} with args: {tool_args}")
             tool = tool_class(config)
-            return tool.run(sys.argv[2:])
+            return tool.run(tool_args)
 
         # If a --config flag is present, instantiate ConfigManager early so
         # legacy callers and tests that patch ConfigManager observe the call.

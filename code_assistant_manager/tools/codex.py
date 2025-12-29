@@ -89,7 +89,17 @@ class CodexTool(CLITool):
             self._load_environment()
             env = os.environ.copy()
             self._set_node_tls_env(env)
-            return self._run_tool_with_env(["codex"] + args, env, "codex", interactive=True)
+
+            # Display the complete command
+            command = ["codex"] + args
+            args_str = " ".join(args) if args else ""
+            command_str = f"codex {args_str}".strip()
+            print("")
+            print("Complete command to execute:")
+            print(command_str)
+            print("")
+
+            return self._run_tool_with_env(command, env, "codex", interactive=True)
 
         # Multi-provider flow: prompt each provider (endpoint) once, then choose which profile to run.
         from code_assistant_manager.menu.menus import display_centered_menu
@@ -135,7 +145,7 @@ class CodexTool(CLITool):
                 selected_models = [models[0]]
             else:
                 from code_assistant_manager.menu.menus import select_multiple_models
-                
+
                 ok, selected_models = select_multiple_models(
                     models,
                     f"Select models from {endpoint_info} (Cancel to skip):",
@@ -169,7 +179,7 @@ class CodexTool(CLITool):
                 profile_env[profile_name] = (env_key, endpoint_config.get("actual_api_key"))
 
         all_profiles = sorted(set(existing_profiles + configured_profiles))
-        
+
         if not all_profiles:
             return 0
 
@@ -194,4 +204,13 @@ class CodexTool(CLITool):
         self._set_node_tls_env(env)
 
         command = ["codex", "-p", selected_profile] + args
+
+        # Display the complete command
+        args_str = " ".join(args) if args else ""
+        command_str = f"codex -p {selected_profile} {args_str}".strip()
+        print("")
+        print("Complete command to execute:")
+        print(command_str)
+        print("")
+
         return self._run_tool_with_env(command, env, "codex", interactive=True)

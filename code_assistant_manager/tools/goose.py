@@ -125,39 +125,39 @@ class GooseTool(CLITool):
 
     def _get_custom_providers(self) -> Dict[str, List[str]]:
         """Read existing custom providers from ~/.config/goose/custom_providers/.
-        
+
         Returns:
             Dict mapping provider name to list of model names
         """
         custom_dir = Path.home() / ".config" / "goose" / "custom_providers"
         providers = {}
-        
+
         if not custom_dir.exists():
             return providers
-        
+
         try:
             for provider_file in custom_dir.glob("*.json"):
                 try:
                     with open(provider_file, "r", encoding="utf-8") as f:
                         data = json.load(f)
-                    
+
                     provider_name = data.get("name", provider_file.stem)
                     models = []
-                    
+
                     if "models" in data and isinstance(data["models"], list):
                         for model in data["models"]:
                             if isinstance(model, dict) and "name" in model:
                                 models.append(model["name"])
                             elif isinstance(model, str):
                                 models.append(model)
-                    
+
                     if models:
                         providers[provider_name] = models
                 except Exception as e:
                     print(f"Warning: Failed to parse {provider_file}: {e}")
         except Exception as e:
             print(f"Warning: Failed to read custom providers: {e}")
-        
+
         return providers
 
     def _get_available_models(self, endpoint_name: str) -> Optional[List[str]]:
@@ -300,7 +300,7 @@ class GooseTool(CLITool):
         for endpoint_name, models in selected_models_by_endpoint.items():
             if models:
                 endpoint_models[endpoint_name] = models
-        
+
         # Get existing custom providers
         custom_models = self._get_custom_providers()
 
@@ -310,7 +310,7 @@ class GooseTool(CLITool):
             for provider_name in list(custom_models.keys()):
                 if provider_name in endpoint_provider_names:
                     del custom_models[provider_name]
-        
+
         # If no options available, return
         if not endpoint_models and not custom_models:
             return
@@ -322,11 +322,11 @@ class GooseTool(CLITool):
             provider_name = self._sanitize_provider_name(endpoint_name)
             self._write_default_to_config(provider_name, model_name)
             return
-        
+
         # If only endpoint models and they exist
         if endpoint_models and not custom_models:
             endpoint_list = list(endpoint_models.keys())
-            
+
             # If only one endpoint with models
             if len(endpoint_list) == 1:
                 endpoint_name = endpoint_list[0]
@@ -334,7 +334,7 @@ class GooseTool(CLITool):
                 provider_name = self._sanitize_provider_name(endpoint_name)
                 self._write_default_to_config(provider_name, model_name)
                 return
-            
+
             # Non-interactive mode: use first
             if os.environ.get("CODE_ASSISTANT_MANAGER_NONINTERACTIVE") == "1":
                 endpoint_name = endpoint_list[0]
@@ -342,11 +342,11 @@ class GooseTool(CLITool):
                 provider_name = self._sanitize_provider_name(endpoint_name)
                 self._write_default_to_config(provider_name, model_name)
                 return
-            
+
             # Show menu
             self._show_and_select_model(endpoint_models, {})
             return
-        
+
         # If we have custom providers (with or without new endpoints)
         # Always show menu to let user choose from all available
         if os.environ.get("CODE_ASSISTANT_MANAGER_NONINTERACTIVE") != "1":
@@ -370,7 +370,7 @@ class GooseTool(CLITool):
     ) -> None:
         """Show menu to select and set default model from all available options."""
         from code_assistant_manager.menu.menus import display_centered_menu
-        
+
         # Build menu options - unified list of all available models
         all_options = []
         option_to_provider = {}
@@ -391,17 +391,17 @@ class GooseTool(CLITool):
                     display = f"{model} ({provider_name})"
                     all_options.append(display)
                     option_to_provider[len(all_options) - 1] = (provider_name, model)
-        
+
         if not all_options:
             return
-        
+
         # Show menu
         success, idx = display_centered_menu(
             "Select default Goose provider/model:",
             all_options,
             "Cancel"
         )
-        
+
         if success and idx is not None and idx in option_to_provider:
             provider_name, model_name = option_to_provider[idx]
             self._write_default_to_config(provider_name, model_name)
@@ -506,4 +506,13 @@ class GooseTool(CLITool):
 
         # Execute the Goose CLI with the configured environment
         command = [self.command_name, *args]
+
+        # Display the complete command
+        args_str = " ".join(args) if args else ""
+        command_str = f"{self.command_name} {args_str}".strip()
+        print("")
+        print("Complete command to execute:")
+        print(command_str)
+        print("")
+
         return self._run_tool_with_env(command, env, self.command_name, interactive=True)

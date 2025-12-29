@@ -45,6 +45,15 @@ class NeovateTool(CLITool):
 
         try:
             command = ["neovate"] + cmd_args
+
+            # Display the complete command
+            args_str = " ".join(cmd_args) if cmd_args else ""
+            command_str = f"neovate {args_str}".strip()
+            print("")
+            print("Complete command to execute:")
+            print(command_str)
+            print("")
+
             return self._run_tool_with_env(command, env, "neovate", interactive=True)
         except Exception as e:
             # This shouldn't happen since _run_tool_with_env handles the try/except

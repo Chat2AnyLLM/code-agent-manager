@@ -36,6 +36,15 @@ class CopilotTool(CLITool):
 
         try:
             command = ["copilot", "--banner"] + args
+
+            # Display the complete command
+            args_str = " ".join(args) if args else ""
+            command_str = f"copilot --banner {args_str}".strip()
+            print("")
+            print("Complete command to execute:")
+            print(command_str)
+            print("")
+
             result = self._run_command(command, env=env)
             return result.returncode
         except KeyboardInterrupt:

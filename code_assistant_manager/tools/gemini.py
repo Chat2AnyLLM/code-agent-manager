@@ -94,6 +94,15 @@ class GeminiTool(CLITool):
             # Set TLS environment for Node.js
             self._set_node_tls_env(env)
             command = ["gemini", *args]
+
+            # Display the complete command
+            args_str = " ".join(args) if args else ""
+            command_str = f"gemini {args_str}".strip()
+            print("")
+            print("Complete command to execute:")
+            print(command_str)
+            print("")
+
             return self._run_tool_with_env(command, env, "gemini", interactive=True)
 
         # If we don't have valid authentication, provide hints and exit
@@ -120,4 +129,13 @@ class GeminiTool(CLITool):
 
         # Execute the Gemini CLI with the configured environment
         command = ["gemini", *args]
+
+        # Display the complete command
+        args_str = " ".join(args) if args else ""
+        command_str = f"gemini {args_str}".strip()
+        print("")
+        print("Complete command to execute:")
+        print(command_str)
+        print("")
+
         return self._run_tool_with_env(command, env, "gemini", interactive=True)

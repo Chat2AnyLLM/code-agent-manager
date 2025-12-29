@@ -49,14 +49,16 @@ class CodeBuddyTool(CLITool):
         # Set TLS environment for Node.js
         self._set_node_tls_env(env)
 
+        # Execute the CodeBuddy CLI with the configured environment and model
+        command = ["codebuddy", "--model", model] + args
+
         # Display the complete command that will be executed
+        args_str = " ".join(args) if args else ""
+        command_str = f"codebuddy --model {model} {args_str}".strip()
         print("")
         print("Complete command to execute:")
         print(
-            f"CODEBUDDY_API_KEY=*** CODEBUDDY_BASE_URL={env['CODEBUDDY_BASE_URL']} codebuddy --model {model}"
+            f"CODEBUDDY_API_KEY=*** CODEBUDDY_BASE_URL={env['CODEBUDDY_BASE_URL']} {command_str}"
         )
         print("")
-
-        # Execute the CodeBuddy CLI with the configured environment and model
-        command = ["codebuddy", "--model", model] + args
         return self._run_tool_with_env(command, env, "codebuddy", interactive=True)

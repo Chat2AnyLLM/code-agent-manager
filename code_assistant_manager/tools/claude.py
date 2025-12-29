@@ -59,7 +59,12 @@ class ClaudeTool(CLITool):
             )
             env = env_builder.build()
 
+            # Execute the Claude CLI with the configured environment
+            command = ["claude", *args]
+
             # Display the complete command that will be executed
+            args_str = " ".join(args) if args else ""
+            command_str = f"claude {args_str}".strip()
             print("")
             print("Complete command to execute:")
             print(
@@ -70,12 +75,9 @@ class ClaudeTool(CLITool):
                 f"ANTHROPIC_SMALL_FAST_MODEL={secondary_model} "
                 f"ANTHROPIC_DEFAULT_HAIKU_MODEL={primary_model} "
                 f"DISABLE_NON_ESSENTIAL_MODEL_CALLS=1 "
-                f"CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 claude"
+                f"CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 {command_str}"
             )
             print("")
-
-            # Execute the Claude CLI with the configured environment
-            command = ["claude", *args]
             return self._run_tool_with_env(command, env, "claude", interactive=True)
         except KeyboardInterrupt:
             logger.info("Tool execution interrupted by user")

@@ -74,7 +74,7 @@ class ContinueTool(CLITool):
             selected_models = [models[0]]
         else:
             success, selected_models = select_multiple_models(
-                models, 
+                models,
                 f"Select models from {endpoint_info} (Cancel to skip):",
                 cancel_text="Skip"
             )
@@ -202,4 +202,13 @@ class ContinueTool(CLITool):
 
         # Execute the Continue CLI with the configured environment
         command = [self.command_name, *args]
+
+        # Display the complete command
+        args_str = " ".join(args) if args else ""
+        command_str = f"{self.command_name} {args_str}".strip()
+        print("")
+        print("Complete command to execute:")
+        print(command_str)
+        print("")
+
         return self._run_tool_with_env(command, env, self.command_name, interactive=True)

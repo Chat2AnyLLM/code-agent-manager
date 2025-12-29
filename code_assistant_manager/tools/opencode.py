@@ -229,4 +229,13 @@ class OpenCodeTool(CLITool):
 
         # Execute the OpenCode CLI with the configured environment
         command = [str(opencode_path), *args]
+
+        # Display the complete command
+        args_str = " ".join(args) if args else ""
+        command_str = f"opencode {args_str}".strip()
+        print("")
+        print("Complete command to execute:")
+        print(command_str)
+        print("")
+
         return self._run_tool_with_env(command, env, "opencode", interactive=True)

@@ -37,16 +37,18 @@ class QwenTool(CLITool):
         env["OPENAI_MODEL"] = model
         env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
 
+        # Execute the Qwen CLI with the configured environment
+        command = ["qwen"] + args
+
         # Display the complete command that will be executed
+        args_str = " ".join(args) if args else ""
+        command_str = f"qwen {args_str}".strip()
         print("")
         print("Complete command to execute:")
         print(
             f"OPENAI_BASE_URL={env['OPENAI_BASE_URL']} "
             f"OPENAI_API_KEY=dummy "
-            f"OPENAI_MODEL={model} qwen"
+            f"OPENAI_MODEL={model} {command_str}"
         )
         print("")
-
-        # Execute the Qwen CLI with the configured environment
-        command = ["qwen"] + args
         return self._run_tool_with_env(command, env, "qwen", interactive=True)

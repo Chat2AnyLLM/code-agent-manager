@@ -27,6 +27,15 @@ class ZedTool(CLITool):
 
         try:
             command = ["zed", *args]
+
+            # Display the complete command
+            args_str = " ".join(args) if args else ""
+            command_str = f"zed {args_str}".strip()
+            print("")
+            print("Complete command to execute:")
+            print(command_str)
+            print("")
+
             return self._run_tool_with_env(
                 command, os.environ.copy(), "zed", interactive=True
             )
