@@ -43,6 +43,5 @@ plugin_app.command("disable")(plugin_install_commands.disable_plugin)
 plugin_app.command("validate")(plugin_install_commands.validate_plugin)
 
 # Discovery commands
-plugin_app.command("browse")(plugin_discovery_commands.browse_marketplace)
 plugin_app.command("view")(plugin_discovery_commands.view_plugin)
 plugin_app.command("status")(plugin_discovery_commands.plugin_status)

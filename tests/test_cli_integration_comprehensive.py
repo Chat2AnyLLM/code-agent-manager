@@ -160,50 +160,58 @@ class TestConfigCommands:
         assert "✗ Configuration validation failed" in result.output
 
     def test_config_list_locations(self, runner):
-        """Test config list-locations command."""
-        result = runner.invoke(app, ["config", "list-locations"])
+        """Test config list command."""
+        result = runner.invoke(app, ["config", "list"])
         assert result.exit_code == 0
         assert "Configuration Files" in result.output
 
-    @patch("code_assistant_manager.cli.app.load_app_config")
-    def test_config_show_command(self, mock_load, runner):
+    @patch("code_assistant_manager.configs.get_tool_config")
+    def test_config_show_command(self, mock_get_tool_config, runner):
         """Test config show command."""
-        mock_load.return_value = ({"key": "value"}, "/tmp/config.json")
+        mock_tool_config = MagicMock()
+        mock_tool_config.load_config.return_value = {"user": {"data": {"key": "value"}, "path": "/tmp/config.json"}}
+        mock_get_tool_config.return_value = mock_tool_config
 
         result = runner.invoke(app, ["config", "show"])
         assert result.exit_code == 0
         assert "value" in result.output
 
-    @patch("code_assistant_manager.cli.app.load_app_config")
-    def test_config_show_specific_key(self, runner, mock_load):
+    @patch("code_assistant_manager.configs.get_tool_config")
+    def test_config_show_specific_key(self, mock_get_tool_config, runner):
         """Test config show command with specific key."""
-        mock_load.return_value = ({"app.key": "value"}, "/tmp/config.json")
+        mock_tool_config = MagicMock()
+        mock_tool_config.load_config.return_value = {"user": {"data": {"key": "value"}, "path": "/tmp/config.json"}}
+        mock_get_tool_config.return_value = mock_tool_config
 
-        result = runner.invoke(app, ["config", "show", "app.key"])
+        result = runner.invoke(app, ["config", "show", "claude.key"])
         assert result.exit_code == 0
         assert "value" in result.output
 
-    @patch("code_assistant_manager.cli.app.load_app_config")
-    def test_config_show_wildcard(self, runner, mock_load):
+    @patch("code_assistant_manager.configs.get_tool_config")
+    def test_config_show_wildcard(self, mock_get_tool_config, runner):
         """Test config show command with wildcard."""
-        mock_load.return_value = ({"app.key1": "value1", "app.key2": "value2"}, "/tmp/config.json")
+        mock_tool_config = MagicMock()
+        mock_tool_config.load_config.return_value = {
+            "user": {"data": {"app.key1": "value1", "app.key2": "value2"}, "path": "/tmp/config.json"}
+        }
+        mock_get_tool_config.return_value = mock_tool_config
 
-    @patch("code_assistant_manager.config.ConfigManager")
-    def test_config_set_command(self, runner, mock_config_class):
+    @patch("code_assistant_manager.configs.get_tool_config")
+    def test_config_set_command(self, mock_get_tool_config, runner):
         """Test config set command."""
-        mock_config = MagicMock()
-        mock_config.set_value.return_value = None
-        mock_config_class.return_value = mock_config
+        mock_tool_config = MagicMock()
+        mock_tool_config.set_value.return_value = "/tmp/config.json"
+        mock_get_tool_config.return_value = mock_tool_config
 
         result = runner.invoke(app, ["config", "set", "test.key=value"])
         assert result.exit_code == 0
 
-    @patch("code_assistant_manager.config.ConfigManager")
-    def test_config_unset_command(self, runner, mock_config_class):
+    @patch("code_assistant_manager.configs.get_tool_config")
+    def test_config_unset_command(self, mock_get_tool_config, runner):
         """Test config unset command."""
-        mock_config = MagicMock()
-        mock_config.unset_value.return_value = None
-        mock_config_class.return_value = mock_config
+        mock_tool_config = MagicMock()
+        mock_tool_config.unset_value.return_value = True
+        mock_get_tool_config.return_value = mock_tool_config
 
         result = runner.invoke(app, ["config", "unset", "test.key"])
         assert result.exit_code == 0
@@ -285,14 +293,6 @@ class TestPluginCommands:
         assert result.exit_code == 0
         mock_validate.assert_called_once()
 
-    @patch("code_assistant_manager.cli.plugins.plugin_discovery_commands.browse_marketplace")
-    def test_plugin_browse(self, runner, mock_browse):
-        """Test plugin browse command."""
-        mock_browse.return_value = []
-
-        result = runner.invoke(app, ["plugin", "browse"])
-        assert result.exit_code == 0
-        mock_browse.assert_called_once()
 
     @patch("code_assistant_manager.cli.plugins.plugin_discovery_commands.view_plugin")
     def test_plugin_view(self, runner, mock_view):
@@ -347,15 +347,6 @@ class TestPluginCommands:
         result = runner.invoke(app, ["plugin", "disable", "test-plugin", "--app", "claude"])
         assert result.exit_code == 0
         mock_disable.assert_called_once()
-
-    @patch("code_assistant_manager.cli.plugins.plugin_discovery_commands.browse_marketplace")
-    def test_plugin_marketplace_browse(self, runner, mock_browse):
-        """Test plugin marketplace browse command."""
-        mock_browse.return_value = []
-
-        result = runner.invoke(app, ["plugin", "marketplace", "browse"])
-        assert result.exit_code == 0
-        mock_browse.assert_called_once()
 
 
 class TestAgentCommands:
