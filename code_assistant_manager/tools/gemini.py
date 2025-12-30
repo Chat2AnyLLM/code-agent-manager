@@ -78,11 +78,19 @@ class GeminiTool(CLITool):
         # Load environment variables first
         self._load_environment()
 
-        # Check if the tool is installed and prompt for upgrade if needed
-        if not self._ensure_tool_installed(
-            self.command_name, self.tool_key, self.install_description
-        ):
-            return 1
+        # Skip upgrade check for extension commands to avoid the menu
+        is_extension_command = args and args[0] == "extensions"
+        if not is_extension_command:
+            # Check if the tool is installed and prompt for upgrade if needed
+            if not self._ensure_tool_installed(
+                self.command_name, self.tool_key, self.install_description
+            ):
+                return 1
+        else:
+            # For extension commands, just check if the tool is available (no upgrade prompt)
+            if not self._check_command_available(self.command_name):
+                print(f"Error: {self.command_name} is not installed. Please install {self.install_description} first.")
+                return 1
 
         # Check if we have authentication available via environment variables
         has_auth, auth_type = self._check_gemini_auth()
