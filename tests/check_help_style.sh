@@ -129,8 +129,8 @@ done
 
 echo
 echo "=== MCP Server Commands Help ==="
-# Test MCP server sub-commands
-mcp_commands=("server --help" "server list --help")
+# Test MCP commands (updated from 'mcp server')
+mcp_commands=("list --help" "add --help" "remove --help")
 for cmd in "${mcp_commands[@]}"; do
     if cam mcp $cmd >/dev/null 2>&1; then
         check_typer_style "mcp $cmd" "mcp $cmd" || ((failures++))
@@ -155,8 +155,8 @@ echo
 echo "=== Commands Requiring Parameters (Error Messages) ==="
 # Test commands that require parameters - should show error messages
 # Note: Some commands show help instead of failing, which is also acceptable Typer behavior
-error_commands=("mcp server add" "mcp server remove" "mcp server update")
-error_descriptions=("mcp server add (missing names)" "mcp server remove (missing names)" "mcp server update (missing names)")
+error_commands=("mcp add" "mcp remove" "mcp update")
+error_descriptions=("mcp add (missing names)" "mcp remove (missing names)" "mcp update (missing names)")
 
 for i in "${!error_commands[@]}"; do
     # For some commands, we expect them to show help rather than fail
