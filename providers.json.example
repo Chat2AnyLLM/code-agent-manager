@@ -53,6 +53,14 @@
       "use_proxy": false,
       "description": "Alibaba Dashscope Endpoint Claude Proxy",
       "supported_client": "claude"
+    },
+    "blackbox-official": {
+      "endpoint": "https://api.blackbox.ai",
+      "api_key_env": "BLACKBOX_API_KEY",
+      "list_models_cmd": "echo 'blackboxai/anthropic/claude-sonnet-4.5\nblackboxai/anthropic/claude-opus-4.5\nblackboxai/anthropic/claude-sonnet-4\nblackboxai/anthropic/claude-opus-4\nblackboxai/google/gemini-2.5-flash\nblackboxai/meta-llama/llama-3.3-70b-instruct\nblackboxai/openai/gpt-4o\nblackboxai/x-ai/grok-code-fast-1:free'",
+      "use_proxy": false,
+      "description": "Blackbox AI Official API",
+      "supported_client": "blackbox"
     }
   }
 }

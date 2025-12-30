@@ -361,3 +361,34 @@ tools:
         - "Configuration and extensions via Model Context Protocol (MCP)."
     cli_parameters:
       injected: []
+
+  blackbox:
+    enabled: true
+    install_cmd: curl -fsSL https://shell.blackbox.ai/api/scripts/blackbox-cli-v2/download.sh | bash
+    cli_command: blackbox
+    description: "Blackbox AI CLI"
+    env:
+      exported:
+        BLACKBOX_API_KEY: "Resolved from endpoint configuration and environment (masked in output)."
+        BLACKBOX_API_BASE_URL: "Populated from selected endpoint.endpoint."
+        BLACKBOX_API_MODEL: "Model ID selected via code-assistant-manager prompt."
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        endpoint: "Base URL for Blackbox-compatible API."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include blackbox."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected: []
+    filesystem:
+      generated:
+        - "~/.blackboxcli/settings.json containing provider configuration based on selected endpoint"

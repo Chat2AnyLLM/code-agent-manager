@@ -7,7 +7,7 @@
 
 **One CLI to Rule Them All.**
 <br>
-Tired of juggling multiple AI coding assistants? **CAM** is a unified Python CLI to manage configurations, prompts, skills, and plugins for **16 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, Goose, Continue, and more from a single, polished terminal interface.
+Tired of juggling multiple AI coding assistants? **CAM** is a unified Python CLI to manage configurations, prompts, skills, and plugins for **17 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, Blackbox, Goose, Continue, and more from a single, polished terminal interface.
 
 </div>
 
@@ -43,7 +43,7 @@ CAM solves this by providing a single, consistent interface to manage everything
 
 ## Supported AI Assistants
 
-CAM supports **16 AI coding assistants**:
+CAM supports **17 AI coding assistants**:
 
 | Assistant | Command | Description | Install Method |
 | :--- | :--- | :--- | :--- |
@@ -57,6 +57,7 @@ CAM supports **16 AI coding assistants**:
 | **iFlow** | `iflow` | iFlow AI CLI | npm |
 | **Crush** | `crush` | Charmland Crush CLI | npm |
 | **Cursor** | `cursor-agent` | Cursor Agent CLI | Shell script |
+| **Blackbox** | `blackbox` | Blackbox AI CLI | Shell script |
 | **Neovate** | `neovate` | Neovate Code CLI | npm |
 | **Qoder** | `qodercli` | Qoder CLI | npm |
 | **Zed** | `zed` | Zed Editor | Shell script |
@@ -74,7 +75,7 @@ CAM supports **16 AI coding assistants**:
 | **Plugin** Support | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | **MCP** Integration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-**MCP Integration** is supported across all 16 assistants including: Claude, Codex, Gemini, Qwen, Copilot, CodeBuddy, Droid, iFlow, Zed, Qoder, Neovate, Crush, Cursor, Goose, Continue, and OpenCode.
+**MCP Integration** is supported across all 17 assistants including: Claude, Codex, Gemini, Qwen, Copilot, CodeBuddy, Droid, iFlow, Zed, Qoder, Neovate, Crush, Cursor, Blackbox, Goose, Continue, and OpenCode.
 
 > **Note:** Some tools (Zed, Qoder, Neovate) are disabled by default in the menu as they are still under development. You can enable them in `tools.yaml` by setting `enabled: true`.
 
