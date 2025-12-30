@@ -64,7 +64,7 @@ def browse_extensions(
             url = ext.get('url', '')
             stars = ext.get('stars', 0)
             
-            # Format: name - description [author/repo] (⭐ stars)
+            # Format: name - description [author/repo] (⭐ stars) - URL
             line = f"• {name}"
             if description:
                 line += f" - {description}"
@@ -72,6 +72,8 @@ def browse_extensions(
                 line += f" [{full_name}]"
             if stars > 0:
                 line += f" (⭐ {stars})"
+            if url:
+                line += f" - {url}"
             
             typer.echo(line)
         
