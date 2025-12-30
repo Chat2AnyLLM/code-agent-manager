@@ -218,19 +218,30 @@ class RequiredFieldsValidator(ValidationHandler):
 
 
 class CommandValidator(ValidationHandler):
-    """Validates command strings."""
+    """Validates command strings and model lists."""
 
     def _do_validate(self, data: Dict) -> Tuple[bool, List[str]]:
-        """Validate command string if present."""
+        """Validate command string and list of models if present."""
+        errors = []
+        
+        # Validate list_models_cmd if present
         command = data.get("list_models_cmd", "")
-
-        # Command is optional
-        if not command:
-            return True, []
-
-        if not self._is_safe_command(command):
-            return False, ["Command contains potentially dangerous patterns"]
-
+        if command and not self._is_safe_command(command):
+            errors.append("Command contains potentially dangerous patterns")
+        
+        # Validate list_of_models if present
+        list_of_models = data.get("list_of_models", None)
+        if list_of_models is not None:
+            if not isinstance(list_of_models, list):
+                errors.append("list_of_models must be a list")
+            else:
+                from .config import validate_model_id
+                for model in list_of_models:
+                    if not validate_model_id(str(model)):
+                        errors.append(f"Invalid model ID in list_of_models: {model}")
+        
+        if errors:
+            return False, errors
         return True, []
 
     def _is_safe_command(self, command: str) -> bool:

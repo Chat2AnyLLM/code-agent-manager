@@ -292,10 +292,21 @@ class EndpointManager:
             if cache_result.should_use:
                 return True, cache_result.models
 
-        # Fetch fresh models
+        # Check if static list of models is provided
+        list_of_models = endpoint_config.get("list_of_models", None)
+        if list_of_models is not None:
+            if isinstance(list_of_models, list):
+                print(f"Using static model list ({len(list_of_models)} models)")
+                models = [m for m in list_of_models if validate_model_id(str(m))]
+                self._model_cache.write_cache(endpoint_name, models)
+                return True, models
+            else:
+                print("Warning: list_of_models is not a list, ignoring")
+
+        # Fetch fresh models using command
         list_cmd = endpoint_config.get("list_models_cmd", "")
         if not list_cmd:
-            print("Warning: No list_models_cmd configured, using empty model list")
+            print("Warning: No list_models_cmd or list_of_models configured, using empty model list")
             return True, []
 
         print("Fetching model list...")

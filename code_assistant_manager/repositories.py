@@ -155,6 +155,9 @@ class JsonConfigRepository(ConfigRepository):
         # Parse other fields
         keep_proxy = str(data.get("keep_proxy_config", "false")).lower() == "true"
         list_models_cmd = data.get("list_models_cmd", "")
+        list_of_models = data.get("list_of_models", None)
+        if list_of_models is not None and not isinstance(list_of_models, list):
+            list_of_models = None
         cache_ttl = 86400
         if self._common_cache is not None:
             cache_ttl = int(self._common_cache.get("cache_ttl_seconds", "86400"))
@@ -169,6 +172,7 @@ class JsonConfigRepository(ConfigRepository):
             use_proxy=use_proxy,
             keep_proxy_config=keep_proxy,
             list_models_cmd=list_models_cmd,
+            list_of_models=list_of_models,
             cache_ttl_seconds=cache_ttl,
         )
 
