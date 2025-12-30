@@ -14,7 +14,7 @@ The codebase implements industry-standard design patterns including:
 See DESIGN_PATTERNS_README.md for detailed documentation.
 """
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"
 __author__ = "Code Assistant Manager Contributors"
 
 from .config import ConfigManager
