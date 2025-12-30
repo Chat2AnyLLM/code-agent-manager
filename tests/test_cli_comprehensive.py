@@ -741,15 +741,15 @@ class TestMCPCommand:
             assert exc_info.value.code == 0
 
     def test_mcp_server_help(self):
-        """Test MCP server subcommand help."""
-        with patch("sys.argv", ["code-assistant-manager", "mcp", "server", "--help"]):
+        """Test MCP list help command (updated from 'mcp server')."""
+        with patch("sys.argv", ["code-assistant-manager", "mcp", "list", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code in [0, 2]  # May show help or error
 
     def test_mcp_server_list(self):
-        """Test MCP server list command."""
-        with patch("sys.argv", ["code-assistant-manager", "mcp", "server", "list"]):
+        """Test MCP list command (updated from 'mcp server list')."""
+        with patch("sys.argv", ["code-assistant-manager", "mcp", "list"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code in [0, 1, 2]

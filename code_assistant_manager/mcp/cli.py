@@ -4,7 +4,6 @@ import logging
 from typing import Optional
 
 import typer
-from typer import Context
 
 from code_assistant_manager.config import ConfigManager
 from code_assistant_manager.tools import (
@@ -12,7 +11,15 @@ from code_assistant_manager.tools import (
     display_tool_endpoints,
 )
 
-from .server_commands import app as server_app
+# Import individual commands from server_commands
+from .server_commands import (
+    add,
+    list as list_servers,
+    remove,
+    search,
+    show,
+    update,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,40 +28,79 @@ app = typer.Typer(
 )
 
 
-@app.callback()
-def mcp_callback(
-    ctx: Context,
-    endpoints: Optional[str] = typer.Option(
+@app.command()
+def endpoints(
+    tool: Optional[str] = typer.Argument(
         None,
-        "--endpoints",
-        help="Display endpoint information for all tools or a specific tool",
+        help="Display endpoint information for a specific tool, or use 'all' for all tools",
     ),
 ):
-    """MCP callback to handle endpoints option."""
-    logger.debug(f"MCP callback invoked with endpoints: {endpoints}")
-    # Store endpoints in app context
-    ctx.ensure_object(dict)
-    ctx.obj["endpoints"] = endpoints
-
-    # If endpoints is specified, display and exit
-    if endpoints:
-        logger.debug(f"Handling endpoints option: {endpoints}")
-        # We need config for this, but since this is a subcommand, we might not have config_path
-        # For now, assume default config
-        try:
-            config = ConfigManager()
-            if endpoints == "all":
-                logger.debug("Displaying all tool endpoints")
-                display_all_tool_endpoints(config)
-            else:
-                logger.debug(f"Displaying endpoints for tool: {endpoints}")
-                display_tool_endpoints(config, endpoints)
-            raise typer.Exit()
-        except Exception as e:
-            logger.error(f"Error displaying endpoints: {e}")
-            typer.echo(f"Error displaying endpoints: {e}")
-            raise typer.Exit(1)
+    """Display endpoint information for MCP-enabled tools."""
+    logger.debug(f"Endpoints command invoked with tool: {tool}")
+    try:
+        config = ConfigManager()
+        if tool is None or tool == "all":
+            logger.debug("Displaying all tool endpoints")
+            display_all_tool_endpoints(config)
+        else:
+            logger.debug(f"Displaying endpoints for tool: {tool}")
+            display_tool_endpoints(config, tool)
+    except Exception as e:
+        logger.error(f"Error displaying endpoints: {e}")
+        typer.echo(f"Error displaying endpoints: {e}")
+        raise typer.Exit(1)
 
 
-# Add server commands as subcommand
-app.add_typer(server_app, name="server")
+@app.command()
+def status(
+    client: Optional[str] = typer.Option(
+        None, "--client", "-c", help="Show status for specific client (or 'all')"
+    ),
+):
+    """Show MCP server installation status across clients."""
+    from rich.console import Console
+    from rich.table import Table
+
+    from .manager import MCPManager
+
+    console = Console()
+    manager = MCPManager()
+
+    if client:
+        # Show detailed status for specific client(s)
+        if client.lower() == "all":
+            clients = manager.get_available_tools()
+        else:
+            clients = [c.strip() for c in client.split(",")]
+
+        for client_name in clients:
+            client_obj = manager.get_client(client_name)
+            if not client_obj:
+                console.print(f"[red]Error:[/] Client '{client_name}' not supported.")
+                continue
+
+            console.print(f"\n[bold]{client_name} MCP Status:[/]")
+            client_obj.list_servers()
+    else:
+        # Show summary status for all clients
+        table = Table(title="MCP Status Summary")
+        table.add_column("Client", style="cyan")
+        table.add_column("Status", style="green")
+        table.add_column("Servers Count", style="yellow")
+
+        for tool_name in manager.get_available_tools():
+            client_obj = manager.get_client(tool_name)
+            if client_obj:
+                # This is a simplified status - could be enhanced
+                table.add_row(tool_name, "Available", "-")
+
+        console.print(table)
+
+
+# Add all server management commands directly to mcp app
+app.command(name="list")(list_servers)
+app.command(name="search")(search)
+app.command(name="show")(show)
+app.command(name="add")(add)
+app.command(name="remove")(remove)
+app.command(name="update")(update)

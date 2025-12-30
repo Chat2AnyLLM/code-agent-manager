@@ -209,7 +209,7 @@ def fetch_agents(
 
 
 @agent_app.command("view")
-def view_agent(agent_key: str):
+def view_agent(agent_key: str = typer.Argument(..., help="Agent identifier")):
     """View a specific agent."""
     manager = _get_agent_manager()
     agent = manager.get(agent_key)
@@ -248,6 +248,13 @@ def view_agent(agent_key: str):
         typer.echo(f"{Colors.CYAN}URL:{Colors.RESET} {agent.readme_url}")
 
     typer.echo()
+
+
+# Alias 'show' to 'view' for consistency with other commands
+@agent_app.command("show")
+def show_agent(agent_key: str = typer.Argument(..., help="Agent identifier")):
+    """Show details about a specific agent (alias for view)."""
+    return view_agent(agent_key)
 
 
 @agent_app.command("install")
@@ -483,6 +490,14 @@ def remove_repo(
     except ValueError as e:
         typer.echo(f"{Colors.RED}✗ Error: {e}{Colors.RESET}")
         raise typer.Exit(1)
+
+
+@agent_app.command("status")
+def agent_status(
+    app_type: Optional[str] = APP_TYPE_OPTION_ALL,
+):
+    """Show agent installation status across apps (alias: installed)."""
+    return list_installed_agents(app_type)
 
 
 @agent_app.command("installed")
