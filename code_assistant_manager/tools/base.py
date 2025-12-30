@@ -222,10 +222,6 @@ class CLITool:
         messages = []
         messages.append(f"Starting upgrade for {desc}")
 
-        # Pre-upgrade cleanup for npm packages
-        if install_cmd.strip().startswith(("npm install", "npm i")):
-            self._cleanup_npm_package(install_cmd, messages)
-
         # Use the new upgrade system
         try:
             # Create the appropriate installer
