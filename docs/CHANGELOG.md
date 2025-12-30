@@ -17,6 +17,50 @@
   - `cam prompt install` - Install configured prompts to app files
   - `cam prompt status` - Enhanced to show file paths
 
+## [1.1.0] - 2024-12-30
+
+### Added
+- **Static Model List Support**: Add support for static model lists for endpoints, improving model discovery and configuration
+- **CLI Startup Optimization**: Implement lazy loading for CLI startup to improve performance and reduce initialization time
+- **Multi-Source Repository Configuration**: Add support for configuring repositories from multiple sources with parallel processing
+- **Multi-Model Selection**: Add multi-model selection support for Goose/Codex/Droid/Continue agents
+- **Agent Metadata Pulling**: Implement agent metadata pulling using awesome-claude-agents approach for better agent discovery
+- **Plugin Marketplace**: Add support for thedotmack plugin marketplace with enhanced marketplace:plugin naming
+- **New Tool Support**:
+  - Block Goose CLI tool support
+  - OpenCode MCP server and prompt support
+  - Enhanced engine type determination for various AI tools
+- **URL Display**: Add URL display to 'extensions browse' command for better visibility
+- **Blackbox Integration**: Add blackbox integration and documentation
+- **Tool Arguments**: Pass tool arguments through CLI and show complete command with parameters
+
+### Changed
+- **CLI Refactoring**:
+  - Rename 'extension' command to 'extensions' and update auto-complete
+  - Standardize CRUD patterns across CLI commands
+  - Fix MCP nesting issues
+  - Deprecate 'cam plugin browse' command in favor of enhanced 'list' command
+- **Engine Type Detection**: Make engine type determination dynamic instead of hardcoded, with better OpenAI-compatible API support
+- **Model Configuration**: Unify model listing logic into a single v1_models module
+- **Goose Menu**: Combine goose menu into single unified list
+
+### Fixed
+- **Security Vulnerabilities**: Implement security fixes for critical vulnerabilities
+- **Test Suite Issues**: Resolve failing tests in CLI integration and plugin commands
+- **Plugin Conflicts**: Implement plugin conflict resolution
+- **Configuration Issues**:
+  - Fix profile selection to include all profiles from toml config
+  - Update MCP test expectations to include opencode client
+  - Ensure OpenCode MCP configurations use correct array format
+  - Update copilot model fetching to use configured endpoints
+  - Fix Continue MCP config format
+- **Installation Issues**: Fix issue where cam update deletes npm packages
+- **Runtime Issues**: Fix skill and agent repository loading with parallel processing
+- **Config Handling**: Copy config.yaml to user directory during installation
+
+### Security
+- **Critical Vulnerability Fixes**: Addressed multiple security issues identified in security audit
+
 ## [1.0.3] - 2024-10-18
 
 ### Changed
