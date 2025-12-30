@@ -168,36 +168,15 @@ class GooseTool(CLITool):
         if not success:
             return None
 
-        # Get models from list_models_cmd
-        models = []
-        if "list_models_cmd" in endpoint_config:
-            try:
-                import subprocess
-                import shlex
+        # Use the endpoint_manager's fetch_models method for consistency
+        success, models = self.endpoint_manager.fetch_models(
+            endpoint_name, endpoint_config, use_cache_if_available=False
+        )
+        
+        if not success or not models:
+            return None
 
-                env = os.environ.copy()
-                env["endpoint"] = endpoint_config.get("endpoint", "")
-                env["api_key"] = endpoint_config.get("actual_api_key", "")
-
-                cmd_parts = shlex.split(endpoint_config["list_models_cmd"])
-                result = subprocess.run(
-                    cmd_parts,
-                    shell=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    env=env,
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    models = [line.strip() for line in result.stdout.split('\n') if line.strip()]
-            except Exception as e:
-                print(f"Warning: Failed to execute list_models_cmd for {endpoint_name}: {e}")
-                return None
-        else:
-            # Fallback if no list_models_cmd
-            models = [endpoint_name.replace(":", "-").replace("_", "-")]
-
-        return models if models else None
+        return models
 
     def _select_models_from_endpoint(self, endpoint_name: str, available_models: List[str]) -> Optional[List[str]]:
         """Let user select multiple models from the given endpoint."""

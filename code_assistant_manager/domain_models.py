@@ -46,6 +46,7 @@ class EndpointConfig:
     use_proxy: bool = False
     keep_proxy_config: bool = False
     list_models_cmd: Optional[str] = None
+    list_of_models: Optional[List[str]] = None
     cache_ttl_seconds: int = 86400
 
     def supports_client(self, client_name: str) -> bool:
@@ -66,6 +67,10 @@ class EndpointConfig:
     def has_list_command(self) -> bool:
         """Check if endpoint has a model list command configured."""
         return bool(self.list_models_cmd and self.list_models_cmd.strip())
+    
+    def has_static_models(self) -> bool:
+        """Check if endpoint has a static list of models configured."""
+        return bool(self.list_of_models and len(self.list_of_models) > 0)
 
     def should_use_proxy(self) -> bool:
         """Determine if proxy should be used."""

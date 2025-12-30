@@ -25,41 +25,50 @@
     "openai-compatible:dashscope-qwen3-models": {
       "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
       "api_key_env": "API_KEY_QWEN",
-      "list_models_cmd": "qwen3-max qwen3-coder-plus",
+      "list_of_models": ["qwen3-max", "qwen3-coder-plus"],
       "use_proxy": false,
-      "description": "Alibaba Dashscope Endpoint",
+      "description": "Alibaba Dashscope Endpoint - using static model list",
       "supported_client": "qwen,droid,iflow,crush"
     },
     "azure-openai:east2": {
       "endpoint": "https://azure-openai-gpt-o1-east2.openai.azure.com/openai/v1",
       "api_key_env": "API_KEY_AZURE_OPENAI",
-      "list_models_cmd": "model-router",
+      "list_of_models": ["model-router"],
       "use_proxy": false,
-      "description": "Azure Openai Endpoint",
+      "description": "Azure Openai Endpoint - using static model list",
       "supported_client": "codex"
     },
     "azure-openai:zhujian0003-1688-resource": {
       "endpoint": "https://zhujian0003-1688-resource.services.ai.azure.com/openai/v1/",
       "api_key_env": "zhujian0003_1688_resource_API_KEY_AZURE_OPENAI",
-      "list_models_cmd": "grok-3",
+      "list_of_models": ["grok-3"],
       "use_proxy": false,
-      "description": "Azure Openai Endpoint",
+      "description": "Azure Openai Endpoint - using static model list",
       "supported_client": "codex"
     },
     "qwen-claude-proxy:dashscope-qwen3-coder-plus": {
       "endpoint": "https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy",
       "api_key_env": "API_KEY_QWEN",
-      "list_models_cmd": "qwen3-coder-plus",
+      "list_of_models": ["qwen3-coder-plus"],
       "use_proxy": false,
-      "description": "Alibaba Dashscope Endpoint Claude Proxy",
+      "description": "Alibaba Dashscope Endpoint Claude Proxy - using static model list",
       "supported_client": "claude"
     },
     "blackbox-official": {
       "endpoint": "https://api.blackbox.ai",
       "api_key_env": "BLACKBOX_API_KEY",
-      "list_models_cmd": "echo 'blackboxai/anthropic/claude-sonnet-4.5\nblackboxai/anthropic/claude-opus-4.5\nblackboxai/anthropic/claude-sonnet-4\nblackboxai/anthropic/claude-opus-4\nblackboxai/google/gemini-2.5-flash\nblackboxai/meta-llama/llama-3.3-70b-instruct\nblackboxai/openai/gpt-4o\nblackboxai/x-ai/grok-code-fast-1:free'",
+      "list_of_models": [
+        "blackboxai/anthropic/claude-sonnet-4.5",
+        "blackboxai/anthropic/claude-opus-4.5",
+        "blackboxai/anthropic/claude-sonnet-4",
+        "blackboxai/anthropic/claude-opus-4",
+        "blackboxai/google/gemini-2.5-flash",
+        "blackboxai/meta-llama/llama-3.3-70b-instruct",
+        "blackboxai/openai/gpt-4o",
+        "blackboxai/x-ai/grok-code-fast-1:free"
+      ],
       "use_proxy": false,
-      "description": "Blackbox AI Official API",
+      "description": "Blackbox AI Official API - using static model list",
       "supported_client": "blackbox"
     }
   }

@@ -416,9 +416,12 @@ class ConfigManager:
 
         config = endpoints[endpoint_name].copy()
 
-        # Convert all values to strings for compatibility
+        # Convert values to strings for compatibility, except for lists
         for key, value in config.items():
-            if isinstance(value, bool):
+            if isinstance(value, list):
+                # Keep lists as-is (e.g., list_of_models)
+                config[key] = value
+            elif isinstance(value, bool):
                 config[key] = str(value).lower()
             elif isinstance(value, (int, float)):
                 config[key] = str(value)
@@ -577,6 +580,16 @@ def _validate_endpoint(endpoint_name: str, endpoint_config: dict) -> List[str]:
     list_models_cmd = endpoint_config.get("list_models_cmd", "")
     if list_models_cmd and not validate_command(list_models_cmd):
         errors.append(f"Invalid list_models_cmd for {endpoint_name}: {list_models_cmd}")
+
+    # Validate list_of_models if present
+    list_of_models = endpoint_config.get("list_of_models", None)
+    if list_of_models is not None:
+        if not isinstance(list_of_models, list):
+            errors.append(f"Invalid list_of_models for {endpoint_name}: must be a list")
+        else:
+            for model in list_of_models:
+                if not validate_model_id(str(model)):
+                    errors.append(f"Invalid model ID in list_of_models for {endpoint_name}: {model}")
 
     # Validate boolean fields
     boolean_fields = ["keep_proxy_config", "use_proxy"]
