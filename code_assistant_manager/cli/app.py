@@ -38,6 +38,10 @@ def _lazy_import_mcp_app():
     from code_assistant_manager.mcp.cli import app as mcp_app
     return mcp_app
 
+def _lazy_import_extension_app():
+    from code_assistant_manager.cli.extension_commands import extension_app
+    return extension_app
+
 # Module-level typer.Option constants to fix B008 linting errors
 from .options import (
     CONFIG_FILE_OPTION,
@@ -254,6 +258,10 @@ def _get_agent_app_impl():
     """Wrapper that defers agent app import."""
     return _get_lazy_app(_lazy_import_agent_app, "agent")
 
+def _get_extension_app_impl():
+    """Wrapper that defers extension app import."""
+    return _get_lazy_app(_lazy_import_extension_app, "extension")
+
 # Note: Due to how Typer works, the apps are still evaluated at import time.
 # The actual performance benefit comes from:
 # 1. The tools modules no longer being imported upfront (done in tools/__init__.py)
@@ -282,6 +290,9 @@ app.add_typer(_get_plugin_app_impl(), name="pl", hidden=True)
 # Add the agent app as a subcommand to the main app (Claude Code agents)
 app.add_typer(_get_agent_app_impl(), name="agent")
 app.add_typer(_get_agent_app_impl(), name="ag", hidden=True)
+# Add the extension app as a subcommand to the main app (Gemini extensions)
+app.add_typer(_get_extension_app_impl(), name="extensions")
+app.add_typer(_get_extension_app_impl(), name="ext", hidden=True)
 
 
 @config_app.command("validate")

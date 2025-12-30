@@ -192,7 +192,7 @@ def fetch_skills(
 
 
 @skill_app.command("view")
-def view_skill(skill_key: str):
+def view_skill(skill_key: str = typer.Argument(..., help="Skill identifier")):
     """View a specific skill."""
     manager = _get_skill_manager()
     skill = manager.get(skill_key)
@@ -225,6 +225,13 @@ def view_skill(skill_key: str):
         typer.echo(f"{Colors.CYAN}README:{Colors.RESET} {skill.readme_url}")
 
     typer.echo()
+
+
+# Alias 'show' to 'view' for consistency with other commands
+@skill_app.command("show")
+def show_skill(skill_key: str = typer.Argument(..., help="Skill identifier")):
+    """Show details about a specific skill (alias for view)."""
+    return view_skill(skill_key)
 
 
 @skill_app.command("create")
@@ -489,6 +496,19 @@ def export_skills(
     except Exception as e:
         typer.echo(f"{Colors.RED}✗ Error: {e}{Colors.RESET}")
         raise typer.Exit(1)
+
+
+@skill_app.command("status")
+def skill_status(
+    app_type: Optional[str] = typer.Option(
+        None,
+        "--app",
+        "-a",
+        help="App type(s) to show (claude, codex, gemini, all). Default shows all.",
+    ),
+):
+    """Show skill installation status across apps (alias: installed)."""
+    return list_installed_skills(app_type)
 
 
 @skill_app.command("installed")

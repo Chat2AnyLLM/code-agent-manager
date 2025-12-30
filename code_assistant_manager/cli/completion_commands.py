@@ -82,7 +82,7 @@ _code_assistant_manager_completions()
     cword=$COMP_CWORD
 
     # Main commands (visible and hidden aliases)
-    commands="launch l config cf mcp m prompt p skill s plugin pl agent ag upgrade u install i uninstall un doctor d version v completion comp c --help --version --config --endpoints --debug -d"
+    commands="launch l config cf mcp m prompt p skill s plugin pl agent ag extensions ext upgrade u install i uninstall un doctor d version v completion comp c --help --version --config --endpoints --debug -d"
 
     # Tool names for launch command
     tools="claude codex copilot gemini droid qwen codebuddy iflow qodercli zed neovate crush cursor-agent"
@@ -101,6 +101,9 @@ _code_assistant_manager_completions()
 
     # Agent subcommands
     agent_commands="list fetch view install uninstall repos add-repo remove-repo installed uninstall-all"
+
+    # Extensions subcommands
+    extensions_commands="browse install uninstall list update disable enable link new validate settings"
 
     # Global flags
     global_flags="--help --version --config --endpoints --debug -d"
@@ -153,6 +156,10 @@ _code_assistant_manager_completions()
             ;;
         agent|ag)
             COMPREPLY=( $(compgen -W "${agent_commands}" -- ${cur}) )
+            return 0
+            ;;
+        extensions|ext)
+            COMPREPLY=( $(compgen -W "${extensions_commands}" -- ${cur}) )
             return 0
             ;;
         upgrade|u)
@@ -393,6 +400,22 @@ _code_assistant_manager_completions()
                         ;;
                 esac
                 ;;
+            extensions|ext)
+                case "${COMP_WORDS[2]}" in
+                    browse|list|new|settings)
+                        COMPREPLY=( $(compgen -W "--help" -- ${cur}) )
+                        return 0
+                        ;;
+                    install|uninstall|update|disable|enable|validate)
+                        COMPREPLY=( $(compgen -W "--help" -- ${cur}) )
+                        return 0
+                        ;;
+                    link)
+                        COMPREPLY=( $(compgen -W "--help" -- ${cur}) )
+                        return 0
+                        ;;
+                esac
+                ;;
             upgrade|u|install|i)
                 case "${COMP_WORDS[2]}" in
                     all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|mcp)
@@ -440,7 +463,7 @@ def _generate_zsh_completion() -> str:
 #compdef code-assistant-manager cam
 
 _code_assistant_manager() {
-    local -a commands tools mcp_server_commands config_commands prompt_commands skill_commands plugin_commands agent_commands global_flags
+    local -a commands tools mcp_server_commands config_commands prompt_commands skill_commands plugin_commands agent_commands extensions_commands global_flags
     local context state line
 
     commands=(
@@ -458,6 +481,8 @@ _code_assistant_manager() {
         'pl:Alias for plugin'
         'agent:Agent management commands'
         'ag:Alias for agent'
+        'extensions:Manage extensions for AI assistants'
+        'ext:Alias for extensions'
         'upgrade:Upgrade CLI tools'
         'u:Alias for upgrade'
         'install:Install CLI tools'
@@ -562,6 +587,20 @@ _code_assistant_manager() {
         'remove-repo:Remove an agent repository'
         'installed:List installed agents'
         'uninstall-all:Uninstall all agents'
+    )
+
+    extensions_commands=(
+        'browse:Browse available Gemini extensions'
+        'install:Install a Gemini extension'
+        'uninstall:Uninstall a Gemini extension'
+        'list:List installed Gemini extensions'
+        'update:Update Gemini extensions'
+        'disable:Disable a Gemini extension'
+        'enable:Enable a Gemini extension'
+        'link:Link a local Gemini extension'
+        'new:Create a new Gemini extension'
+        'validate:Validate a Gemini extension'
+        'settings:Manage Gemini extension settings'
     )
 
     global_flags=(
@@ -741,6 +780,23 @@ _code_assistant_manager() {
                                 ;;
                             add-repo|remove-repo)
                                 _values 'option' '--owner[Repository owner]' '--name[Repository name]' '--help[Show help]'
+                                ;;
+                            *)
+                                _values 'option' '--help[Show help]'
+                                ;;
+                        esac
+                    fi
+                    ;;
+                extensions|ext)
+                    if (( CURRENT == 2 )); then
+                        _describe -t extensions_commands 'extensions command' extensions_commands
+                    else
+                        case $words[2] in
+                            browse|list|new|settings)
+                                _values 'option' '--help[Show help]'
+                                ;;
+                            install|uninstall|update|disable|enable|validate|link)
+                                _values 'option' '--help[Show help]'
                                 ;;
                             *)
                                 _values 'option' '--help[Show help]'

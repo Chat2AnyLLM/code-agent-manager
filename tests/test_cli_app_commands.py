@@ -51,6 +51,7 @@ class TestCLIAppCommands:
             "mcp",
             "prompt",
             "skill",
+            "extensions",
         ]
         for cmd in expected_commands:
             assert cmd in result.output
@@ -97,7 +98,11 @@ class TestCLIAppCommands:
         assert result.exit_code == 0
         assert "skill" in result.output.lower()
 
-
+    def test_extensions_command_help(self, runner):
+        """Test extensions command help."""
+        result = runner.invoke(app, ["extensions", "--help"])
+        assert result.exit_code == 0
+        assert "extensions" in result.output.lower()
 class TestCLIGlobalOptions:
     """Test global CLI options."""
 
