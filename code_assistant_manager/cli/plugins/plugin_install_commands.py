@@ -118,7 +118,7 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
             typer.echo(f"\n{Colors.YELLOW}Unreachable marketplaces (temporarily unavailable):{Colors.RESET}")
             for unreachable in unreachable_marketplaces:
                 typer.echo(f"  • {unreachable['marketplace']} ({unreachable['source']})")
-        typer.echo(f"\n{Colors.CYAN}Browse plugins:{Colors.RESET} cam plugin browse")
+        typer.echo(f"\n{Colors.CYAN}Browse plugins:{Colors.RESET} cam plugin list")
         raise typer.Exit(1)
 
     elif len(found_in_marketplaces) == 1:
@@ -367,7 +367,7 @@ def install_plugin(
     - marketplace-name:plugin-name (specifies which marketplace to use)
 
     For marketplace management, use 'cam plugin marketplace install <marketplace>'.
-    For browsing available plugins, use 'cam plugin browse'.
+    For browsing available plugins, use 'cam plugin list'.
 
     Examples:
         cam plugin install code-reviewer

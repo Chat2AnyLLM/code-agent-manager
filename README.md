@@ -275,7 +275,6 @@ cam plugin install <plugin>[@marketplace]  # Install a plugin from marketplace
 cam plugin uninstall <plugin>              # Uninstall a plugin
 cam plugin enable <plugin>                 # Enable a disabled plugin
 cam plugin disable <plugin>                # Disable an enabled plugin
-cam plugin browse [marketplace]            # Browse plugins in marketplaces
 cam plugin view <plugin>                   # View detailed plugin information
 cam plugin status                          # Show plugin system status
 cam plugin validate <path>                 # Validate plugin/marketplace manifest

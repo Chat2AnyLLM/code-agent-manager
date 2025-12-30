@@ -309,19 +309,21 @@ def validate_config(
             typer.echo(f"{Colors.RED}✗ Configuration validation failed:{Colors.RESET}")
             for error in errors:
                 typer.echo(f"  - {error}")
-            return 1
+            raise typer.Exit(1)
 
+    except typer.Exit:
+        raise
     except FileNotFoundError as e:
         typer.echo(f"{Colors.RED}✗ Configuration file not found: {e}{Colors.RESET}")
-        return 1
+        raise typer.Exit(1)
     except ValueError as e:
         typer.echo(f"{Colors.RED}✗ Configuration validation failed: {e}{Colors.RESET}")
-        return 1
+        raise typer.Exit(1)
     except Exception as e:
         typer.echo(
             f"{Colors.RED}✗ Unexpected error during validation: {e}{Colors.RESET}"
         )
-        return 1
+        raise typer.Exit(1)
 
 
 @config_app.command("list", short_help="List all configuration file locations")

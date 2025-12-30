@@ -56,9 +56,9 @@ class TestPluginCommandIntegration:
         runner = CliRunner()
         result = runner.invoke(discovery_app, ["--help"])
         assert result.exit_code == 0
-        assert "browse" in result.output
         assert "view" in result.output
         assert "status" in result.output
+        # browse was deprecated and removed, list was enhanced instead
         # fetch was moved to marketplace add --save, so it's no longer here
 
     def test_marketplace_commands_available(self):
@@ -87,44 +87,6 @@ class TestPluginCommandIntegration:
             0,
             1,
         ]  # 0 for success, 1 for expected errors with empty repos
-
-    @patch("code_assistant_manager.cli.plugins.plugin_discovery_commands.PluginManager")
-    @patch("code_assistant_manager.plugins.fetch.fetch_repo_info")
-    def test_browse_marketplace_python_expert(self, mock_fetch, mock_plugin_manager):
-        """CLI browse can show python-expert from awesome-claude-code-plugins."""
-        mock_manager = MagicMock()
-        mock_manager.get_repo.return_value = MagicMock(
-            repo_owner="ccplugins",
-            repo_name="awesome-claude-code-plugins",
-            repo_branch="main",
-        )
-        mock_plugin_manager.return_value = mock_manager
-
-        mock_fetch.return_value = FetchedRepoInfo(
-            owner="ccplugins",
-            repo="awesome-claude-code-plugins",
-            branch="main",
-            name="awesome-claude-code-plugins",
-            description="Awesome Claude Code plugins collection",
-            type="marketplace",
-            plugin_count=1,
-            plugins=[
-                {
-                    "name": "python-expert",
-                    "version": "0.1.0",
-                    "description": "Python expert plugin",
-                    "category": "python",
-                }
-            ],
-        )
-
-        runner = CliRunner()
-        result = runner.invoke(
-            discovery_app,
-            ["browse", "awesome-claude-code-plugins", "--query", "python-expert"],
-        )
-        assert result.exit_code == 0
-        assert "python-expert" in result.output
 
     @patch("code_assistant_manager.cli.plugins.plugin_discovery_commands.PluginManager")
     @patch("code_assistant_manager.plugins.fetch.fetch_repo_info")

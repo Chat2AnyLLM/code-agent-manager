@@ -478,7 +478,7 @@ def marketplace_install(
     to the target AI assistant app(s). The marketplace must already be configured
     using 'cam plugin marketplace add' before it can be installed.
 
-    After installation, you can browse plugins with 'cam plugin browse <marketplace>'
+    After installation, you can browse plugins with 'cam plugin list <marketplace>'
     and install them with 'cam plugin install <plugin>@<marketplace>'.
 
     Examples:
@@ -578,7 +578,7 @@ def marketplace_install(
     if len(target_apps) == 1:
         if installed_count > 0 or already_installed_count > 0:
             typer.echo(
-                f"\n{Colors.CYAN}Browse plugins with:{Colors.RESET} cam plugin marketplace browse <marketplace>"
+                f"\n{Colors.CYAN}Browse plugins with:{Colors.RESET} cam plugin list <marketplace>"
             )
             typer.echo(
                 f"{Colors.CYAN}Install plugins with:{Colors.RESET} cam plugin install <plugin-name>@<marketplace>"
