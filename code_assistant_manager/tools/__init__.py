@@ -7,39 +7,71 @@ from typing import Dict, Optional, Tuple, Type
 from ..config import ConfigManager
 from ..endpoints import EndpointManager
 
-# Import tool modules so their subclasses are registered
-from . import (  # noqa: F401
-    claude,
-    codebuddy,
-    codex,
-    continue_tool,
-    copilot,
-    crush,
-    cursor,
-    droid,
-    gemini,
-    goose,
-    iflow,
-    neovate,
-    opencode,
-    qodercli,
-    qwen,
-    zed,
-)
+# Expose registry for backwards compatibility
+# Import early since get_registered_tools needs it
+from .registry import TOOL_REGISTRY  # noqa: F401,E402
+
 from .base import CLITool
-
-# Import MCP tool from the MCP package (handles registration)
-try:
-    from ..mcp.tool import MCPTool  # noqa: F401
-except ImportError:
-    # Circular import protection - MCPTool will be registered when the package is imported elsewhere
-    pass
-
 
 # Backwards-compat: expose UI helpers that used to be available from code_assistant_manager.tools
 
 # Expose model selector functions
 from ..menu.menus import display_centered_menu, select_two_models  # noqa: F401
+
+# Expose endpoint display functions
+from .endpoint_display import (  # noqa: F401,E402
+    display_all_tool_endpoints,
+    display_tool_endpoints,
+)
+
+# Backwards-compat: expose commonly patched names used in tests
+# so tests that patch code_assistant_manager.tools.<name> continue to work.
+EndpointManager = EndpointManager  # type: ignore
+ConfigManager = ConfigManager  # type: ignore
+subprocess = subprocess  # re-export subprocess for tests
+Path = Path
+
+# Flag to track if tools have been lazy-loaded
+_tools_loaded = False
+
+
+def _ensure_tools_loaded() -> None:
+    """Lazy-load all tool modules to populate TOOL_REGISTRY.
+
+    This is called only when tools are actually needed, not on CLI startup.
+    """
+    global _tools_loaded
+    if _tools_loaded:
+        return
+
+    # Import tool modules so their subclasses are registered
+    from . import (  # noqa: F401
+        claude,
+        codebuddy,
+        codex,
+        continue_tool,
+        copilot,
+        crush,
+        cursor,
+        droid,
+        gemini,
+        goose,
+        iflow,
+        neovate,
+        opencode,
+        qodercli,
+        qwen,
+        zed,
+    )
+
+    # Import MCP tool from the MCP package (handles registration)
+    try:
+        from ..mcp.tool import MCPTool  # noqa: F401
+    except ImportError:
+        # Circular import protection - MCPTool will be registered when the package is imported elsewhere
+        pass
+
+    _tools_loaded = True
 
 
 def select_model(
@@ -60,47 +92,16 @@ def select_model(
     return False, None
 
 
-# Backwards-compatible exports: expose tool classes at package level
-from .claude import ClaudeTool  # noqa: F401,E402
-from .codebuddy import CodeBuddyTool  # noqa: F401,E402
-from .codex import CodexTool  # noqa: F401,E402
-from .continue_tool import ContinueTool  # noqa: F401,E402
-from .copilot import CopilotTool  # noqa: F401,E402
-from .crush import CrushTool  # noqa: F401,E402
-from .cursor import CursorTool  # noqa: F401,E402
-from .droid import DroidTool  # noqa: F401,E402
-
-# Expose endpoint display functions
-from .endpoint_display import (  # noqa: F401,E402
-    display_all_tool_endpoints,
-    display_tool_endpoints,
-)
-from .gemini import GeminiTool  # noqa: F401,E402
-from .goose import GooseTool  # noqa: F401,E402
-from .iflow import IfLowTool  # noqa: F401,E402
-from .neovate import NeovateTool  # noqa: F401,E402
-from .opencode import OpenCodeTool  # noqa: F401,E402
-from .qodercli import QoderCLITool  # noqa: F401,E402
-from .qwen import QwenTool  # noqa: F401,E402
-
-# Expose registry for backwards compatibility
-from .registry import TOOL_REGISTRY  # noqa: F401,E402
-from .zed import ZedTool  # noqa: F401,E402
-
-# Backwards-compat: expose commonly patched names used in tests
-# so tests that patch code_assistant_manager.tools.<name> continue to work.
-EndpointManager = EndpointManager  # type: ignore
-ConfigManager = ConfigManager  # type: ignore
-subprocess = subprocess  # re-export subprocess for tests
-Path = Path
-
-
 def get_registered_tools() -> Dict[str, Type[CLITool]]:
     """Return mapping of command name to tool class by discovering CLITool subclasses.
 
     Only returns tools that are enabled in tools.yaml (enabled: true or not specified).
     Tools with enabled: false are hidden from menus.
+
+    Note: This function lazy-loads all tool modules on first call.
     """
+    _ensure_tools_loaded()
+
     tools: Dict[str, Type[CLITool]] = {}
     for cls in CLITool.__subclasses__():
         name = getattr(cls, "command_name", None)
@@ -112,3 +113,34 @@ def get_registered_tools() -> Dict[str, Type[CLITool]]:
             if TOOL_REGISTRY.is_enabled(key_to_check):
                 tools[name] = cls
     return tools
+
+
+# Lazy-load tool classes for backwards compatibility
+# These are imported via __getattr__ only when explicitly accessed
+def __getattr__(name: str):
+    """Lazy-load tool classes when explicitly imported."""
+    tool_map = {
+        "ClaudeTool": "claude",
+        "CodeBuddyTool": "codebuddy",
+        "CodexTool": "codex",
+        "ContinueTool": "continue_tool",
+        "CopilotTool": "copilot",
+        "CrushTool": "crush",
+        "CursorTool": "cursor",
+        "DroidTool": "droid",
+        "GeminiTool": "gemini",
+        "GooseTool": "goose",
+        "IfLowTool": "iflow",
+        "NeovateTool": "neovate",
+        "OpenCodeTool": "opencode",
+        "QoderCLITool": "qodercli",
+        "QwenTool": "qwen",
+        "ZedTool": "zed",
+    }
+
+    if name in tool_map:
+        module_name = tool_map[name]
+        module = __import__(f"code_assistant_manager.tools.{module_name}", fromlist=[name])
+        return getattr(module, name)
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

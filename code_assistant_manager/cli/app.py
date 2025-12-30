@@ -10,17 +10,33 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from code_assistant_manager.cli.agents_commands import agent_app
-from code_assistant_manager.cli.plugin_commands import plugin_app
-from code_assistant_manager.cli.prompts_commands import prompt_app
-from code_assistant_manager.cli.skills_commands import skill_app
 from code_assistant_manager.config import ConfigManager
-from code_assistant_manager.mcp.cli import app as mcp_app
 from code_assistant_manager.tools import (
     display_all_tool_endpoints,
     display_tool_endpoints,
     get_registered_tools,
 )
+
+# Lazy-import heavy command modules to improve startup time
+def _lazy_import_agent_app():
+    from code_assistant_manager.cli.agents_commands import agent_app
+    return agent_app
+
+def _lazy_import_plugin_app():
+    from code_assistant_manager.cli.plugin_commands import plugin_app
+    return plugin_app
+
+def _lazy_import_prompt_app():
+    from code_assistant_manager.cli.prompts_commands import prompt_app
+    return prompt_app
+
+def _lazy_import_skill_app():
+    from code_assistant_manager.cli.skills_commands import skill_app
+    return skill_app
+
+def _lazy_import_mcp_app():
+    from code_assistant_manager.mcp.cli import app as mcp_app
+    return mcp_app
 
 # Module-level typer.Option constants to fix B008 linting errors
 from .options import (
@@ -207,21 +223,65 @@ app.add_typer(editor_app, name="l", hidden=True)
 # Add the config app as a subcommand to the main app
 app.add_typer(config_app, name="config")
 app.add_typer(config_app, name="cf", hidden=True)
-# Add the MCP app as a subcommand to the main app
-app.add_typer(mcp_app, name="mcp")
-app.add_typer(mcp_app, name="m", hidden=True)
+
+# Cache for lazy-loaded apps
+_lazy_apps_cache = {}
+
+def _get_lazy_app(import_func, cache_key):
+    """Get or load a lazy app with caching."""
+    if cache_key not in _lazy_apps_cache:
+        _lazy_apps_cache[cache_key] = import_func()
+    return _lazy_apps_cache[cache_key]
+
+# Create wrapper functions that import apps only when needed
+def _get_mcp_app_impl():
+    """Wrapper that defers MCP app import."""
+    return _get_lazy_app(_lazy_import_mcp_app, "mcp")
+
+def _get_prompt_app_impl():
+    """Wrapper that defers prompt app import."""
+    return _get_lazy_app(_lazy_import_prompt_app, "prompt")
+
+def _get_skill_app_impl():
+    """Wrapper that defers skill app import."""
+    return _get_lazy_app(_lazy_import_skill_app, "skill")
+
+def _get_plugin_app_impl():
+    """Wrapper that defers plugin app import."""
+    return _get_lazy_app(_lazy_import_plugin_app, "plugin")
+
+def _get_agent_app_impl():
+    """Wrapper that defers agent app import."""
+    return _get_lazy_app(_lazy_import_agent_app, "agent")
+
+# Note: Due to how Typer works, the apps are still evaluated at import time.
+# The actual performance benefit comes from:
+# 1. The tools modules no longer being imported upfront (done in tools/__init__.py)
+# 2. The command modules being simpler to import
+#
+# For even better lazy loading, we would need to use click's built-in group/command
+# lazy loading feature, but that would require more extensive refactoring.
+#
+# The current implementation still provides significant savings by:
+# - Deferring tool module imports (biggest impact)
+# - Using function wrappers that can be extended for true lazy loading later
+
+# Add the apps (they will import when these lines execute, but the major
+# time savings come from tools not being preloaded)
+app.add_typer(_get_mcp_app_impl(), name="mcp")
+app.add_typer(_get_mcp_app_impl(), name="m", hidden=True)
 # Add the prompt app as a subcommand to the main app
-app.add_typer(prompt_app, name="prompt")
-app.add_typer(prompt_app, name="p", hidden=True)
+app.add_typer(_get_prompt_app_impl(), name="prompt")
+app.add_typer(_get_prompt_app_impl(), name="p", hidden=True)
 # Add the skill app as a subcommand to the main app
-app.add_typer(skill_app, name="skill")
-app.add_typer(skill_app, name="s", hidden=True)
+app.add_typer(_get_skill_app_impl(), name="skill")
+app.add_typer(_get_skill_app_impl(), name="s", hidden=True)
 # Add the plugin app as a subcommand to the main app (Claude Code plugins)
-app.add_typer(plugin_app, name="plugin")
-app.add_typer(plugin_app, name="pl", hidden=True)
+app.add_typer(_get_plugin_app_impl(), name="plugin")
+app.add_typer(_get_plugin_app_impl(), name="pl", hidden=True)
 # Add the agent app as a subcommand to the main app (Claude Code agents)
-app.add_typer(agent_app, name="agent")
-app.add_typer(agent_app, name="ag", hidden=True)
+app.add_typer(_get_agent_app_impl(), name="agent")
+app.add_typer(_get_agent_app_impl(), name="ag", hidden=True)
 
 
 @config_app.command("validate")
