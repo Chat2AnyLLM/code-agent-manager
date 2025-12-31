@@ -133,7 +133,7 @@ class BaseEntityFetcher(ABC, Generic[T]):
 
         try:
             # Clone/download repository
-            with git_repo.clone() as temp_dir:
+            with git_repo.clone() as (temp_dir, actual_branch):
                 # Determine scan directory
                 scan_dir = temp_dir
                 if repo.path:

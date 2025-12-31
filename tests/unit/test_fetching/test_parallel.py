@@ -105,16 +105,29 @@ class TestParallelFetcher(unittest.TestCase):
 
         # Mock ThreadPoolExecutor to verify max_workers
         with patch('concurrent.futures.ThreadPoolExecutor') as mock_executor:
+            # Mock the executor to avoid actually running threads
             mock_executor.return_value.__enter__.return_value = Mock()
             mock_executor.return_value.__exit__ = Mock(return_value=None)
-            mock_future = Mock()
-            mock_future.result.return_value = "result"
-            mock_executor.return_value.as_completed.return_value = [mock_future] * 5
 
-            result = parallel_fetcher.fetch_all(sources)
+            # Create different mock futures for each source
+            mock_futures = []
+            for _ in sources:
+                mock_future = Mock()
+                mock_future.result.return_value = "result"
+                mock_futures.append(mock_future)
 
-            # Verify ThreadPoolExecutor was created with max_workers=2
-            mock_executor.assert_called_once_with(max_workers=2)
+            # Make submit return different futures for each call
+            mock_executor.return_value.submit.side_effect = mock_futures
+
+            # Mock as_completed to return the keys of the dict passed to it
+            def mock_as_completed(futures_dict):
+                return iter(futures_dict.keys())
+
+            with patch('concurrent.futures.as_completed', side_effect=mock_as_completed):
+                result = parallel_fetcher.fetch_all(sources)
+
+                # Verify ThreadPoolExecutor was created with max_workers=2
+                mock_executor.assert_called_once_with(max_workers=2)
 
     def test_thread_safety(self):
         """Test that results collection is thread-safe."""

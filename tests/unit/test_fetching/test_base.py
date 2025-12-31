@@ -135,9 +135,32 @@ class TestBaseEntityFetcher(unittest.TestCase):
         call_args = mock_parallel_fetcher.call_args
         self.assertEqual(call_args[1]['max_workers'], 4)
 
+    def test_fetch_from_single_repo_clone_unpacking(self):
+        """Test that _fetch_from_single_repo correctly unpacks clone() tuple."""
+        # This test verifies the fix for the tuple unpacking bug
+        # where clone() returns (temp_dir, actual_branch) but was unpacked as just temp_dir
+
+        from code_assistant_manager.fetching.repository import GitRepository
+
+        with patch.object(GitRepository, 'clone') as mock_clone:
+            # Mock the context manager to return proper tuple
+            mock_temp_dir = Mock(spec=Path)
+            mock_temp_dir.exists.return_value = True
+            mock_temp_dir.rglob.return_value = []  # No files found
+
+            mock_clone.return_value.__enter__.return_value = (mock_temp_dir, "main")
+            mock_clone.return_value.__exit__.return_value = None
+
+            repo = RepoConfig(owner="test-owner", name="test-repo")
+
+            # This should not raise an exception about tuple unpacking
+            result = self.fetcher._fetch_from_single_repo(repo)
+
+            self.assertEqual(result, [])
+            mock_clone.assert_called_once()
+
 
 class TestEntityParser(unittest.TestCase):
-    """Test EntityParser abstract base class."""
 
     def test_abstract_methods(self):
         """Test that EntityParser defines required abstract methods."""
