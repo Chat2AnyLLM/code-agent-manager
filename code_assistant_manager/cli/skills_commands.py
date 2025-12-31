@@ -37,6 +37,12 @@ def list_skills(
         "-a",
         help="App type(s) to check installed status (claude, codex, copilot, gemini, all)",
     ),
+    query: Optional[str] = typer.Option(
+        None,
+        "--query",
+        "-q",
+        help="Filter skills by repository name (e.g., 'BrownFineSecurity/iothackbot')",
+    ),
 ):
     """List all skills."""
     manager = _get_skill_manager()
@@ -48,14 +54,33 @@ def list_skills(
 
     skills = manager.get_all()
 
+    # Filter skills by query if provided
+    if query and isinstance(query, str):
+        filtered_skills = {}
+        query_lower = query.lower()
+        for skill_key, skill in skills.items():
+            if skill.repo_owner and skill.repo_name:
+                repo_full_name = f"{skill.repo_owner}/{skill.repo_name}".lower()
+                if query_lower in repo_full_name:
+                    filtered_skills[skill_key] = skill
+        skills = filtered_skills
+
     if not skills:
-        typer.echo(
-            f"{Colors.YELLOW}No skills found. Run 'cam skill fetch' to discover skills from repositories.{Colors.RESET}"
-        )
+        if query and isinstance(query, str):
+            typer.echo(
+                f"{Colors.YELLOW}No skills found matching query '{query}'. Run 'cam skill fetch' to discover skills from repositories.{Colors.RESET}"
+            )
+        else:
+            typer.echo(
+                f"{Colors.YELLOW}No skills found. Run 'cam skill fetch' to discover skills from repositories.{Colors.RESET}"
+            )
         return
 
     context = ", ".join(target_apps)
-    typer.echo(f"\n{Colors.BOLD}Skills (for {context}):{Colors.RESET}\n")
+    if query and isinstance(query, str):
+        typer.echo(f"\n{Colors.BOLD}Skills matching '{query}' (for {context}):{Colors.RESET}\n")
+    else:
+        typer.echo(f"\n{Colors.BOLD}Skills (for {context}):{Colors.RESET}\n")
     for skill_key, skill in sorted(skills.items()):
         status = (
             f"{Colors.GREEN}✓{Colors.RESET}"
