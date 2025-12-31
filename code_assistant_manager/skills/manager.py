@@ -4,15 +4,13 @@ This module provides the SkillManager class that orchestrates skill operations
 across different AI tool handlers.
 """
 
-import concurrent.futures
 import json
 import logging
-import shutil
-import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Type
 
 from ..repo_loader import RepoConfigLoader
+from ..fetching.base import BaseEntityFetcher, RepoConfig
 from .base import BaseSkillHandler
 from .claude import ClaudeSkillHandler
 from .codebuddy import CodebuddySkillHandler
@@ -119,6 +117,10 @@ class SkillManager:
         self.skills_file = self.config_dir / "skills.json"
         self.repos_file = self.config_dir / "skill_repos.json"
         self.config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize fetcher with skill parser
+        from ..fetching.parsers import SkillParser
+        self.fetcher = BaseEntityFetcher(parser=SkillParser())
 
         # Initialize handlers
         self._handlers: Dict[str, BaseSkillHandler] = {}
@@ -349,145 +351,35 @@ class SkillManager:
             self._init_default_repos_file()
             repos = self._load_repos()
 
-        # Filter enabled repos
-        enabled_repos = {
-            repo_id: repo for repo_id, repo in repos.items() if repo.enabled
-        }
+        # Convert SkillRepo objects to RepoConfig objects for the fetcher
+        repo_configs = [
+            RepoConfig(
+                owner=repo.owner,
+                name=repo.name,
+                branch=repo.branch,
+                path=repo.skills_path,
+                enabled=repo.enabled
+            )
+            for repo in repos.values()
+        ]
 
-        if not enabled_repos:
-            logger.warning("No enabled repositories found")
-            return []
+        # Fetch using unified fetcher
+        skills = self.fetcher.fetch_from_repos(
+            repos=repo_configs,
+            max_workers=max_workers
+        )
 
-        logger.info(f"Fetching skills from {len(enabled_repos)} repositories in parallel")
-
-        all_skills = []
+        # Update installed status from existing skills
         existing_skills = self._load_skills()
-
-        # Thread-safe storage for results
-        skills_results = []
-        lock = threading.Lock()
-
-        # Use claude handler for fetching (all repos use same format)
-        handler = self.get_handler("claude")
-
-        def process_repository(repo_id: str, repo: SkillRepo):
-            """Process a single repository to extract skills."""
-            try:
-                skills = self._fetch_skills_from_repo(repo, handler)
-                for skill in skills:
-                    if skill.key in existing_skills:
-                        skill.installed = existing_skills[skill.key].installed
-
-                with lock:
-                    skills_results.extend(skills)
-
-                logger.info(f"Found {len(skills)} skills in {repo_id}")
-                return len(skills)
-            except Exception as e:
-                logger.warning(f"Failed to fetch skills from {repo_id}: {e}")
-                return 0
-
-        # Use ThreadPoolExecutor for parallel processing
-        actual_workers = min(max_workers, len(enabled_repos))
-        logger.debug(f"Using {actual_workers} concurrent workers")
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=actual_workers) as executor:
-            # Submit all tasks
-            future_to_repo = {
-                executor.submit(process_repository, repo_id, repo): repo_id
-                for repo_id, repo in enabled_repos.items()
-            }
-
-            # Wait for all tasks to complete
-            for future in concurrent.futures.as_completed(future_to_repo):
-                repo_id = future_to_repo[future]
-                try:
-                    skill_count = future.result()
-                    logger.debug(f"Completed processing {repo_id}: {skill_count} skills")
-                except Exception as e:
-                    logger.error(f"Exception processing {repo_id}: {e}")
-
-        all_skills = skills_results
-
-        # Merge and save
-        for skill in all_skills:
+        for skill in skills:
+            if skill.key in existing_skills:
+                skill.installed = existing_skills[skill.key].installed
             existing_skills[skill.key] = skill
+
+        # Save updated skills
         self._save_skills(existing_skills)
 
-        logger.info(f"Total skills fetched: {len(all_skills)}")
-        return all_skills
-
-    def _fetch_skills_from_repo(
-        self, repo: SkillRepo, handler: BaseSkillHandler
-    ) -> List[Skill]:
-        """Fetch skills from a single repository.
-
-        Args:
-            repo: The repository to fetch from
-            handler: The handler to use for parsing
-
-        Returns:
-            List of skills found
-        """
-        temp_dir, actual_branch = handler._download_repo(
-            repo.owner, repo.name, repo.branch
-        )
-        skills = []
-
-        try:
-            scan_dir = temp_dir
-            if repo.skills_path:
-                scan_dir = temp_dir / repo.skills_path.strip("/")
-
-            if not scan_dir.exists():
-                logger.warning(f"Skills path not found: {scan_dir}")
-                return skills
-
-            # Scan for SKILL.md files recursively
-            for skill_md in scan_dir.rglob("SKILL.md"):
-                skill_dir = skill_md.parent
-                if not skill_dir.is_dir():
-                    continue
-
-                meta = handler.parse_skill_metadata(skill_md)
-
-                try:
-                    rel_path = skill_dir.relative_to(scan_dir)
-                    source_directory = str(rel_path).replace("\\", "/")
-
-                    # Handle root level SKILL.md
-                    if source_directory == ".":
-                        source_directory = "."  # Keep as "." for root-level skills
-                        directory = (
-                            skill_dir.name if skill_dir != scan_dir else repo.name
-                        )
-                    else:
-                        directory = skill_dir.name
-                except ValueError:
-                    continue
-
-                path_from_repo_root = skill_dir.relative_to(temp_dir)
-                readme_path = str(path_from_repo_root).replace("\\", "/")
-
-                skill = Skill(
-                    key=f"{repo.owner}/{repo.name}:{source_directory}",
-                    name=meta.get("name", directory),
-                    description=meta.get("description", ""),
-                    directory=directory,
-                    installed=False,
-                    repo_owner=repo.owner,
-                    repo_name=repo.name,
-                    repo_branch=actual_branch,
-                    skills_path=repo.skills_path,
-                    readme_url=f"https://github.com/{repo.owner}/{repo.name}/tree/{actual_branch}/{readme_path}",
-                    source_directory=source_directory,
-                )
-                skills.append(skill)
-                logger.debug(f"Found skill: {skill.key}")
-        finally:
-            if temp_dir.exists():
-                shutil.rmtree(temp_dir)
-
+        logger.info(f"Total skills fetched: {len(skills)}")
         return skills
 
     def sync_installed_status(self, app_type: str = "claude") -> None:
