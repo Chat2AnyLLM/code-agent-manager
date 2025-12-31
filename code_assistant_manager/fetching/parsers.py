@@ -48,6 +48,17 @@ class SkillParser(EntityParser[Skill]):
         except ValueError:
             source_directory = directory
 
+        # If skills_path is set, source_directory should be relative to skills_path
+        if repo_config.path:
+            skills_path = Path(repo_config.path)
+            try:
+                # Try to make source_directory relative to skills_path
+                full_skills_path = repo_root / skills_path
+                source_directory = str(skill_dir.relative_to(full_skills_path))
+            except ValueError:
+                # If we can't make it relative, keep the full path but warn
+                logger.warning(f"Skill directory {skill_dir} is not under skills_path {repo_config.path}")
+
         # Create skill entity
         skill = Skill(
             key=self.create_entity_key(repo_config, directory),
