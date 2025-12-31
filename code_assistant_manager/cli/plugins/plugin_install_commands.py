@@ -390,12 +390,19 @@ def install_plugin(
         marketplace = _resolve_plugin_conflict(plugin, app)
 
     # Use @ syntax for Claude CLI compatibility, but show : syntax in output
-    plugin_ref = f"{plugin}@{marketplace}" if marketplace else plugin
+    # For Claude CLI, extract just the repo name from owner/repo format
+    claude_marketplace = marketplace
+    if getattr(handler, "uses_cli_plugin_commands", False) and marketplace and "/" in marketplace:
+        # Claude CLI uses just repo name, not owner/repo
+        claude_marketplace = marketplace.split("/")[-1]  # Extract "claude-plugins-official" from "anthropics/claude-plugins-official"
+        plugin_ref = f"{plugin}@{claude_marketplace}"
+    else:
+        plugin_ref = f"{plugin}@{marketplace}" if marketplace else plugin
     display_ref = f"{marketplace}:{plugin}" if marketplace else plugin
     typer.echo(f"{Colors.CYAN}Installing plugin: {display_ref}...{Colors.RESET}")
 
     if getattr(handler, "uses_cli_plugin_commands", False):
-        success, msg = handler.install_plugin(plugin, marketplace)
+        success, msg = handler.install_plugin(plugin, claude_marketplace)
     else:
         # Install directly from CAM-configured marketplace (no app CLI required)
         from code_assistant_manager.plugins import PluginManager

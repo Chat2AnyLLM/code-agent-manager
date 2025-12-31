@@ -4,15 +4,13 @@ This module provides the AgentManager class that orchestrates agent operations
 across different AI tool handlers.
 """
 
-import concurrent.futures
 import json
 import logging
-import shutil
-import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Type
 
 from ..repo_loader import RepoConfigLoader
+from ..fetching.base import BaseEntityFetcher, RepoConfig
 from .base import BaseAgentHandler
 from .claude import ClaudeAgentHandler
 from .codebuddy import CodebuddyAgentHandler
@@ -115,6 +113,10 @@ class AgentManager:
         self.agents_file = self.config_dir / "agents.json"
         self.repos_file = self.config_dir / "agent_repos.json"
         self.config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize fetcher with agent parser
+        from ..fetching.parsers import AgentParser
+        self.fetcher = BaseEntityFetcher(parser=AgentParser())
 
         # Initialize handlers
         self._handlers: Dict[str, BaseAgentHandler] = {}
@@ -311,120 +313,35 @@ class AgentManager:
             self._init_default_repos_file()
             repos = self._load_repos()
 
-        # Filter enabled repos
-        enabled_repos = {
-            repo_id: repo for repo_id, repo in repos.items() if repo.enabled
-        }
+        # Convert AgentRepo objects to RepoConfig objects for the fetcher
+        repo_configs = [
+            RepoConfig(
+                owner=repo.owner,
+                name=repo.name,
+                branch=repo.branch,
+                path=repo.agents_path,
+                enabled=repo.enabled
+            )
+            for repo in repos.values()
+        ]
 
-        if not enabled_repos:
-            logger.warning("No enabled repositories found")
-            return []
+        # Fetch using unified fetcher
+        agents = self.fetcher.fetch_from_repos(
+            repos=repo_configs,
+            max_workers=max_workers
+        )
 
-        logger.info(f"Fetching agents from {len(enabled_repos)} repositories in parallel")
-
-        all_agents = []
+        # Update installed status from existing agents
         existing_agents = self._load_agents()
-
-        # Thread-safe storage for results
-        agents_results = []
-        lock = threading.Lock()
-
-        # Use claude handler for fetching (all repos use same format)
-        handler = self.get_handler("claude")
-
-        def process_repository(repo_id: str, repo: AgentRepo):
-            """Process a single repository to extract agents."""
-            try:
-                agents = self._fetch_agents_from_repo(repo, handler)
-                for agent in agents:
-                    if agent.key in existing_agents:
-                        agent.installed = existing_agents[agent.key].installed
-
-                with lock:
-                    agents_results.extend(agents)
-
-                logger.info(f"Found {len(agents)} agents in {repo_id}")
-                return len(agents)
-            except Exception as e:
-                logger.warning(f"Failed to fetch agents from {repo_id}: {e}")
-                return 0
-
-        # Use ThreadPoolExecutor for parallel processing
-        actual_workers = min(max_workers, len(enabled_repos))
-        logger.debug(f"Using {actual_workers} concurrent workers")
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=actual_workers) as executor:
-            # Submit all tasks
-            future_to_repo = {
-                executor.submit(process_repository, repo_id, repo): repo_id
-                for repo_id, repo in enabled_repos.items()
-            }
-
-            # Wait for all tasks to complete
-            for future in concurrent.futures.as_completed(future_to_repo):
-                repo_id = future_to_repo[future]
-                try:
-                    agent_count = future.result()
-                    logger.debug(f"Completed processing {repo_id}: {agent_count} agents")
-                except Exception as e:
-                    logger.error(f"Exception processing {repo_id}: {e}")
-
-        all_agents = agents_results
-
-        # Merge and save
-        for agent in all_agents:
+        for agent in agents:
+            if agent.key in existing_agents:
+                agent.installed = existing_agents[agent.key].installed
             existing_agents[agent.key] = agent
+
+        # Save updated agents
         self._save_agents(existing_agents)
 
-        logger.info(f"Total agents fetched: {len(all_agents)}")
-        return all_agents
-
-    def _fetch_agents_from_repo(
-        self, repo: AgentRepo, handler: BaseAgentHandler
-    ) -> List[Agent]:
-        """Fetch agents from a single repository.
-
-        Args:
-            repo: The repository to fetch from
-            handler: The handler to use for parsing
-
-        Returns:
-            List of agents found
-        """
-        # Use the new Fetcher class similar to awesome-claude-agents
-        fetcher = Fetcher()
-
-        repo_data = {
-            "owner": repo.owner,
-            "name": repo.name,
-            "branch": repo.branch,
-            "agentsPath": repo.agents_path or "agents"
-        }
-
-        agents_data = fetcher.fetch_agents_from_repo(repo_data)
-        agents = []
-
-        for agent_data in agents_data:
-            # Convert to Agent model
-            filename = agent_data["file_path"].split("/")[-1] if "/" in agent_data["file_path"] else agent_data["file_path"]
-
-            agent = Agent(
-                key=f"{repo.owner}/{repo.name}:{agent_data['name']}",
-                name=agent_data["name"],
-                description=agent_data["description"],
-                filename=filename,
-                installed=False,
-                repo_owner=repo.owner,
-                repo_name=repo.name,
-                repo_branch=repo.branch,
-                agents_path=repo.agents_path,
-                readme_url=f"https://github.com/{repo.owner}/{repo.name}/blob/{repo.branch}/{agent_data['file_path']}",
-                tools=agent_data.get("source_data", {}).get("tools", []),
-                color=agent_data.get("source_data", {}).get("color"),
-            )
-            agents.append(agent)
-            logger.debug(f"Found agent: {agent.key}")
-
+        logger.info(f"Total agents fetched: {len(agents)}")
         return agents
 
     def fetch_agents_from_external_sources(self) -> List[Agent]:
