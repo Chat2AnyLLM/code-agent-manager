@@ -21,6 +21,8 @@ def _load_builtin_plugin_repos() -> Dict[str, PluginRepo]:
 
     Returns bundled repos as PluginRepo objects for fallback.
     """
+    from .fetch import fetch_repo_info
+
     package_dir = Path(__file__).parent.parent
     repos_file = package_dir / "plugin_repos.json"
 
@@ -30,8 +32,25 @@ def _load_builtin_plugin_repos() -> Dict[str, PluginRepo]:
             with open(repos_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             for key, repo_data in data.items():
+                # For marketplace repos, fetch the actual name from the repo's marketplace.json
+                name = repo_data.get("name", key)
+                if repo_data.get("type") == "marketplace" and repo_data.get("repoOwner") and repo_data.get("repoName"):
+                    try:
+                        # Fetch the actual name from the repo's marketplace.json
+                        repo_info = fetch_repo_info(
+                            repo_data["repoOwner"],
+                            repo_data["repoName"],
+                            repo_data.get("repoBranch", "main")
+                        )
+                        if repo_info and repo_info.name:
+                            name = repo_info.name
+                            logger.debug(f"Using fetched name '{name}' for {key} from marketplace.json")
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch name for {key} from marketplace.json: {e}")
+                        # Fall back to the configured name
+
                 repos[key] = PluginRepo(
-                    name=repo_data.get("name", key),
+                    name=name,
                     description=repo_data.get("description", ""),
                     repo_owner=repo_data.get("repoOwner"),
                     repo_name=repo_data.get("repoName"),
@@ -57,6 +76,8 @@ def _load_plugin_repos_from_config(config_dir: Optional[Path] = None) -> Dict[st
     Returns:
         Dictionary of PluginRepo objects
     """
+    from .fetch import fetch_repo_info
+
     loader = RepoConfigLoader(config_dir)
     bundled_fallback_dict = _load_builtin_plugin_repos()
 
@@ -81,8 +102,25 @@ def _load_plugin_repos_from_config(config_dir: Optional[Path] = None) -> Dict[st
     # Convert back to PluginRepo objects
     repos: Dict[str, PluginRepo] = {}
     for key, repo_data in repos_dict.items():
+        # For marketplace repos, fetch the actual name from the repo's marketplace.json
+        name = repo_data.get("name", key)
+        if repo_data.get("type") == "marketplace" and repo_data.get("repoOwner") and repo_data.get("repoName"):
+            try:
+                # Fetch the actual name from the repo's marketplace.json
+                repo_info = fetch_repo_info(
+                    repo_data["repoOwner"],
+                    repo_data["repoName"],
+                    repo_data.get("repoBranch", "main")
+                )
+                if repo_info and repo_info.name:
+                    name = repo_info.name
+                    logger.debug(f"Using fetched name '{name}' for {key} from marketplace.json")
+            except Exception as e:
+                logger.warning(f"Failed to fetch name for {key} from marketplace.json: {e}")
+                # Fall back to the configured name
+
         repos[key] = PluginRepo(
-            name=repo_data.get("name", key),
+            name=name,
             description=repo_data.get("description", ""),
             repo_owner=repo_data.get("repoOwner"),
             repo_name=repo_data.get("repoName"),
@@ -379,6 +417,11 @@ class PluginManager:
         # Check if it's an alias
         for canonical_name, repo in repos.items():
             if name in repo.aliases:
+                return canonical_name
+        
+        # Check if it matches any repo's name attribute (for marketplace names from marketplace.json)
+        for canonical_name, repo in repos.items():
+            if repo.name == name:
                 return canonical_name
 
         return None

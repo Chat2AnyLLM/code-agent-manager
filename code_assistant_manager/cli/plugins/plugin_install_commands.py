@@ -64,12 +64,16 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
     found_in_marketplaces = []
     unreachable_marketplaces = []
 
-    for marketplace_name, repo in configured_marketplaces.items():
+    for marketplace_key, repo in configured_marketplaces.items():
         # Handle both PluginRepo objects and installed marketplace dictionaries
         if hasattr(repo, 'repo_owner'):  # PluginRepo object
             repo_owner = repo.repo_owner
             repo_name = repo.repo_name
             repo_branch = repo.repo_branch or "main"
+            # Use the actual marketplace name from the repo object, not the dict key
+            # The dict key might be "owner/repo" format from remote configs,
+            # but repo.name contains the correct marketplace name from marketplace.json
+            marketplace_name = repo.name
         elif isinstance(repo, dict) and 'source' in repo:  # Installed marketplace dict
             # Skip installed marketplaces - we'll handle them separately
             continue
@@ -104,6 +108,28 @@ def _resolve_plugin_conflict(plugin_name: str, app_type: str) -> str:
                 "error": str(e),
                 "available": False
             })
+
+    # Deduplicate marketplaces based on (name, source) combination
+    # This handles cases where remote configs have duplicate entries with different keys
+    # pointing to the same repo
+    seen = set()
+    deduplicated_found = []
+    for entry in found_in_marketplaces:
+        key = (entry["marketplace"], entry["source"])
+        if key not in seen:
+            seen.add(key)
+            deduplicated_found.append(entry)
+    found_in_marketplaces = deduplicated_found
+    
+    # Also deduplicate unreachable marketplaces
+    seen = set()
+    deduplicated_unreachable = []
+    for entry in unreachable_marketplaces:
+        key = (entry["marketplace"], entry["source"])
+        if key not in seen:
+            seen.add(key)
+            deduplicated_unreachable.append(entry)
+    unreachable_marketplaces = deduplicated_unreachable
 
     # Handle results
     if not found_in_marketplaces:

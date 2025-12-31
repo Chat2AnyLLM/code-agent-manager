@@ -178,7 +178,7 @@ def fetch_repo_info(
             break
 
     if not content:
-        logger.warning(f"Could not find {MARKETPLACE_JSON_PATH} in {owner}/{repo}")
+        logger.debug(f"Could not find {MARKETPLACE_JSON_PATH} in {owner}/{repo}")
         # Cache the None result to avoid repeated failed fetches
         _marketplace_cache[cache_key] = (None, current_time)
         return None

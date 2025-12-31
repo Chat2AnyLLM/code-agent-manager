@@ -87,7 +87,14 @@ def list_skills(
             if skill.installed
             else f"{Colors.RED}✗{Colors.RESET}"
         )
-        typer.echo(f"{status} {Colors.BOLD}{skill.name}{Colors.RESET} ({skill_key})")
+        # Create simplified install key: repo_owner/repo_name:directory
+        # This matches the simplified keys that are also stored in the skills dict
+        if skill.repo_owner and skill.repo_name:
+            install_key = f"{skill.repo_owner}/{skill.repo_name}:{skill.directory}"
+        else:
+            install_key = skill_key
+        
+        typer.echo(f"{status} {Colors.BOLD}{skill.name}{Colors.RESET} ({install_key})")
         if skill.description:
             typer.echo(f"  {Colors.CYAN}Description:{Colors.RESET} {skill.description}")
         typer.echo(f"  {Colors.CYAN}Directory:{Colors.RESET} {skill.directory}")
