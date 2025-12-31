@@ -32,12 +32,20 @@ class SkillParser(EntityParser[Skill]):
         # Calculate paths
         directory = skill_dir.name
 
+        # Find the repo root by looking for .git directory
+        repo_root = skill_dir
+        for parent in skill_dir.parents:
+            if (parent / '.git').exists():
+                repo_root = parent
+                break
+        else:
+            # Fallback to the original logic if .git not found
+            repo_root = skill_dir.parents[-2]
+
         # Get relative path from repo root to skill directory
         try:
-            # Assuming we know the scan directory relative to repo root
-            # This might need adjustment based on how repo_config.path is used
-            source_directory = str(skill_dir.relative_to(skill_dir.parents[-2]))  # Go up to repo root
-        except (ValueError, IndexError):
+            source_directory = str(skill_dir.relative_to(repo_root))
+        except ValueError:
             source_directory = directory
 
         # Create skill entity
