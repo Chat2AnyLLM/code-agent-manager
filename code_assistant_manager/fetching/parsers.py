@@ -26,6 +26,11 @@ class SkillParser(EntityParser[Skill]):
 
         skill_dir = file_path.parent
 
+        # Skip generated/cache skills that start with 'cam_'
+        if skill_dir.name.startswith('cam_'):
+            logger.debug(f"Skipping generated skill directory: {skill_dir.name}")
+            return None
+
         # Parse metadata from SKILL.md
         meta = self._parse_metadata(file_path)
 
