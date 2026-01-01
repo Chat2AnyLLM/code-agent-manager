@@ -35,7 +35,7 @@ def list_skills(
         "claude",
         "--app",
         "-a",
-        help="App type(s) to check installed status (claude, codex, copilot, gemini, all)",
+        help="App type(s) to check installed status (claude, codex, copilot, gemini, qwen, all)",
     ),
     query: Optional[str] = typer.Option(
         None,
@@ -376,7 +376,7 @@ def install_skill(
         "claude",
         "--app",
         "-a",
-        help="App type(s) to install to (claude, codex, gemini, all)",
+        help="App type(s) to install to (claude, codex, gemini, qwen, all)",
     ),
 ):
     """Install a skill to one or more app skills directories."""
@@ -404,7 +404,7 @@ def uninstall_skill(
         "claude",
         "--app",
         "-a",
-        help="App type(s) to uninstall from (claude, codex, gemini, all)",
+        help="App type(s) to uninstall from (claude, codex, gemini, qwen, all)",
     ),
 ):
     """Uninstall a skill from one or more app skills directories."""
@@ -536,7 +536,7 @@ def skill_status(
         None,
         "--app",
         "-a",
-        help="App type(s) to show (claude, codex, gemini, all). Default shows all.",
+        help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
     ),
 ):
     """Show skill installation status across apps (alias: installed)."""
@@ -549,7 +549,7 @@ def list_installed_skills(
         None,
         "--app",
         "-a",
-        help="App type(s) to show (claude, codex, gemini, all). Default shows all.",
+        help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
     ),
 ):
     """Show installed skills for each app."""
@@ -606,7 +606,7 @@ def uninstall_all_skills(
         ...,
         "--app",
         "-a",
-        help="App type(s) to uninstall all skills from (claude, codex, gemini, all)",
+        help="App type(s) to uninstall all skills from (claude, codex, gemini, qwen, all)",
     ),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):

@@ -692,13 +692,13 @@ _code_assistant_manager() {
                                 _values 'option' '--force[Skip confirmation]' '--help[Show help]'
                                 ;;
                             import)
-                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--description[Prompt description]' '--help[Show help]'
+                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot qwen codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--description[Prompt description]' '--help[Show help]'
                                 ;;
                             install)
-                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--help[Show help]'
+                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot qwen codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--help[Show help]'
                                 ;;
                             uninstall)
-                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--force[Skip confirmation]' '--help[Show help]'
+                                _values 'option' '--app[Application type]:app:(claude codex gemini copilot qwen codebuddy)' '--level[Level]:level:(user project)' '--project-dir[Project directory]:directory:_files -/' '--force[Skip confirmation]' '--help[Show help]'
                                 ;;
                             status)
                                 _values 'option' '--project-dir[Project directory]:directory:_files -/' '--help[Show help]'
@@ -753,7 +753,7 @@ _code_assistant_manager() {
                                 _values 'option' '--owner[Repository owner]' '--repo[Repository name]' '--help[Show help]'
                                 ;;
                             install|uninstall|enable|disable|validate)
-                                _values 'option' '--app[Application type]:app:(claude codebuddy codex copilot)' '--help[Show help]'
+                                _values 'option' '--app[Application type]:app:(claude codebuddy codex copilot gemini qwen)' '--help[Show help]'
                                 ;;
                             browse|view|status)
                                 _values 'option' '--help[Show help]'
