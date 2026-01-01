@@ -19,7 +19,7 @@ from code_assistant_manager.skills import (
 logger = logging.getLogger(__name__)
 
 skill_app = typer.Typer(
-    help="Manage skills for AI assistants (Claude, Codex, Copilot, Gemini, Droid, CodeBuddy)",
+    help="Manage skills for AI assistants (Claude, Codex, Copilot, Gemini, Droid, CodeBuddy, Qwen)",
     no_args_is_help=True,
 )
 
@@ -35,7 +35,13 @@ def list_skills(
         "claude",
         "--app",
         "-a",
-        help="App type(s) to check installed status (claude, codex, copilot, gemini, all)",
+        help="App type(s) to check installed status (claude, codex, copilot, gemini, qwen, all)",
+    ),
+    query: Optional[str] = typer.Option(
+        None,
+        "--query",
+        "-q",
+        help="Filter skills by repository name (e.g., 'BrownFineSecurity/iothackbot')",
     ),
 ):
     """List all skills."""
@@ -48,21 +54,47 @@ def list_skills(
 
     skills = manager.get_all()
 
+    # Filter skills by query if provided
+    if query and isinstance(query, str):
+        filtered_skills = {}
+        query_lower = query.lower()
+        for skill_key, skill in skills.items():
+            if skill.repo_owner and skill.repo_name:
+                repo_full_name = f"{skill.repo_owner}/{skill.repo_name}".lower()
+                if query_lower in repo_full_name:
+                    filtered_skills[skill_key] = skill
+        skills = filtered_skills
+
     if not skills:
-        typer.echo(
-            f"{Colors.YELLOW}No skills found. Run 'cam skill fetch' to discover skills from repositories.{Colors.RESET}"
-        )
+        if query and isinstance(query, str):
+            typer.echo(
+                f"{Colors.YELLOW}No skills found matching query '{query}'. Run 'cam skill fetch' to discover skills from repositories.{Colors.RESET}"
+            )
+        else:
+            typer.echo(
+                f"{Colors.YELLOW}No skills found. Run 'cam skill fetch' to discover skills from repositories.{Colors.RESET}"
+            )
         return
 
     context = ", ".join(target_apps)
-    typer.echo(f"\n{Colors.BOLD}Skills (for {context}):{Colors.RESET}\n")
+    if query and isinstance(query, str):
+        typer.echo(f"\n{Colors.BOLD}Skills matching '{query}' (for {context}):{Colors.RESET}\n")
+    else:
+        typer.echo(f"\n{Colors.BOLD}Skills (for {context}):{Colors.RESET}\n")
     for skill_key, skill in sorted(skills.items()):
         status = (
             f"{Colors.GREEN}✓{Colors.RESET}"
             if skill.installed
             else f"{Colors.RED}✗{Colors.RESET}"
         )
-        typer.echo(f"{status} {Colors.BOLD}{skill.name}{Colors.RESET} ({skill_key})")
+        # Create simplified install key: repo_owner/repo_name:directory
+        # This matches the simplified keys that are also stored in the skills dict
+        if skill.repo_owner and skill.repo_name:
+            install_key = f"{skill.repo_owner}/{skill.repo_name}:{skill.directory}"
+        else:
+            install_key = skill_key
+        
+        typer.echo(f"{status} {Colors.BOLD}{skill.name}{Colors.RESET} ({install_key})")
         if skill.description:
             typer.echo(f"  {Colors.CYAN}Description:{Colors.RESET} {skill.description}")
         typer.echo(f"  {Colors.CYAN}Directory:{Colors.RESET} {skill.directory}")
@@ -344,7 +376,7 @@ def install_skill(
         "claude",
         "--app",
         "-a",
-        help="App type(s) to install to (claude, codex, gemini, all)",
+        help="App type(s) to install to (claude, codex, gemini, qwen, all)",
     ),
 ):
     """Install a skill to one or more app skills directories."""
@@ -372,7 +404,7 @@ def uninstall_skill(
         "claude",
         "--app",
         "-a",
-        help="App type(s) to uninstall from (claude, codex, gemini, all)",
+        help="App type(s) to uninstall from (claude, codex, gemini, qwen, all)",
     ),
 ):
     """Uninstall a skill from one or more app skills directories."""
@@ -504,7 +536,7 @@ def skill_status(
         None,
         "--app",
         "-a",
-        help="App type(s) to show (claude, codex, gemini, all). Default shows all.",
+        help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
     ),
 ):
     """Show skill installation status across apps (alias: installed)."""
@@ -517,7 +549,7 @@ def list_installed_skills(
         None,
         "--app",
         "-a",
-        help="App type(s) to show (claude, codex, gemini, all). Default shows all.",
+        help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
     ),
 ):
     """Show installed skills for each app."""
@@ -574,7 +606,7 @@ def uninstall_all_skills(
         ...,
         "--app",
         "-a",
-        help="App type(s) to uninstall all skills from (claude, codex, gemini, all)",
+        help="App type(s) to uninstall all skills from (claude, codex, gemini, qwen, all)",
     ),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):

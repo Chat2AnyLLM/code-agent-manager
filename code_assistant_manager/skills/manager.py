@@ -18,6 +18,7 @@ from .codex import CodexSkillHandler
 from .copilot import CopilotSkillHandler
 from .droid import DroidSkillHandler
 from .gemini import GeminiSkillHandler
+from .qwen import QwenSkillHandler
 from .models import Skill, SkillRepo
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,7 @@ SKILL_HANDLERS: Dict[str, Type[BaseSkillHandler]] = {
     "gemini": GeminiSkillHandler,
     "droid": DroidSkillHandler,
     "codebuddy": CodebuddySkillHandler,
+    "qwen": QwenSkillHandler,
 }
 
 # Valid app types for skills
@@ -229,9 +231,25 @@ class SkillManager:
         return self._load_skills()
 
     def get(self, skill_key: str) -> Optional[Skill]:
-        """Get a specific skill."""
+        """Get a specific skill by key (can be actual key or install key format repo:directory)."""
         skills = self._load_skills()
-        return skills.get(skill_key)
+
+        # First try direct lookup with the provided key
+        skill = skills.get(skill_key)
+        if skill:
+            return skill
+
+        # If not found, try to find by install key format (repo:directory)
+        if ":" in skill_key:
+            repo_part, directory_part = skill_key.rsplit(":", 1)
+            # Look for skills that match this repo and directory
+            for stored_skill in skills.values():
+                if (stored_skill.repo_owner and stored_skill.repo_name and
+                    f"{stored_skill.repo_owner}/{stored_skill.repo_name}" == repo_part and
+                    stored_skill.directory == directory_part):
+                    return stored_skill
+
+        return None
 
     def create(self, skill: Skill) -> None:
         """Create a new skill."""
@@ -259,10 +277,24 @@ class SkillManager:
         logger.info(f"Upserted skill: {skill.key}")
 
     def delete(self, skill_key: str) -> None:
-        """Delete a skill."""
+        """Delete a skill by key (can be actual key or install key format repo:directory)."""
         skills = self._load_skills()
+
+        # First try direct lookup with the provided key
         if skill_key not in skills:
-            raise ValueError(f"Skill with key '{skill_key}' not found")
+            # If not found, try to find by install key format (repo:directory)
+            if ":" in skill_key:
+                repo_part, directory_part = skill_key.rsplit(":", 1)
+                # Look for skills that match this repo and directory
+                for stored_key, skill in skills.items():
+                    if (skill.repo_owner and skill.repo_name and
+                        f"{skill.repo_owner}/{skill.repo_name}" == repo_part and
+                        skill.directory == directory_part):
+                        skill_key = stored_key
+                        break
+                else:
+                    raise ValueError(f"Skill with key '{skill_key}' not found")
+
         del skills[skill_key]
         self._save_skills(skills)
         logger.info(f"Deleted skill: {skill_key}")
@@ -294,13 +326,32 @@ class SkillManager:
         """Install a skill for a specific app.
 
         Args:
-            skill_key: The skill identifier
+            skill_key: The skill identifier (can be actual key or install key format repo:directory)
             app_type: The app type to install to
 
         Returns:
             Path to the installed skill directory
+
+        Raises:
+            ValueError: If skill_key is not found
         """
         skills = self._load_skills()
+
+        # First try direct lookup with the provided key
+        if skill_key not in skills:
+            # If not found, try to find by install key format (repo:directory)
+            if ":" in skill_key:
+                repo_part, directory_part = skill_key.rsplit(":", 1)
+                # Look for skills that match this repo and directory
+                for stored_key, skill in skills.items():
+                    if (skill.repo_owner and skill.repo_name and
+                        f"{skill.repo_owner}/{skill.repo_name}" == repo_part and
+                        skill.directory == directory_part):
+                        skill_key = stored_key
+                        break
+                else:
+                    raise ValueError(f"Skill with key '{skill_key}' not found")
+
         if skill_key not in skills:
             raise ValueError(f"Skill with key '{skill_key}' not found")
 
@@ -320,10 +371,26 @@ class SkillManager:
         """Uninstall a skill from a specific app.
 
         Args:
-            skill_key: The skill identifier
+            skill_key: The skill identifier (can be actual key or install key format repo:directory)
             app_type: The app type to uninstall from
         """
         skills = self._load_skills()
+
+        # First try direct lookup with the provided key
+        if skill_key not in skills:
+            # If not found, try to find by install key format (repo:directory)
+            if ":" in skill_key:
+                repo_part, directory_part = skill_key.rsplit(":", 1)
+                # Look for skills that match this repo and directory
+                for stored_key, skill in skills.items():
+                    if (skill.repo_owner and skill.repo_name and
+                        f"{skill.repo_owner}/{skill.repo_name}" == repo_part and
+                        skill.directory == directory_part):
+                        skill_key = stored_key
+                        break
+                else:
+                    raise ValueError(f"Skill with key '{skill_key}' not found")
+
         if skill_key not in skills:
             raise ValueError(f"Skill with key '{skill_key}' not found")
 

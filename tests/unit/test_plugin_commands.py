@@ -494,12 +494,14 @@ class TestPluginInstallErrorHandling:
             mock_pm_class.return_value = mock_pm
             # Create marketplace repos
             working_repo = MagicMock()
+            working_repo.name = "working-marketplace"  # Add name attribute
             working_repo.repo_owner = "working"
             working_repo.repo_name = "repo"
             working_repo.repo_branch = "main"
             working_repo.type = "marketplace"
 
             broken_repo = MagicMock()
+            broken_repo.name = "broken-marketplace"  # Add name attribute
             broken_repo.repo_owner = "broken"
             broken_repo.repo_name = "repo"
             broken_repo.repo_branch = "main"
@@ -548,6 +550,7 @@ class TestPluginInstallErrorHandling:
 
             # Create unreachable marketplace repo
             broken_repo = MagicMock()
+            broken_repo.name = "broken-marketplace"  # Add name attribute
             broken_repo.repo_owner = "broken"
             broken_repo.repo_name = "repo"
             broken_repo.repo_branch = "main"
@@ -562,7 +565,8 @@ class TestPluginInstallErrorHandling:
                 mock_fetch.side_effect = Exception("Network timeout")
 
                 # This should exit due to no available plugins
-                with pytest.raises(SystemExit):
+                from typer import Exit
+                with pytest.raises(Exit):
                     _resolve_plugin_conflict("test-plugin", "claude")
 
     @patch("code_assistant_manager.cli.plugins.plugin_install_commands._get_handler")
@@ -582,18 +586,21 @@ class TestPluginInstallErrorHandling:
 
             # Create marketplace repos
             owner1_repo = MagicMock()
+            owner1_repo.name = "marketplace1"  # Add name attribute
             owner1_repo.repo_owner = "owner1"
             owner1_repo.repo_name = "repo1"
             owner1_repo.repo_branch = "main"
             owner1_repo.type = "marketplace"
 
             owner2_repo = MagicMock()
+            owner2_repo.name = "marketplace2"  # Add name attribute
             owner2_repo.repo_owner = "owner2"
             owner2_repo.repo_name = "repo2"
             owner2_repo.repo_branch = "main"
             owner2_repo.type = "marketplace"
 
             broken_repo = MagicMock()
+            broken_repo.name = "unreachable-marketplace"  # Add name attribute
             broken_repo.repo_owner = "broken"
             broken_repo.repo_name = "repo"
             broken_repo.repo_branch = "main"
@@ -622,8 +629,8 @@ class TestPluginInstallErrorHandling:
 
                 mock_fetch.side_effect = mock_fetch_side_effect
 
-                # Mock user input to select marketplace 1
-                with patch("builtins.input", return_value="1"):
+                # Mock typer prompt to return "1" to select the first marketplace
+                with patch("code_assistant_manager.cli.plugins.plugin_install_commands.typer.prompt", return_value="1"):
                     marketplace = _resolve_plugin_conflict("test-plugin", "claude")
 
                 # Should return marketplace1 (the first working marketplace)

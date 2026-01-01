@@ -10,7 +10,6 @@ import typer
 
 from code_assistant_manager.menu.base import Colors
 from code_assistant_manager.plugins import (
-    BUILTIN_PLUGIN_REPOS,
     VALID_APP_TYPES,
     PluginManager,
     PluginRepo,

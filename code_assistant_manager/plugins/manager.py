@@ -30,8 +30,11 @@ def _load_builtin_plugin_repos() -> Dict[str, PluginRepo]:
             with open(repos_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             for key, repo_data in data.items():
+                # Use configured name or fallback to key
+                name = repo_data.get("name", key)
+                
                 repos[key] = PluginRepo(
-                    name=repo_data.get("name", key),
+                    name=name,
                     description=repo_data.get("description", ""),
                     repo_owner=repo_data.get("repoOwner"),
                     repo_name=repo_data.get("repoName"),
@@ -81,8 +84,11 @@ def _load_plugin_repos_from_config(config_dir: Optional[Path] = None) -> Dict[st
     # Convert back to PluginRepo objects
     repos: Dict[str, PluginRepo] = {}
     for key, repo_data in repos_dict.items():
+        # Use configured name or fallback to key
+        name = repo_data.get("name", key)
+
         repos[key] = PluginRepo(
-            name=repo_data.get("name", key),
+            name=name,
             description=repo_data.get("description", ""),
             repo_owner=repo_data.get("repoOwner"),
             repo_name=repo_data.get("repoName"),
@@ -107,8 +113,16 @@ PLUGIN_HANDLERS: Dict[str, Type[BasePluginHandler]] = {
 # Valid app types that support plugins
 VALID_APP_TYPES = list(PLUGIN_HANDLERS.keys())
 
-# Built-in plugin repositories
-BUILTIN_PLUGIN_REPOS = _load_plugin_repos_from_config()
+# Cache for plugin repositories
+_CACHED_PLUGIN_REPOS: Optional[Dict[str, PluginRepo]] = None
+
+
+def _get_plugin_repos_lazy() -> Dict[str, PluginRepo]:
+    """Get all plugin repos (lazy loaded)."""
+    global _CACHED_PLUGIN_REPOS
+    if _CACHED_PLUGIN_REPOS is None:
+        _CACHED_PLUGIN_REPOS = _load_plugin_repos_from_config()
+    return _CACHED_PLUGIN_REPOS
 
 
 def get_handler(app_type: str) -> BasePluginHandler:
@@ -290,13 +304,14 @@ class PluginManager:
 
     def get_builtin_repos(self) -> Dict[str, PluginRepo]:
         """Get all built-in plugin repositories."""
-        return BUILTIN_PLUGIN_REPOS.copy()
+        return _get_plugin_repos_lazy().copy()
 
     def get_builtin_repo(self, name: str) -> Optional[PluginRepo]:
         """Get a built-in plugin repository by name (supports aliases)."""
-        resolved = self._resolve_repo_name(name, self.get_builtin_repos())
+        repos = self.get_builtin_repos()
+        resolved = self._resolve_repo_name(name, repos)
         if resolved:
-            return BUILTIN_PLUGIN_REPOS.get(resolved)
+            return repos.get(resolved)
         return None
 
     # ==================== User Plugin Repos ====================
@@ -380,6 +395,11 @@ class PluginManager:
         for canonical_name, repo in repos.items():
             if name in repo.aliases:
                 return canonical_name
+        
+        # Check if it matches any repo's name attribute (for marketplace names from marketplace.json)
+        for canonical_name, repo in repos.items():
+            if repo.name == name:
+                return canonical_name
 
         return None
 
@@ -453,7 +473,7 @@ class PluginManager:
         else:
             raise ValueError(
                 f"Invalid source: {source}. Must be a local path, GitHub repo (owner/repo), "
-                f"or built-in repo name: {list(BUILTIN_PLUGIN_REPOS.keys())}"
+                f"or built-in repo name: {list(_get_plugin_repos_lazy().keys())}"
             )
 
         # Save to registry

@@ -64,7 +64,8 @@ class GitRepository:
                     break
                 except subprocess.CalledProcessError:
                     if branch == branches_to_try[-1]:
-                        raise
+                        # All branches failed, raise RuntimeError instead of CalledProcessError
+                        raise RuntimeError(f"Failed to clone repository from any branch")
                     logger.debug(f"Branch {branch} not found, trying next...")
 
             if not success:
@@ -74,5 +75,4 @@ class GitRepository:
 
         finally:
             # Cleanup
-            if temp_dir.exists():
-                shutil.rmtree(temp_dir, ignore_errors=True)
+            shutil.rmtree(temp_dir, ignore_errors=True)

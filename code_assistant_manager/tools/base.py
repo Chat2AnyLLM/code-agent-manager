@@ -158,12 +158,15 @@ class CLITool:
             ]
             for args in version_attempts:
                 try:
-                    res = self._run_command(args, capture_output=True, text=True)
+                    res = self._run_command(args, capture_output=True, text=True, timeout=5)
                     if res.returncode == 0:
                         output = (res.stdout or res.stderr).strip()
                         if output:
                             # Return full output, let _format_version() clean it up
                             return output
+                except subprocess.TimeoutExpired:
+                    # Command timed out, try next attempt
+                    continue
                 except subprocess.CalledProcessError:
                     continue
             return "unknown"

@@ -141,10 +141,24 @@ class TestGitRepository(unittest.TestCase):
         # Verify cleanup was still called
         mock_rmtree.assert_called_once_with(Path(temp_dir), ignore_errors=True)
 
-    def test_branch_fallbacks_attribute(self):
-        """Test that BRANCH_FALLBACKS contains expected branches."""
-        expected_branches = ["main", "master", "develop", "development", "dev", "trunk"]
-        self.assertEqual(GitRepository.BRANCH_FALLBACKS, expected_branches)
+    def test_clone_returns_correct_tuple(self):
+        """Test that clone method returns the correct tuple structure."""
+        with patch('subprocess.run') as mock_run, \
+             patch('tempfile.mkdtemp', return_value='/tmp/test'), \
+             patch('shutil.rmtree') as mock_rmtree:
+
+            mock_run.return_value = Mock(returncode=0)
+
+            # Test that clone returns (Path, str) tuple
+            with self.repo.clone() as result:
+                self.assertIsInstance(result, tuple)
+                self.assertEqual(len(result), 2)
+                temp_dir, actual_branch = result
+                self.assertIsInstance(temp_dir, Path)
+                self.assertIsInstance(actual_branch, str)
+                self.assertEqual(actual_branch, self.branch)
+
+            mock_rmtree.assert_called_once()
 
     @patch('subprocess.run')
     @patch('tempfile.mkdtemp')

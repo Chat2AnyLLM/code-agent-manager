@@ -98,6 +98,30 @@ class TestCLIAppCommands:
         assert result.exit_code == 0
         assert "skill" in result.output.lower()
 
+    def test_skill_command_help_includes_qwen(self, runner):
+        """Test that skill command help includes Qwen since it's now supported."""
+        result = runner.invoke(app, ["skill", "--help"])
+        assert result.exit_code == 0
+        # Verify Qwen IS mentioned in the help text
+        assert "Qwen" in result.output, "Skill command help should include 'Qwen' since it's supported"
+
+    def test_qwen_in_valid_app_types(self):
+        """Test that Qwen is included in VALID_APP_TYPES since it's now supported."""
+        from code_assistant_manager.skills import VALID_APP_TYPES
+        assert "qwen" in VALID_APP_TYPES, "Qwen should be in VALID_APP_TYPES since it's supported"
+
+    def test_qwen_skill_handler_available(self):
+        """Test that QwenSkillHandler is importable since Qwen is now supported."""
+        # This should NOT raise an ImportError
+        from code_assistant_manager.skills.qwen import QwenSkillHandler
+        # Verify it's the right class
+        assert QwenSkillHandler is not None
+
+    def test_skill_handlers_registry_includes_qwen(self):
+        """Test that SKILL_HANDLERS registry includes Qwen since it's now supported."""
+        from code_assistant_manager.skills.manager import SKILL_HANDLERS
+        assert "qwen" in SKILL_HANDLERS, "SKILL_HANDLERS should include 'qwen' since it's supported"
+
     def test_extensions_command_help(self, runner):
         """Test extensions command help."""
         result = runner.invoke(app, ["extensions", "--help"])

@@ -17,8 +17,9 @@ from .codex import CodexSkillHandler
 from .copilot import CopilotSkillHandler
 from .droid import DroidSkillHandler
 from .gemini import GeminiSkillHandler
-from .manager import VALID_APP_TYPES, SkillManager
+from .qwen import QwenSkillHandler
 from .models import Skill, SkillRepo
+from .manager import SkillManager, VALID_APP_TYPES
 
 __all__ = [
     "Skill",
@@ -31,5 +32,6 @@ __all__ = [
     "GeminiSkillHandler",
     "DroidSkillHandler",
     "CodebuddySkillHandler",
+    "QwenSkillHandler",
     "VALID_APP_TYPES",
 ]
