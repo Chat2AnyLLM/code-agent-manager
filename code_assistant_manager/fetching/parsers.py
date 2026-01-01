@@ -82,7 +82,7 @@ class SkillParser(EntityParser[Skill]):
 
         # Create skill entity
         skill = Skill(
-            key=self.create_entity_key(repo_config, source_directory),
+            key=self.create_entity_key(repo_config, directory),
             name=meta.get("name", directory),
             description=meta.get("description", ""),
             directory=directory,
