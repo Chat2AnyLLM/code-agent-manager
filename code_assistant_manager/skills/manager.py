@@ -18,6 +18,7 @@ from .codex import CodexSkillHandler
 from .copilot import CopilotSkillHandler
 from .droid import DroidSkillHandler
 from .gemini import GeminiSkillHandler
+from .qwen import QwenSkillHandler
 from .models import Skill, SkillRepo
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,7 @@ SKILL_HANDLERS: Dict[str, Type[BaseSkillHandler]] = {
     "gemini": GeminiSkillHandler,
     "droid": DroidSkillHandler,
     "codebuddy": CodebuddySkillHandler,
+    "qwen": QwenSkillHandler,
 }
 
 # Valid app types for skills
