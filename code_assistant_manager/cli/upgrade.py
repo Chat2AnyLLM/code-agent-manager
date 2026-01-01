@@ -204,10 +204,10 @@ def handle_upgrade_command(
                 percent = completed / total if total else 1.0
                 filled = int(percent * bar_len)
                 bar = "█" * filled + "-" * (bar_len - filled)
-                sys.stdout.write(
-                    f"Upgrading: [{bar}] {completed}/{total} tools processed"
+                # Use \r to ensure we start at the beginning of the line
+                typer.echo(
+                    f"Upgrading: [{bar}] {completed}/{total} tools processed", nl=False
                 )
-                sys.stdout.flush()
 
             # First, count the skipped tools as completed
             for _tool_name, action, _ in prepared_tools:
@@ -217,10 +217,11 @@ def handle_upgrade_command(
                         percent = completed / total if total else 1.0
                         filled = int(percent * bar_len)
                         bar = "█" * filled + "-" * (bar_len - filled)
-                        sys.stdout.write(
-                            f"\rUpgrading: [{bar}] {completed}/{total} tools processed"
+                        # Clear line and update progress
+                        typer.echo(
+                            f"\033[2K\rUpgrading: [{bar}] {completed}/{total} tools processed",
+                            nl=False,
                         )
-                        sys.stdout.flush()
                         time.sleep(
                             0.05
                         )  # Small delay to make incremental progress visible
@@ -269,21 +270,20 @@ def handle_upgrade_command(
                                 percent = completed / total if total else 1.0
                                 filled = int(percent * bar_len)
                                 bar = "█" * filled + "-" * (bar_len - filled)
-                                sys.stdout.write(
-                                    f"\rUpgrading: [{bar}] {completed}/{total} tools processed"
+                                typer.echo(
+                                    f"\033[2K\rUpgrading: [{bar}] {completed}/{total} tools processed",
+                                    nl=False,
                                 )
-                                sys.stdout.flush()
                             else:
                                 # Compact per-line update, keep only minimal text
                                 typer.echo(f"  [{completed}/{total}] tools processed")
 
             if is_tty:
-                # Finish the progress bar line
-                sys.stdout.write("\n")
-                sys.stdout.flush()
+                # Finish the progress bar line and ensure clean terminal state
+                typer.echo("")
 
             # Display results for ALL upgradeable tools, including ones skipped by pre-check
-            typer.echo(f"\n{Colors.GREEN}Upgrade results:{Colors.RESET}")
+            typer.echo(f"{Colors.GREEN}Upgrade results:{Colors.RESET}")
             for tool_name in upgradeable_tools.keys():
                 before_v = _format_version(pre_versions.get(tool_name, "unknown"))
 
@@ -453,32 +453,11 @@ def _perform_upgrade_task(tool_name, tool, install_cmd, quiet: bool = False):
         if not quiet:
             # typer.echo(f"{Colors.BLUE}Starting upgrade for {tool_name}...{Colors.RESET}")
             pass
-        # If quiet mode requested, ask tool to run quieter by passing a wrapper command
-        if quiet:
-            # Try to use script command for quiet execution, but fall back if it doesn't work
-            # Different Unix systems have different script command syntax
-            import subprocess
 
-            try:
-                # Test if script command supports -q -c syntax (macOS style)
-                subprocess.run(
-                    ["script", "-q", "-c", "echo test"],
-                    capture_output=True,
-                    text=True,
-                    timeout=1,
-                )
-                # If we get here, script -q -c works
-                wrapper_cmd = f"script -q -c {install_cmd!r} /dev/null"
-            except (
-                subprocess.TimeoutExpired,
-                subprocess.CalledProcessError,
-                FileNotFoundError,
-            ):
-                # script command doesn't support -q -c, or doesn't exist, fall back to redirection
-                wrapper_cmd = f"{install_cmd} >/dev/null 2>&1"
-            result = tool._perform_upgrade(desc, wrapper_cmd)
-        else:
-            result = tool._perform_upgrade(desc, install_cmd)
+        # Perform the upgrade
+        # Note: CommandRunner (used by _perform_upgrade) captures output, so it is inherently quiet.
+        # We do not need to wrap commands in 'script' or redirects which can corrupt terminal state.
+        result = tool._perform_upgrade(desc, install_cmd)
         return result
     except Exception as e:
         # Do not print exception stack traces to stderr; return structured failure
