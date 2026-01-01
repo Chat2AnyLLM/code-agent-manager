@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -9,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class ToolRegistry:
-    """Registry for external CLI tools loaded from tools.yaml with lazy loading."""
+    """Registry for external CLI tools loaded from tools.yaml with lazy loading and caching."""
 
     def __init__(self, config_path: Optional[Path] = None):
         env_override = os.environ.get("CODE_ASSISTANT_MANAGER_TOOLS_FILE")
@@ -23,6 +24,8 @@ class ToolRegistry:
                 Path(__file__).resolve().parent.parent.parent / "tools.yaml"
             )
         self._tools = None  # Lazy load on first access
+        self._cache_time = None
+        self._cache_ttl = 30  # Cache for 30 seconds
 
     def _load(self) -> Dict[str, dict]:
         """Load tools from packaged resources first, then fall back to file path.
@@ -81,11 +84,14 @@ class ToolRegistry:
         return tools if isinstance(tools, dict) else {}
 
     def _ensure_loaded(self):
-        if self._tools is None:
+        # Check if cache is still valid
+        if self._tools is None or self._cache_time is None or (time.time() - self._cache_time) > self._cache_ttl:
             self._tools = self._load()
+            self._cache_time = time.time()
 
     def reload(self):
         self._tools = self._load()
+        self._cache_time = time.time()
 
     def get_tool(self, tool_key: str) -> dict:
         self._ensure_loaded()
