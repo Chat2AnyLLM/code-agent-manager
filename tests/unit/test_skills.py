@@ -230,17 +230,23 @@ class TestSkillManager:
         initial_repos = manager.get_repos()
         initial_count = len(initial_repos)
 
-        repo = SkillRepo(owner="testowner", name="testrepo", branch="main")
+        # Use a completely unique repo identifier that won't conflict with defaults
+        repo = SkillRepo(owner="test-owner-uniqu3", name="test-repo-uniqu3", branch="main")
         manager.add_repo(repo)
 
         repos = manager.get_repos()
-        assert len(repos) == initial_count + 1
-        # Check that our new repo is in the list
-        assert any(r.owner == "testowner" and r.name == "testrepo" for r in repos)
+        # Check that our new repo is in the list instead of just relying on count
+        new_repos = manager.get_repos()
+        assert any(r.owner == "test-owner-uniqu3" and r.name == "test-repo-uniqu3" for r in new_repos)
 
-        manager.remove_repo("testowner", "testrepo")
-        repos = manager.get_repos()
-        assert len(repos) == initial_count
+        # Also verify that the count increased (this should work if the repo was properly added)
+        assert len(new_repos) == initial_count + 1
+
+        manager.remove_repo("test-owner-uniqu3", "test-repo-uniqu3")
+        repos_after_removal = manager.get_repos()
+        assert len(repos_after_removal) == initial_count
+        # Verify the specific repo was removed
+        assert not any(r.owner == "test-owner-uniqu3" and r.name == "test-repo-uniqu3" for r in repos_after_removal)
 
     def test_manager_export_import(self, temp_config_dir):
         """Test exporting and importing skills."""

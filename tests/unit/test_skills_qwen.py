@@ -32,19 +32,20 @@ class TestQwenSkillHandler:
         """Test getting installed skill directories."""
         handler = QwenSkillHandler(skills_dir_override=temp_skills_dir)
         
-        # Create some dummy skill directories
-        (temp_skills_dir / "skill1").mkdir()
-        (temp_skills_dir / "skill2").mkdir()
+        # Create some dummy skill directories with Qwen-specific files
+        skill1_dir = temp_skills_dir / "skill1"
+        skill1_dir.mkdir()
+        (skill1_dir / "SKILL.md").write_text("# Skill 1\nSkill content for testing")  # Required for recognition
+
+        skill2_dir = temp_skills_dir / "skill2"
+        skill2_dir.mkdir()
+        (skill2_dir / "SKILL.md").write_text("# Skill 2\nSkill content for testing")  # Required for recognition
+
         (temp_skills_dir / "not_a_skill.txt").touch()
 
         # We need to make sure the base directory exists check passes
-        # But we are using a real temp dir, so it should exist.
-        # The issue might be related to how BaseSkillHandler scans directories.
-        # Let's check BaseSkillHandler.get_installed_dirs implementation.
-        
-        # Mock Path.exists to ensure handler logic proceeds even if temp dir context is tricky
-        with patch.object(Path, "exists", return_value=True):
-             installed = handler.get_installed_dirs()
+        # The BaseSkillHandler looks for specific files to identify skill directories
+        installed = handler.get_installed_dirs()
         
         assert len(installed) == 2
         assert any(d.name == "skill1" for d in installed)

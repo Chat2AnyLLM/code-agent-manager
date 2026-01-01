@@ -46,11 +46,12 @@ class TestCLIMain:
 
     def test_cli_version(self, runner):
         """Test 'version' command."""
+        from code_assistant_manager import __version__
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
         version_output = result.stdout
         assert "code-assistant-manager" in version_output
-        assert "1.1.0" in version_output, "Version command should output 1.1.0"
+        assert __version__ in version_output, f"Version command should output {__version__}"
 
     def test_cli_no_arguments(self):
         """Test CLI with no arguments."""

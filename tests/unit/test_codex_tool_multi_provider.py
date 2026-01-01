@@ -109,8 +109,8 @@ def test_codex_tool_includes_existing_profiles_from_toml(monkeypatch):
                 #    select index 1 -> "old-profile-1"
                 menu_calls = []
 
-                def _mock_menu(prompt, options, cancel_text=None):
-                    menu_calls.append({"prompt": prompt, "options": options, "cancel_text": cancel_text})
+                def _mock_menu(prompt, options, cancel_text=None, key_provider=None):
+                    menu_calls.append({"prompt": prompt, "options": options, "cancel_text": cancel_text, "key_provider": key_provider})
                     if len(menu_calls) == 1:
                         return (True, 0)  # Select new-model
                     else:

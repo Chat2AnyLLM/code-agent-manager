@@ -64,23 +64,19 @@ class TestUpgradeFunctionality:
             # Since _ensure_tool_installed returns True on success, ensure True is returned
             assert result is True
 
-    @patch("code_assistant_manager.tools.subprocess.run")
+    @patch("code_assistant_manager.tools.CLITool._perform_upgrade")
     @patch("code_assistant_manager.tools.CLITool._check_command_available")
     @patch("code_assistant_manager.menu.menus.display_simple_menu")
-    def test_upgrade_failure_handling(self, mock_menu, mock_check_available, mock_run):
+    def test_upgrade_failure_handling(self, mock_menu, mock_check_available, mock_perform_upgrade):
         """Test that upgrade failures are handled correctly."""
         # Setup
-        mock_check_available.return_value = True
+        mock_check_available.return_value = True  # Command is initially available
         mock_menu.return_value = (
             True,
             0,
         )  # User selects "Yes, upgrade to latest version"
-        # Mock subprocess.run to return success for clear commands but failure for install command
-        mock_run.side_effect = [
-            MagicMock(returncode=0),  # clear command
-            MagicMock(returncode=0),  # clear command
-            MagicMock(returncode=1),  # install command (failure)
-        ]
+        # Mock _perform_upgrade to return failure
+        mock_perform_upgrade.return_value = {"success": False, "error": "install_failed"}
 
         # Create a test tool instance
         class TestTool(CLITool):
@@ -99,20 +95,8 @@ class TestUpgradeFunctionality:
             # Execute the tool installation check which should trigger upgrade
             result = tool._ensure_tool_installed("testcmd", "test-tool", "Test Tool")
 
-            # Verify that subprocess.run was called with the install command (accept wrapper/capture)
-            found = False
-            for call in mock_run.call_args_list:
-                args, kwargs = call
-                if (
-                    args
-                    and isinstance(args[0], list)
-                    and " ".join(args[0]) == "npm install -g test-tool@latest"
-                ):
-                    found = True
-                    break
-            assert (
-                found
-            ), f"Expected subprocess.run to be called with install command, calls: {mock_run.call_args_list}"
+            # Verify that _perform_upgrade was called
+            mock_perform_upgrade.assert_called_once()
             # Upgrade failure should return False
             assert result is False
 
