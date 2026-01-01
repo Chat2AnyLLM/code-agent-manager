@@ -10,8 +10,17 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import sys
+from unittest.mock import patch, MagicMock
 from typer.testing import CliRunner
 
+# Mock tomli_w if missing to allow tests to run
+try:
+    import tomli_w
+except ImportError:
+    sys.modules["tomli_w"] = MagicMock()
+
+import code_assistant_manager.configs  # Ensure configs module is loaded for patching
 from code_assistant_manager.cli.app import app, config_app
 
 

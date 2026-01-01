@@ -22,7 +22,6 @@ from .fetch import (
 )
 from .gemini import GeminiPluginHandler
 from .manager import (
-    BUILTIN_PLUGIN_REPOS,
     PLUGIN_HANDLERS,
     VALID_APP_TYPES,
     PluginManager,
@@ -55,5 +54,4 @@ __all__ = [
     # Constants
     "PLUGIN_HANDLERS",
     "VALID_APP_TYPES",
-    "BUILTIN_PLUGIN_REPOS",
 ]

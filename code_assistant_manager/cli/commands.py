@@ -40,13 +40,7 @@ from code_assistant_manager.cli.uninstall_commands import (
     UninstallContext,
     uninstall,
 )
-from code_assistant_manager.config import ConfigManager
-from code_assistant_manager.menu.base import Colors
-from code_assistant_manager.tools import (
-    display_all_tool_endpoints,
-    display_tool_endpoints,
-    get_registered_tools,
-)
+# Lazy imports moved inside functions to improve startup time
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +50,13 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 
-def _get_config_manager(ctx: Context) -> ConfigManager:
+
+def _get_config_manager(ctx: Context):
+    # Lazy import
+    from code_assistant_manager.config import ConfigManager
+    
+    # Return type hint for clarity
+    
     """Get or create ConfigManager from context."""
     try:
         config_path = None
@@ -80,6 +80,12 @@ def upgrade(
     """Upgrade CLI tools (alias: u). If not installed, will install.
     If installed, will try to upgrade."""
     from code_assistant_manager.cli.upgrade import handle_upgrade_command
+    from code_assistant_manager.config import ConfigManager
+    from code_assistant_manager.tools import (
+        display_all_tool_endpoints,
+        display_tool_endpoints,
+        get_registered_tools,
+    )
 
     logger.debug(f"Upgrade command called with target: {target}")
     config_path = ctx.obj.get("config_path")
@@ -125,6 +131,10 @@ def doctor(
     config: Optional[str] = CONFIG_FILE_OPTION,
 ):
     """Run diagnostic checks on the code-assistant-manager installation (alias: d)"""
+
+    # Lazy imports
+    from code_assistant_manager.config import ConfigManager
+    from code_assistant_manager.tools import display_all_tool_endpoints, display_tool_endpoints
     # Initialize context object
     ctx.ensure_object(dict)
     ctx.obj["config_path"] = config
@@ -173,6 +183,10 @@ def doctor(
 
 def launch_alias(ctx: Context, tool_name: str = TOOL_NAME_OPTION):
     """Alias for 'launch' command."""
+
+    # Lazy imports
+    from code_assistant_manager.config import ConfigManager
+    from code_assistant_manager.tools import get_registered_tools
     # Initialize context object
     ctx.ensure_object(dict)
     ctx.obj["config_path"] = None
@@ -420,6 +434,10 @@ def validate_config(
     verbose: bool = VALIDATE_VERBOSE_OPTION,
 ):
     """Validate the configuration file for syntax and semantic errors."""
+
+    # Lazy imports
+    from code_assistant_manager.config import ConfigManager
+    from code_assistant_manager.menu.base import Colors
     try:
         cm = ConfigManager(config)
         typer.echo(

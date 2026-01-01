@@ -39,19 +39,28 @@ class SkillParser(EntityParser[Skill]):
 
         # Find the repo root by looking for .git directory
         repo_root = skill_dir
-        for parent in skill_dir.parents:
-            if (parent / '.git').exists():
-                repo_root = parent
-                break
+        # Check current dir first
+        if (skill_dir / '.git').exists():
+            repo_root = skill_dir
         else:
-            # Fallback to the original logic if .git not found
-            repo_root = skill_dir.parents[-2]
+            for parent in skill_dir.parents:
+                if (parent / '.git').exists():
+                    repo_root = parent
+                    break
+            else:
+                # Fallback to the original logic if .git not found
+                try:
+                    repo_root = skill_dir.parents[-2]
+                except IndexError:
+                    repo_root = skill_dir.parent
 
         # Get relative path from repo root to skill directory
         try:
-            source_directory = str(skill_dir.relative_to(repo_root))
+            repo_relative_path = str(skill_dir.relative_to(repo_root))
         except ValueError:
-            source_directory = directory
+            repo_relative_path = directory
+
+        source_directory = repo_relative_path
 
         # If skills_path is set, source_directory should be relative to skills_path
         if repo_config.path:
@@ -64,9 +73,16 @@ class SkillParser(EntityParser[Skill]):
                 # If we can't make it relative, keep the full path but warn
                 logger.warning(f"Skill directory {skill_dir} is not under skills_path {repo_config.path}")
 
+        # Determine directory name for key
+        if skill_dir == repo_root:
+            # Use repo name for root skills if directory would be "."
+            directory = repo_config.name if repo_config.name else "."
+        else:
+            directory = skill_dir.name
+
         # Create skill entity
         skill = Skill(
-            key=self.create_entity_key(repo_config, directory),
+            key=self.create_entity_key(repo_config, source_directory),
             name=meta.get("name", directory),
             description=meta.get("description", ""),
             directory=directory,
@@ -75,7 +91,7 @@ class SkillParser(EntityParser[Skill]):
             repo_name=repo_config.name,
             repo_branch=repo_config.branch,
             skills_path=repo_config.path,
-            readme_url=f"https://github.com/{repo_config.owner}/{repo_config.name}/tree/{repo_config.branch}/{source_directory}",
+            readme_url=f"https://github.com/{repo_config.owner}/{repo_config.name}/tree/{repo_config.branch}/{repo_relative_path}",
             source_directory=source_directory,
         )
 
@@ -91,23 +107,44 @@ class SkillParser(EntityParser[Skill]):
 
     def _parse_metadata(self, skill_md: Path) -> dict:
         """Parse skill metadata from SKILL.md."""
-        # This is a simplified version - in reality this would parse YAML frontmatter
-        # from the existing handler logic
         meta = {"name": "", "description": ""}
 
         try:
             with open(skill_md, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Simple parsing - look for name and description
+            # Parse frontmatter manually to avoid dependencies if needed, 
+            # or just to handle simple key: value pairs
             lines = content.split('\n')
-            for line in lines[:10]:  # Check first 10 lines
-                line = line.strip()
-                if line.startswith('# '):
-                    meta["name"] = line[2:].strip()
-                elif line.startswith('description:') or line.startswith('Description:'):
-                    meta["description"] = line.split(':', 1)[1].strip()
-                    break
+            frontmatter = []
+            in_frontmatter = False
+
+            for line in lines:
+                if line.strip() == '---':
+                    if not in_frontmatter:
+                        in_frontmatter = True
+                        continue
+                    else:
+                        break
+                if in_frontmatter:
+                    frontmatter.append(line)
+
+            if frontmatter:
+                for line in frontmatter:
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        key = key.strip()
+                        value = value.strip().strip('"').strip("'")
+                        if key in meta or key == "name": # Allow updating name and description
+                            meta[key] = value
+            
+            # Fallback to H1 title if name not found in frontmatter
+            if not meta["name"]:
+                for line in lines:
+                    if line.strip().startswith('# '):
+                        meta["name"] = line.strip()[2:].strip()
+                        break
+
         except Exception as e:
             logger.warning(f"Failed to parse metadata from {skill_md}: {e}")
 

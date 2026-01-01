@@ -1,11 +1,13 @@
 import shutil
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from code_assistant_manager.skills import Skill, SkillManager, SkillRepo
+from code_assistant_manager.fetching.base import RepoConfig
 
 
 class TestRecursiveSkillDiscovery:
@@ -14,8 +16,8 @@ class TestRecursiveSkillDiscovery:
         with tempfile.TemporaryDirectory() as tmp_config:
             return SkillManager(config_dir=Path(tmp_config))
 
-    @patch("code_assistant_manager.skills.manager.BaseSkillHandler._download_repo")
-    def test_fetch_skills_recursive(self, mock_download, skill_manager):
+    @patch("code_assistant_manager.fetching.repository.GitRepository")
+    def test_fetch_skills_recursive(self, MockGitRepository, skill_manager):
         # Setup mock repo structure
         # temp_dir/
         #   skills/ (skills_path)
@@ -27,7 +29,16 @@ class TestRecursiveSkillDiscovery:
 
         with tempfile.TemporaryDirectory() as temp_dir_str:
             temp_dir = Path(temp_dir_str)
-            mock_download.return_value = (temp_dir, "main")
+            
+            # Mock GitRepository clone context manager
+            mock_repo_instance = MockGitRepository.return_value
+            @contextmanager
+            def mock_clone():
+                yield temp_dir, "main"
+            mock_repo_instance.clone.side_effect = mock_clone
+
+            # Create .git to help parser identify root
+            (temp_dir / ".git").mkdir()
 
             skills_root = temp_dir / "skills"
             skills_root.mkdir()
@@ -46,11 +57,10 @@ class TestRecursiveSkillDiscovery:
                 "---\nname: Skill Two\n---\n", encoding="utf-8"
             )
 
-            repo = SkillRepo(owner="owner", name="repo", skills_path="skills")
+            repo_config = RepoConfig(owner="owner", name="repo", path="skills")
 
-            # Get a handler for the test
-            handler = skill_manager.get_handler("claude")
-            skills = skill_manager._fetch_skills_from_repo(repo, handler)
+            # Call internal fetcher method
+            skills = skill_manager.fetcher._fetch_from_single_repo(repo_config)
 
             # Verify results
             assert len(skills) == 2
@@ -64,7 +74,7 @@ class TestRecursiveSkillDiscovery:
             assert s1.name == "Skill One"
             assert s1.key == "owner/repo:skill1"
             assert s1.source_directory == "skill1"
-            assert s1.readme_url.endswith("/skills/skill1")
+            assert s1.readme_url and s1.readme_url.endswith("/skills/skill1")
 
             # Check Skill 2
             # directory is just the folder name, source_directory has full path
@@ -73,15 +83,24 @@ class TestRecursiveSkillDiscovery:
             assert s2.name == "Skill Two"
             assert s2.key == "owner/repo:category/skill2"
             assert s2.source_directory == "category/skill2"
-            assert s2.readme_url.endswith("/skills/category/skill2")
+            assert s2.readme_url and s2.readme_url.endswith("/skills/category/skill2")
 
-    @patch("code_assistant_manager.skills.manager.BaseSkillHandler._download_repo")
-    def test_fetch_skills_root_structure(self, mock_download, skill_manager):
+    @patch("code_assistant_manager.fetching.repository.GitRepository")
+    def test_fetch_skills_root_structure(self, MockGitRepository, skill_manager):
         # Test when skills_path is root ("/") or None
 
         with tempfile.TemporaryDirectory() as temp_dir_str:
             temp_dir = Path(temp_dir_str)
-            mock_download.return_value = (temp_dir, "main")
+            
+            # Mock GitRepository clone context manager
+            mock_repo_instance = MockGitRepository.return_value
+            @contextmanager
+            def mock_clone():
+                yield temp_dir, "main"
+            mock_repo_instance.clone.side_effect = mock_clone
+
+            # Create .git to help parser identify root
+            (temp_dir / ".git").mkdir()
 
             # Skill at root (now supported)
             (temp_dir / "SKILL.md").write_text(
@@ -94,11 +113,10 @@ class TestRecursiveSkillDiscovery:
                 "---\nname: Nested\n---\n", encoding="utf-8"
             )
 
-            repo = SkillRepo(owner="owner", name="repo", skills_path=None)
+            repo_config = RepoConfig(owner="owner", name="repo", path=None)
 
-            # Get a handler for the test
-            handler = skill_manager.get_handler("claude")
-            skills = skill_manager._fetch_skills_from_repo(repo, handler)
+            # Call internal fetcher method
+            skills = skill_manager.fetcher._fetch_from_single_repo(repo_config)
 
             # Should find both root skill and nested skill
             assert len(skills) == 2

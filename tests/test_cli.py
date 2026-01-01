@@ -9,10 +9,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from code_assistant_manager.cli import app, main
+from typer.testing import CliRunner
 
 
 class TestCLIMain:
     """Test CLI main function."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create CLI test runner."""
+        return CliRunner()
 
     def test_cli_help(self):
         """Test CLI help output."""
@@ -38,20 +44,13 @@ class TestCLIMain:
         assert "install" in help_output, "Help output should contain install command"
         assert "alias: i" in help_output, "Help output should show 'i' as install alias"
 
-    def test_cli_version(self):
-        """Test CLI version output."""
-        import io
-        from contextlib import redirect_stdout
-
-        captured_output = io.StringIO()
-        with redirect_stdout(captured_output):
-            with patch("sys.argv", ["code-assistant-manager", "version"]):
-                with pytest.raises(SystemExit) as exc_info:
-                    app()
-                assert exc_info.value.code == 0
-
-        version_output = captured_output.getvalue()
-        assert "1.0.3" in version_output, "Version command should output 1.0.3"
+    def test_cli_version(self, runner):
+        """Test 'version' command."""
+        result = runner.invoke(app, ["version"])
+        assert result.exit_code == 0
+        version_output = result.stdout
+        assert "code-assistant-manager" in version_output
+        assert "1.1.0" in version_output, "Version command should output 1.1.0"
 
     def test_cli_no_arguments(self):
         """Test CLI with no arguments."""
@@ -345,7 +344,7 @@ class TestCLIConfigHandling:
             "sys.argv",
             ["code-assistant-manager", "launch", "claude", "--config", temp_config],
         ):
-            with patch("code_assistant_manager.cli.app.ConfigManager") as mock_cm_class:
+            with patch("code_assistant_manager.config.ConfigManager") as mock_cm_class:
                 mock_config = MagicMock()
                 mock_config.validate_config.return_value = (True, [])
                 mock_cm_class.return_value = mock_config
@@ -360,7 +359,7 @@ class TestCLIConfigHandling:
     def test_cli_default_config_path(self):
         """Test that CLI looks for default config."""
         with patch("sys.argv", ["code-assistant-manager", "launch", "claude"]):
-            with patch("code_assistant_manager.cli.app.ConfigManager") as mock_cm_class:
+            with patch("code_assistant_manager.config.ConfigManager") as mock_cm_class:
                 mock_config = MagicMock()
                 mock_config.validate_config.return_value = (True, [])
                 mock_cm_class.return_value = mock_config
@@ -422,7 +421,7 @@ class TestToolInvocation:
         """Test invoking claude via main CLI."""
         with patch("sys.argv", ["code-assistant-manager", "launch", "claude"]):
             with patch(
-                "code_assistant_manager.cli.app.ConfigManager"
+                "code_assistant_manager.config.ConfigManager"
             ) as mock_config_class:
                 mock_config = MagicMock()
                 mock_config.validate_config.return_value = (True, [])
@@ -439,7 +438,7 @@ class TestToolInvocation:
         """Test invoking codex via main CLI."""
         with patch("sys.argv", ["code-assistant-manager", "launch", "codex"]):
             with patch(
-                "code_assistant_manager.cli.app.ConfigManager"
+                "code_assistant_manager.config.ConfigManager"
             ) as mock_config_class:
                 mock_config = MagicMock()
                 mock_config.validate_config.return_value = (True, [])
@@ -459,7 +458,7 @@ class TestToolInvocation:
             ["code-assistant-manager", "launch", "claude", "some-arg", "value"],
         ):
             with patch(
-                "code_assistant_manager.cli.app.ConfigManager"
+                "code_assistant_manager.config.ConfigManager"
             ) as mock_config_class:
                 mock_config = MagicMock()
                 mock_config.validate_config.return_value = (True, [])
@@ -480,7 +479,7 @@ class TestToolInvocation:
         """Test backward compatibility with direct tool commands."""
         with patch("sys.argv", ["code-assistant-manager", "claude"]):
             with patch(
-                "code_assistant_manager.cli.app.ConfigManager"
+                "code_assistant_manager.config.ConfigManager"
             ) as mock_config_class:
                 mock_config = MagicMock()
                 mock_config.validate_config.return_value = (True, [])
@@ -516,7 +515,7 @@ class TestUninstallCommand:
             assert exc_info.value.code == 0
 
     @patch("subprocess.run")
-    @patch("code_assistant_manager.tools.get_registered_tools")
+    @patch("code_assistant_manager.cli.uninstall_commands.get_registered_tools")
     def test_uninstall_invalid_tool(self, mock_get_tools, mock_subprocess):
         """Test uninstall with invalid tool."""
         mock_get_tools.return_value = {}
@@ -529,7 +528,7 @@ class TestUninstallCommand:
         result = uninstall(ctx, "invalid_tool", force=True, keep_config=False)
         assert result == 1
 
-    @patch("code_assistant_manager.tools.get_registered_tools")
+    @patch("code_assistant_manager.cli.uninstall_commands.get_registered_tools")
     def test_uninstall_no_installed_tools(self, mock_get_tools):
         """Test uninstall when no tools are installed."""
         mock_tool = MagicMock()
