@@ -36,10 +36,11 @@ CAM solves this by providing a single, consistent interface to manage everything
   - **Configuration:** Advanced configuration management with set/unset/show commands and TOML support.
 - **MCP Support:** First-class support for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), allowing assistants to connect to external data sources and tools.
 - **Parallel Upgrades:** Concurrent tool upgrades with npm version checking and progress visualization.
-- **Comprehensive Testing:** Enterprise-grade test suite with 1,423+ tests, 28.6% coverage (71/248 lines), and quality assurance.
+- **Comprehensive Testing:** Enterprise-grade test suite with 1,423+ tests, extensive coverage analysis, and quality assurance.
 - **Diagnostics:** A comprehensive `doctor` command to validate your environment, API keys, tool installations, and cache status.
 - **Enterprise Security:** Config-first approach eliminates shell injection vulnerabilities with secure MCP client implementations.
 - **Automated Quality Assurance:** Built-in complexity monitoring, file size limits, and comprehensive CI/CD quality gates.
+- **Spec-Driven Development:** Governed by speckit framework with constitutional principles ensuring unified interface, security-first design, TDD practices, extensible architecture, and quality assurance.
 
 ## Supported AI Assistants
 
@@ -69,10 +70,10 @@ CAM supports **17 AI coding assistants**:
 
 | Feature | Claude | Codex | Gemini | Qwen | CodeBuddy | Droid | Copilot |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Agent** Management | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
-| **Prompt** Syncing | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
-| **Skill** Installation | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| **Plugin** Support | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **Agent** Management | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Prompt** Syncing | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Skill** Installation | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Plugin** Support | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **MCP** Integration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 **MCP Integration** is supported across all 17 assistants including: Claude, Codex, Gemini, Qwen, Copilot, CodeBuddy, Droid, iFlow, Zed, Qoder, Neovate, Crush, Cursor, Blackbox, Goose, Continue, and OpenCode.
@@ -361,9 +362,61 @@ CAM stores data in `~/.config/code-assistant-manager/`:
 4. Create handlers in `agents/`, `skills/`, `prompts/`, `mcp/` as needed
 5. The tool is auto-discovered via `CLITool.__subclasses__()`
 
+## Governance Framework
+
+CAM is governed by a speckit-driven development framework that ensures consistent, high-quality evolution:
+
+### Constitutional Principles
+
+The project follows five core principles established in `.specify/memory/constitution.md`:
+
+1. **Unified Interface** - Single CLI (`cam`) for all AI assistant operations
+2. **Security First** - Enterprise-grade security with no credential commits
+3. **Test-Driven Development** - TDD mandatory with comprehensive test coverage
+4. **Extensibility Framework** - Standardized agents, prompts, skills, and plugins
+5. **Quality Assurance** - Automated gates (black, flake8, mypy, bandit)
+
+### Development Workflow
+
+- **Commit Protocol**: Ask for approval before commits, run complete test suite
+- **Quality Gates**: Automated formatting, linting, type checking, and security scanning
+- **Post-Change Validation**: Automated reinstallation and verification process
+- **Constitution Compliance**: All changes must pass constitutional checks
+
+### Speckit Workflow
+
+CAM uses speckit for spec-driven development:
+
+```bash
+# Create feature specifications
+speckit.specify "feature description"
+
+# Generate implementation plans
+speckit.plan
+
+# Create actionable task lists
+speckit.tasks
+
+# Execute implementation
+speckit.implement
+
+# Analyze and validate
+speckit.analyze
+```
+
 ## Contributing
 
 Contributions are welcome! Please see our [Developer Guide](docs/DEVELOPER_GUIDE.md) and [Contributing Guidelines](docs/CONTRIBUTING.md) to get started.
+
+### Development Standards
+
+All contributions must comply with CAM's constitutional principles and speckit governance framework:
+
+- **Constitution Compliance**: All changes must align with the five core principles in `.specify/memory/constitution.md`
+- **Spec-Driven Development**: Use speckit workflow for feature development
+- **Quality Gates**: Automated checks for formatting, linting, type checking, and security
+- **Test Coverage**: Comprehensive testing required for all new functionality
+- **Security First**: No credential handling, secure MCP client implementations only
 
 ### Development Setup
 
@@ -429,7 +482,13 @@ This project is licensed under the MIT License.
 
 ## 🏆 Recent Improvements
 
-**Version 1.0.3** introduces significant enhancements to code quality, security, and new tool support:
+**Version 1.0.3+** introduces speckit governance framework and enhanced development standards:
+
+### 🆕 Governance Framework
+- **Speckit Integration:** Full speckit workflow support for spec-driven development
+- **Constitutional Governance:** Five core principles ensuring unified interface, security-first design, TDD practices, extensible architecture, and quality assurance
+- **Development Workflow:** Standardized commit protocol, quality gates, and post-change validation
+- **Constitution Compliance:** All changes must pass constitutional checks before merging
 
 ### 🆕 New Features
 - **Goose CLI Support:** Added Block Goose CLI tool with dynamic engine type determination and custom provider configuration
@@ -461,10 +520,10 @@ This project is licensed under the MIT License.
 
 ### 📊 Current Health Metrics
 - **Code Quality:** A+ grade with enterprise-grade standards
-- **Codebase Size:** 32,087 lines of Python code across 148 files
+- **Codebase Size:** 377,940 lines of Python code across 1,156 files
 - **Security:** Zero known vulnerabilities
-- **Test Coverage:** 28.6% (71/248 lines covered) with comprehensive testing infrastructure
-- **Test Suite:** 1,423+ tests including unit, integration, and interactive tests
+- **Test Coverage:** Comprehensive coverage analysis with 1,423+ tests across unit, integration, and interactive flows
+- **Test Suite:** Enterprise-grade testing infrastructure with multiple coverage report formats (HTML, terminal, XML)
 - **Maintainability:** Clean, modular architecture with clear separation of concerns
 
 ### 🎯 Development Standards
