@@ -191,10 +191,26 @@ def _show_app_plugins(app_name: str, handler, show_all: bool, query: Optional[st
         if plugins:
             # Apply filtering if specified
             if query or category:
-                plugins = [p for p in plugins if
-                          (not query or query.lower() in p.name.lower() or
-                           (p.description and query.lower() in p.description.lower())) and
-                          (not category or category.lower() in (p.category or "").lower())]
+                filtered_plugins = []
+                for p in plugins:
+                    # Convert Plugin object to dict for consistent filtering
+                    plugin_dict = {
+                        "name": p.name,
+                        "description": p.description or "",
+                        "category": getattr(p, 'category', '') if hasattr(p, 'category') else "",
+                        "version": p.version,
+                        "marketplace": p.marketplace,
+                    }
+                    # Apply filters
+                    matches_query = (not query or
+                                   query.lower() in plugin_dict["name"].lower() or
+                                   query.lower() in plugin_dict["description"].lower())
+                    matches_category = (not category or
+                                      category.lower() in plugin_dict["category"].lower())
+
+                    if matches_query and matches_category:
+                        filtered_plugins.append(p)
+                plugins = filtered_plugins
 
             # Apply limit
             plugins = plugins[:limit]
