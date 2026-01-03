@@ -60,9 +60,9 @@ def browse_extensions(
 
         # Prepare table data
         table_data = []
-        headers = ["Name", "Description", "Author/Repo", "Stars", "URL"]
+        headers = ["#", "Name", "Description", "Author/Repo", "Stars", "URL"]
 
-        for ext in extensions:
+        for i, ext in enumerate(extensions, 1):
             name = ext.get('extensionName', 'Unknown')
             description = ext.get('extensionDescription', '') or ext.get('repoDescription', 'No description')
             full_name = ext.get('fullName', '')
@@ -77,6 +77,7 @@ def browse_extensions(
             stars_display = f"⭐ {stars}" if stars > 0 else ""
 
             table_data.append([
+                i,
                 name,
                 description,
                 full_name,
