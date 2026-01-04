@@ -12,5 +12,7 @@ class CopilotConfig(BaseToolConfig):
                 self.home / ".copilot" / "mcp-config.json",
                 self.home / ".copilot" / "mcp.json",
             ],
-            "project": [self.cwd / ".copilot" / "mcp.json"],
+            "project": [
+                self.cwd / ".copilot" / "mcp.json",
+            ],
         }

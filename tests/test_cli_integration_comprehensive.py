@@ -208,7 +208,7 @@ class TestConfigCommands:
         mock_tool_config.set_value.return_value = "/tmp/config.json"
         mock_get_tool_config.return_value = mock_tool_config
 
-        result = runner.invoke(app, ["config", "set", "test.key=value"])
+        result = runner.invoke(app, ["config", "set", "test.key", "value"])
         assert result.exit_code == 0
 
     @patch("code_assistant_manager.configs.get_tool_config")

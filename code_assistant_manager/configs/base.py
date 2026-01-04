@@ -71,18 +71,37 @@ class BaseToolConfig(ABC):
         # Load all scopes
         results = {}
         for s_name, paths in self.get_scope_paths().items():
+            merged_data = {}
+            loaded_paths = []
+
+            # Load all existing files for this scope and merge them
             for path in paths:
                 if path.exists():
                     try:
-                        results[s_name] = {
-                            "data": self._load_file(path),
-                            "path": str(path),
-                        }
-                        break
+                        file_data = self._load_file(path)
+                        # Deep merge the data
+                        self._deep_merge(merged_data, file_data)
+                        loaded_paths.append(str(path))
                     except Exception as e:
                         logger.warning(f"Failed to load {path}: {e}")
                         continue
+
+            if merged_data:
+                # Use the first loaded path as the representative path
+                results[s_name] = {
+                    "data": merged_data,
+                    "path": loaded_paths[0] if loaded_paths else str(paths[0]),
+                }
+
         return results
+
+    def _deep_merge(self, target: Dict[str, Any], source: Dict[str, Any]) -> None:
+        """Deep merge source dict into target dict."""
+        for key, value in source.items():
+            if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+                self._deep_merge(target[key], value)
+            else:
+                target[key] = value
 
     def _load_file(self, path: Path) -> Dict[str, Any]:
         """Load a single config file."""
