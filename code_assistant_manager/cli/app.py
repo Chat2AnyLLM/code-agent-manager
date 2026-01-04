@@ -84,7 +84,7 @@ _code_assistant_manager_completions()
     commands="launch l config cf mcp m prompt p skill s plugin pl agent ag extensions ext upgrade u install i uninstall un doctor d version v completion comp c --help --version --config --endpoints --debug -d"
 
     # Tool names for launch command
-    tools="claude codex copilot gemini droid qwen codebuddy iflow qodercli zed neovate crush cursor-agent"
+    tools="claude codex copilot gemini droid qwen codebuddy iflow qodercli zed neovate crush cursor-agent ampcode"
 
     # MCP subcommands (mcp server ...)
     mcp_server_commands="list search show add remove update"
@@ -252,7 +252,7 @@ _code_assistant_manager_completions()
         case "${COMP_WORDS[1]}" in
             launch|l)
                 case "${COMP_WORDS[2]}" in
-                    claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent)
+                    claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|ampcode)
                         COMPREPLY=( $(compgen -W "--config --help" -- ${cur}) )
                         return 0
                         ;;
@@ -416,7 +416,7 @@ _code_assistant_manager_completions()
                 ;;
             upgrade|u|install|i)
                 case "${COMP_WORDS[2]}" in
-                    all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|mcp)
+                    all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|ampcode|mcp)
                         COMPREPLY=( $(compgen -W "--verbose -v --help" -- ${cur}) )
                         return 0
                         ;;
@@ -424,7 +424,7 @@ _code_assistant_manager_completions()
                 ;;
             uninstall|un)
                 case "${COMP_WORDS[2]}" in
-                    all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent)
+                    all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|ampcode)
                         COMPREPLY=( $(compgen -W "--force -f --keep-config --help" -- ${cur}) )
                         return 0
                         ;;
@@ -513,6 +513,7 @@ _code_assistant_manager() {
         'neovate:Neovate assistant'
         'crush:Charmland Crush assistant'
         'cursor-agent:Cursor AI assistant'
+        'ampcode:Amp CLI assistant'
     )
 
     mcp_server_commands=(
@@ -652,7 +653,7 @@ _code_assistant_manager() {
                     else
                         case $words[3] in
                             list)
-                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy)' '--interactive[Use interactive mode]' '--help[Show help]'
+                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy ampcode)' '--interactive[Use interactive mode]' '--help[Show help]'
                                 ;;
                             search)
                                 _values 'option' '--help[Show help]'
@@ -661,10 +662,10 @@ _code_assistant_manager() {
                                 _values 'option' '--schema[Show raw JSON schema]' '--help[Show help]'
                                 ;;
                             add)
-                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy)' '--method[Installation method]' '--force[Force installation]' '--interactive[Use interactive mode]' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
+                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy ampcode)' '--method[Installation method]' '--force[Force installation]' '--interactive[Use interactive mode]' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
                                 ;;
                             remove|update)
-                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy)' '--interactive[Use interactive mode]' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
+                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy ampcode)' '--interactive[Use interactive mode]' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
                                 ;;
                             *)
                                 _values 'option' '--help[Show help]'

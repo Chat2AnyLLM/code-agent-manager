@@ -113,8 +113,24 @@ tools:
         endpoint: "Provided to list_models_cmd as env var endpoint."
         api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
+  ampcode:
+    enabled: true
+    install_cmd: curl -fsSL https://ampcode.com/install.sh | bash
+    cli_command: amp
+    description: "Amp CLI - frontier coding agent"
+    env:
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      notes:
+        - "Amp CLI provides three modes: smart (unconstrained models), rush (fast/cheap), free (ad-supported)"
+        - "Configuration stored in ~/.config/amp/settings.json"
+        - "Supports MCP servers and various LLM providers"
     cli_parameters:
       injected: []
+    filesystem:
+      touched:
+        - "~/.config/amp/settings.json (Amp CLI configuration)"
 
   copilot-api:
     enabled: true
