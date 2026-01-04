@@ -28,15 +28,13 @@
     "owner": "jeremylongshore",
     "name": "claude-code-plugins-plus",
     "branch": "main",
-    "enabled": true,
-    "skillsPath": "plugins"
+    "enabled": true
   },
   "anthropics/claude-code": {
     "owner": "anthropics",
     "name": "claude-code",
     "branch": "main",
-    "enabled": true,
-    "skillsPath": "plugins"
+    "enabled": true
   },
   "mrgoonie/claudekit-skills": {
     "owner": "mrgoonie",
@@ -54,8 +52,7 @@
     "owner": "wshobson",
     "name": "agents",
     "branch": "main",
-    "enabled": true,
-    "skillsPath": "/plugins"
+    "enabled": true
   },
   "ccplugins/awesome-claude-code-plugins": {
     "owner": "ccplugins",

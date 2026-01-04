@@ -436,9 +436,18 @@ class SkillManager:
             max_workers=max_workers
         )
 
+        # Deduplicate skills based on key - if the same skill appears multiple times
+        # (e.g., from different repository configurations), keep only the first occurrence
+        unique_skills = []
+        seen_keys = set()
+        for skill in skills:
+            if skill.key not in seen_keys:
+                unique_skills.append(skill)
+                seen_keys.add(skill.key)
+
         # Update installed status from existing skills
         existing_skills = self._load_skills()
-        for skill in skills:
+        for skill in unique_skills:
             if skill.key in existing_skills:
                 skill.installed = existing_skills[skill.key].installed
             existing_skills[skill.key] = skill
