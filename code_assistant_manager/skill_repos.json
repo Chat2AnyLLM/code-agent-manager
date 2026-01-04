@@ -28,7 +28,15 @@
     "owner": "jeremylongshore",
     "name": "claude-code-plugins-plus",
     "branch": "main",
-    "enabled": true
+    "enabled": true,
+    "exclude": ["backups/*"]
+  },
+  "jeremylongshore/claude-code-plugins-plus-skills": {
+    "owner": "jeremylongshore",
+    "name": "claude-code-plugins-plus-skills",
+    "branch": "main",
+    "enabled": true,
+    "exclude": ["backups/*"]
   },
   "anthropics/claude-code": {
     "owner": "anthropics",

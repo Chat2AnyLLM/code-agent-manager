@@ -74,6 +74,7 @@ class AgentRepo:
     branch: str = "main"
     enabled: bool = True
     agents_path: Optional[str] = None
+    exclude: Optional[List[str]] = None
 
     def to_dict(self) -> Dict:
         """Convert to dictionary."""
@@ -85,6 +86,8 @@ class AgentRepo:
         }
         if self.agents_path:
             data["agentsPath"] = self.agents_path
+        if self.exclude:
+            data["exclude"] = self.exclude
         return data
 
     @classmethod
@@ -96,4 +99,5 @@ class AgentRepo:
             branch=data.get("branch", "main"),
             enabled=data.get("enabled", True),
             agents_path=data.get("agentsPath"),
+            exclude=data.get("exclude"),
         )
