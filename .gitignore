@@ -19,3 +19,6 @@ dist
 .claude/*
 codebuddy_usage.md
 .coverage
+.codebuddy/
+.cursor/
+.gemini/
