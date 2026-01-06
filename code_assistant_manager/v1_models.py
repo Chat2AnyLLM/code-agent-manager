@@ -107,14 +107,17 @@ def list_models():
         logger.error("endpoint environment variable is required")
         raise SystemExit("endpoint environment variable is required")
 
-    if not endpoint.endswith("/v1/models"):
-        # If it doesn't end with /v1/models, append it
+    if endpoint.endswith("/v1/models"):
+        url = endpoint
+    elif endpoint.endswith("/v1"):
+        # If it ends with /v1 but not /v1/models, append /models
+        url = f"{endpoint}/models"
+    else:
+        # If it doesn't contain /v1 at all, append /v1/models
         if endpoint.endswith("/"):
             url = f"{endpoint}v1/models"
         else:
             url = f"{endpoint}/v1/models"
-    else:
-        url = endpoint
 
     api_key = os.environ.get("api_key")
     github_token = os.environ.get("GITHUB_TOKEN")

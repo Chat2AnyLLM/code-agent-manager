@@ -90,6 +90,44 @@ class TestV1Models:
         mock_print.assert_any_call("model-b")
 
     @patch("code_assistant_manager.v1_models.load_env")
+    @patch("code_assistant_manager.v1_models.fetch_v1_models")
+    @patch("builtins.print")
+    def test_list_models_v1_endpoint(self, mock_print, mock_fetch, mock_load_env):
+        os.environ["endpoint"] = "https://example.com/v1"
+        os.environ["api_key"] = "test-api-key"
+
+        mock_fetch.return_value = {"data": [{"id": "model-a"}, {"id": "model-b"}]}
+
+        list_models()
+
+        mock_fetch.assert_called_once()
+        args, kwargs = mock_fetch.call_args
+        assert args[0] == "https://example.com/v1/models"
+        assert args[1]["Authorization"] == "Bearer test-api-key"
+
+        mock_print.assert_any_call("model-a")
+        mock_print.assert_any_call("model-b")
+
+    @patch("code_assistant_manager.v1_models.load_env")
+    @patch("code_assistant_manager.v1_models.fetch_v1_models")
+    @patch("builtins.print")
+    def test_list_models_v1_models_endpoint(self, mock_print, mock_fetch, mock_load_env):
+        os.environ["endpoint"] = "https://example.com/v1/models"
+        os.environ["api_key"] = "test-api-key"
+
+        mock_fetch.return_value = {"data": [{"id": "model-a"}, {"id": "model-b"}]}
+
+        list_models()
+
+        mock_fetch.assert_called_once()
+        args, kwargs = mock_fetch.call_args
+        assert args[0] == "https://example.com/v1/models"
+        assert args[1]["Authorization"] == "Bearer test-api-key"
+
+        mock_print.assert_any_call("model-a")
+        mock_print.assert_any_call("model-b")
+
+    @patch("code_assistant_manager.v1_models.load_env")
     @patch("code_assistant_manager.v1_models.get_copilot_token")
     @patch("code_assistant_manager.v1_models.fetch_v1_models")
     @patch("builtins.print")
