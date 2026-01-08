@@ -84,13 +84,16 @@ _code_assistant_manager_completions()
     commands="launch l config cf mcp m prompt p skill s plugin pl agent ag extensions ext upgrade u install i uninstall un doctor d version v completion comp c --help --version --config --endpoints --debug -d"
 
     # Tool names for launch command
-    tools="claude codex copilot gemini droid qwen codebuddy iflow qodercli zed neovate crush cursor-agent"
+    tools="claude codex copilot gemini droid qwen codebuddy iflow qodercli zed neovate crush cursor-agent ampcode"
 
     # MCP subcommands (mcp server ...)
     mcp_server_commands="list search show add remove update"
 
     # Config subcommands
     config_commands="validate list ls l"
+
+    # Tool names for config subcommands
+    config_tools="claude codex cursor-agent gemini copilot qwen codebuddy crush droid iflow neovate qodercli zed"
 
     # Prompt subcommands
     prompt_commands="list show add update remove import install uninstall status"
@@ -143,6 +146,13 @@ _code_assistant_manager_completions()
         config|cf)
             COMPREPLY=( $(compgen -W "${config_commands}" -- ${cur}) )
             return 0
+            ;;
+        # Config tool names for -a flag
+        set|unset|show)
+            if [[ "${prev}" == "-a" ]] || [[ "${prev}" == "--app" ]]; then
+                COMPREPLY=( $(compgen -W "${config_tools}" -- ${cur}) )
+                return 0
+            fi
             ;;
         prompt|p)
             COMPREPLY=( $(compgen -W "${prompt_commands}" -- ${cur}) )
@@ -252,7 +262,7 @@ _code_assistant_manager_completions()
         case "${COMP_WORDS[1]}" in
             launch|l)
                 case "${COMP_WORDS[2]}" in
-                    claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent)
+                    claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|ampcode)
                         COMPREPLY=( $(compgen -W "--config --help" -- ${cur}) )
                         return 0
                         ;;
@@ -274,6 +284,10 @@ _code_assistant_manager_completions()
                         ;;
                     list|ls|l)
                         COMPREPLY=( $(compgen -W "--help" -- ${cur}) )
+                        return 0
+                        ;;
+                    set|unset|show)
+                        COMPREPLY=( $(compgen -W "--app --scope --help" -- ${cur}) )
                         return 0
                         ;;
                 esac
@@ -416,7 +430,7 @@ _code_assistant_manager_completions()
                 ;;
             upgrade|u|install|i)
                 case "${COMP_WORDS[2]}" in
-                    all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|mcp)
+                    all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|ampcode|mcp)
                         COMPREPLY=( $(compgen -W "--verbose -v --help" -- ${cur}) )
                         return 0
                         ;;
@@ -424,7 +438,7 @@ _code_assistant_manager_completions()
                 ;;
             uninstall|un)
                 case "${COMP_WORDS[2]}" in
-                    all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent)
+                    all|claude|codex|copilot|gemini|droid|qwen|codebuddy|iflow|qodercli|zed|neovate|crush|cursor-agent|ampcode)
                         COMPREPLY=( $(compgen -W "--force -f --keep-config --help" -- ${cur}) )
                         return 0
                         ;;
@@ -513,6 +527,7 @@ _code_assistant_manager() {
         'neovate:Neovate assistant'
         'crush:Charmland Crush assistant'
         'cursor-agent:Cursor AI assistant'
+        'ampcode:Amp CLI assistant'
     )
 
     mcp_server_commands=(
@@ -529,6 +544,25 @@ _code_assistant_manager() {
         'list:List all configuration file locations'
         'ls:Alias for list'
         'l:Alias for list'
+        'set:Set a configuration value'
+        'unset:Unset a configuration value'
+        'show:Show configuration in dotted format'
+    )
+
+    config_tools=(
+        'claude:Claude configuration'
+        'codex:Codex configuration'
+        'cursor-agent:Cursor Agent configuration'
+        'gemini:Gemini configuration'
+        'copilot:Copilot configuration'
+        'qwen:Qwen configuration'
+        'codebuddy:CodeBuddy configuration'
+        'crush:Crush configuration'
+        'droid:Droid configuration'
+        'iflow:iFlow configuration'
+        'neovate:Neovate configuration'
+        'qodercli:Qoder configuration'
+        'zed:Zed configuration'
     )
 
     prompt_commands=(
@@ -633,13 +667,28 @@ _code_assistant_manager() {
                 config|cf)
                     if (( CURRENT == 2 )); then
                         _describe -t config_commands 'config command' config_commands
+                        _describe -t config_tools 'config tool' config_tools
                     else
                         case $words[2] in
                             validate)
                                 _values 'option' '--config[Specify config file]:file:_files' '--verbose[Show verbose output]' '--help[Show help]'
                                 ;;
-                            *)
+                            list|ls|l)
                                 _values 'option' '--help[Show help]'
+                                ;;
+                            claude|codex|cursor-agent|gemini|copilot|qwen|codebuddy|crush|droid|iflow|neovate|qodercli|zed)
+                                if (( CURRENT == 3 )); then
+                                    _values 'tool command' 'set[Set configuration value]' 'show[Show configuration]' 'unset[Unset configuration value]'
+                                else
+                                    case $words[3] in
+                                        set)
+                                            _values 'option' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
+                                            ;;
+                                        show|unset)
+                                            _values 'option' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
+                                            ;;
+                                    esac
+                                fi
                                 ;;
                         esac
                     fi
@@ -652,7 +701,7 @@ _code_assistant_manager() {
                     else
                         case $words[3] in
                             list)
-                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy)' '--interactive[Use interactive mode]' '--help[Show help]'
+                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy ampcode)' '--interactive[Use interactive mode]' '--help[Show help]'
                                 ;;
                             search)
                                 _values 'option' '--help[Show help]'
@@ -661,10 +710,10 @@ _code_assistant_manager() {
                                 _values 'option' '--schema[Show raw JSON schema]' '--help[Show help]'
                                 ;;
                             add)
-                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy)' '--method[Installation method]' '--force[Force installation]' '--interactive[Use interactive mode]' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
+                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy ampcode)' '--method[Installation method]' '--force[Force installation]' '--interactive[Use interactive mode]' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
                                 ;;
                             remove|update)
-                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy)' '--interactive[Use interactive mode]' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
+                                _values 'option' '--client[Specify client]:client:(all claude codex copilot gemini droid qwen codebuddy ampcode)' '--interactive[Use interactive mode]' '--scope[Configuration scope]:scope:(user project)' '--help[Show help]'
                                 ;;
                             *)
                                 _values 'option' '--help[Show help]'
@@ -1203,6 +1252,9 @@ config_app = typer.Typer(
     no_args_is_help=True,
 )
 
+
+# Remove tool-specific config subcommands - now using -a flag instead
+
 # Add the editor app as a subcommand to the main app
 app.add_typer(editor_app, name="launch")
 app.add_typer(editor_app, name="l", hidden=True)
@@ -1685,18 +1737,17 @@ def parse_toml_key_path(key_path):
 def set_config(
 
 
-    key_value: str = typer.Argument(
-
-
-        ...,
-
-
-        help="Configuration key=value pair (e.g., codex.profiles.grok-code-fast-1.model=qwen3-coder-plus)",
-
-
+    key: str = typer.Argument(
+        ..., help="Configuration key path (e.g., 'model' or 'codex.model')"
     ),
 
+    value: str = typer.Argument(
+        ..., help="Value to set"
+    ),
 
+    app: str = typer.Option(
+        None, "-a", "--app", help="App/tool to operate on (claude, codex, droid, etc.)"
+    ),
     scope: str = typer.Option("user", "--scope", "-s", help="Configuration scope (user, project)"),
 
 
@@ -1739,33 +1790,7 @@ def set_config(
     try:
 
 
-        # Parse key=value
-
-
-        if "=" not in key_value:
-
-
-            typer.echo(
-
-
-                f"{Colors.RED}✗ Invalid format. Use key=value syntax{Colors.RESET}"
-
-
-            )
-
-
-            raise typer.Exit(1)
-
-
-
-
-
-        key_path, value = key_value.split("=", 1)
-
-
-        key_path = key_path.strip()
-
-
+        key_path = key.strip()
         value = value.strip()
 
 
@@ -1775,43 +1800,20 @@ def set_config(
         # Parse dotted key path using TOML-aware parser
 
 
-        # We need to extract the prefix (tool name) first
-
-
-        # But wait, BaseToolConfig._parse_key_path does splitting too.
-
-
-        # However, we need to know WHICH tool to load first.
-
-
-        # So we reuse the parse_toml_key_path helper here for now or duplicate logic.
-
-
-        parts = parse_toml_key_path(key_path)
-
-
-        if len(parts) < 2:
-
-
-            typer.echo(
-
-
-                f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format{Colors.RESET}"
-
-
-            )
-
-
-            raise typer.Exit(1)
-
-
-
-
-
-        prefix = parts[0]  # e.g., "codex"
-
-
-        config_key = ".".join(parts[1:])  # Reconstruct the key without prefix
+        # If -a flag is provided, use that as the tool name
+        if app:
+            prefix = app
+            config_key = key_path  # Use the full key_path as the config key
+        else:
+            # Legacy behavior: parse tool from key path
+            parts = parse_toml_key_path(key_path)
+            if len(parts) < 2:
+                typer.echo(
+                    f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format or specify tool with -a{Colors.RESET}"
+                )
+                raise typer.Exit(1)
+            prefix = parts[0]  # e.g., "codex"
+            config_key = ".".join(parts[1:])  # Reconstruct the key without prefix
 
 
 
@@ -1893,16 +1895,14 @@ def unset_config(
 
 
     key_path: str = typer.Argument(
-
-
-        ..., help="Configuration key path (e.g., codex.profiles.grok-code-fast-1.model)"
-
-
+        ..., help="Configuration key path (e.g., 'model' or 'codex.model')"
     ),
 
+    app: str = typer.Option(
+        None, "-a", "--app", help="App/tool to operate on (claude, codex, droid, etc.)"
+    ),
 
     scope: str = typer.Option("user", "--scope", "-s", help="Configuration scope (user, project)"),
-
 
 ):
 
@@ -1950,33 +1950,21 @@ def unset_config(
 
 
         # Parse dotted key path
-
-
         parts = parse_toml_key_path(key_path)
 
-
-        if len(parts) < 2:
-
-
-            typer.echo(
-
-
-                f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format{Colors.RESET}"
-
-
-            )
-
-
-            raise typer.Exit(1)
-
-
-
-
-
-        prefix = parts[0]
-
-
-        config_key = ".".join(parts[1:])
+        # If -a flag is provided, use that as the tool name
+        if app:
+            prefix = app
+            config_key = key_path  # Use the full key_path as the config key
+        else:
+            # Legacy behavior: parse tool from key path
+            if len(parts) < 2:
+                typer.echo(
+                    f"{Colors.RED}✗ Invalid key format. Use prefix.key.path format or specify tool with -a{Colors.RESET}"
+                )
+                raise typer.Exit(1)
+            prefix = parts[0]
+            config_key = ".".join(parts[1:])
 
 
 
@@ -2093,10 +2081,11 @@ def flatten_config(data: dict, prefix: str = "") -> dict:
         elif isinstance(obj, list):
 
 
-            # For lists, convert to string representation
+            # For lists, flatten each element with index
 
-
-            result[current_prefix] = str(obj)
+            for i, item in enumerate(obj):
+                new_prefix = f"{current_prefix}.{i}" if current_prefix else str(i)
+                _flatten(item, new_prefix)
 
 
         else:

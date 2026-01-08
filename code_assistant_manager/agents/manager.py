@@ -76,6 +76,7 @@ def _load_agent_repos_from_config(config_dir: Optional[Path] = None) -> List[Dic
             "branch": repo.get("branch", "main"),
             "enabled": repo.get("enabled", True),
             "agentsPath": repo.get("agentsPath"),
+            "exclude": repo.get("exclude"),
         }
         for repo in repos_dict.values()
     ]
@@ -186,6 +187,7 @@ class AgentManager:
                 branch=repo_data.get("branch", "main"),
                 enabled=repo_data.get("enabled", True),
                 agents_path=repo_data.get("agentsPath"),
+                exclude=repo_data.get("exclude"),
             )
             repo_id = f"{repo.owner}/{repo.name}"
             repos[repo_id] = repo
@@ -202,6 +204,7 @@ class AgentManager:
                 branch=repo_data.get("branch", "main"),
                 enabled=repo_data.get("enabled", True),
                 agents_path=repo_data.get("agentsPath"),
+                exclude=repo_data.get("exclude"),
             )
             repo_id = f"{repo.owner}/{repo.name}"
             repos[repo_id] = repo
@@ -320,6 +323,7 @@ class AgentManager:
                 name=repo.name,
                 branch=repo.branch,
                 path=repo.agents_path,
+                exclude=repo.exclude,
                 enabled=repo.enabled
             )
             for repo in repos.values()

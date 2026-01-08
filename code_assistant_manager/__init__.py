@@ -18,7 +18,7 @@ try:
     import setuptools_scm
     __version__ = setuptools_scm.get_version()
 except (ImportError, LookupError):
-    __version__ = "1.1.0"  # Fallback to hardcoded version
+    __version__ = "1.2.0"  # Fallback to hardcoded version
 __author__ = "Code Assistant Manager Contributors"
 
 from .config import ConfigManager

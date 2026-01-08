@@ -1,7 +1,7 @@
 """Skill models for Code Assistant Manager."""
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -70,6 +70,7 @@ class SkillRepo:
     branch: str = "main"
     enabled: bool = True
     skills_path: Optional[str] = None
+    exclude: Optional[List[str]] = None
 
     def to_dict(self) -> Dict:
         """Convert to dictionary."""
@@ -81,6 +82,8 @@ class SkillRepo:
         }
         if self.skills_path:
             data["skillsPath"] = self.skills_path
+        if self.exclude:
+            data["exclude"] = self.exclude
         return data
 
     @classmethod
@@ -92,4 +95,5 @@ class SkillRepo:
             branch=data.get("branch", "main"),
             enabled=data.get("enabled", True),
             skills_path=data.get("skillsPath"),
+            exclude=data.get("exclude"),
         )

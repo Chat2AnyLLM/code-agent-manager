@@ -117,6 +117,50 @@ class TestShortLaunchCommand:
                 main()
             assert exc_info.value.code == 0
 
+    @patch("code_assistant_manager.tools.CrushTool.run", return_value=0)
+    def test_l_crush(self, mock_run, temp_config):
+        """Test 'l crush' launches Crush."""
+        with patch(
+            "sys.argv",
+            ["code-assistant-manager", "l", "crush", "--config", temp_config],
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    @patch("code_assistant_manager.tools.BlackboxTool.run", return_value=0)
+    def test_l_blackbox(self, mock_run, temp_config):
+        """Test 'l blackbox' launches Blackbox."""
+        with patch(
+            "sys.argv",
+            ["code-assistant-manager", "l", "blackbox", "--config", temp_config],
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    @patch("code_assistant_manager.tools.GooseTool.run", return_value=0)
+    def test_l_goose(self, mock_run, temp_config):
+        """Test 'l goose' launches Goose."""
+        with patch(
+            "sys.argv",
+            ["code-assistant-manager", "l", "goose", "--config", temp_config],
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    @patch("code_assistant_manager.tools.OpenCodeTool.run", return_value=0)
+    def test_l_opencode(self, mock_run, temp_config):
+        """Test 'l opencode' launches OpenCode."""
+        with patch(
+            "sys.argv",
+            ["code-assistant-manager", "l", "opencode", "--config", temp_config],
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
     @patch("code_assistant_manager.tools.ClaudeTool.run", return_value=0)
     def test_l_with_arguments(self, mock_run, temp_config):
         """Test 'l tool arg1 arg2' passes arguments."""
@@ -547,6 +591,38 @@ class TestShortCompletionCommand:
             assert exc_info.value.code == 1
 
 
+class TestShortCompletionCAlias:
+    """Test 'c' short alias for completion command."""
+
+    def test_c_help(self):
+        """Test 'c' shows help."""
+        with patch("sys.argv", ["code-assistant-manager", "c", "--help"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    def test_c_bash(self):
+        """Test 'c bash' generates bash completion."""
+        with patch("sys.argv", ["code-assistant-manager", "c", "bash"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    def test_c_zsh(self):
+        """Test 'c zsh' generates zsh completion."""
+        with patch("sys.argv", ["code-assistant-manager", "c", "zsh"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    def test_c_invalid_shell(self):
+        """Test 'c fish' with invalid shell."""
+        with patch("sys.argv", ["code-assistant-manager", "c", "fish"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 1
+
+
 class TestAllShortCommandsCombinations:
     """Test combinations of short commands."""
 
@@ -617,6 +693,13 @@ class TestAllShortCommandsCombinations:
                 main()
             assert exc_info.value.code == 0
 
+    def test_c_vs_completion_equivalent(self):
+        """Test 'c bash' is equivalent to 'completion bash'."""
+        with patch("sys.argv", ["code-assistant-manager", "c", "bash"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
 
 class TestShortCommandsWithAllTools:
     """Test short commands with all available tools."""
@@ -632,6 +715,10 @@ class TestShortCommandsWithAllTools:
             "qwen": "QwenTool",
             "codebuddy": "CodeBuddyTool",
             "iflow": "IfLowTool",
+            "crush": "CrushTool",
+            "blackbox": "BlackboxTool",
+            "goose": "GooseTool",
+            "opencode": "OpenCodeTool",
         }
         for tool, tool_class in tools_map.items():
             with patch(

@@ -242,7 +242,7 @@ class TestConfigCommands:
             mock_get_config.return_value = mock_config
             mock_config.set_value.return_value = "/path/to/config"
 
-            result = runner.invoke(config_app, ["set", "claude.model=gpt-4"])
+            result = runner.invoke(config_app, ["set", "claude.model", "gpt-4"])
             assert result.exit_code == 0
             assert "Set claude.model = gpt-4" in result.output
 
@@ -253,7 +253,7 @@ class TestConfigCommands:
             mock_get_config.return_value = mock_config
             mock_config.set_value.return_value = "/path/to/config"
 
-            result = runner.invoke(config_app, ["set", "--scope", "project", "claude.model=gpt-4"])
+            result = runner.invoke(config_app, ["set", "--scope", "project", "claude.model", "gpt-4"])
             assert result.exit_code == 0
             mock_config.set_value.assert_called_once()
             args, kwargs = mock_config.set_value.call_args

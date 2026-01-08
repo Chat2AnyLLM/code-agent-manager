@@ -31,11 +31,12 @@ def browse_extensions(
     """Browse available Gemini extensions from geminicli.com."""
     try:
         import urllib.request
-        
+        from tabulate import tabulate
+
         # Fetch extensions from geminicli.com
         url = "https://geminicli.com/extensions.json"
         logger.debug(f"Fetching extensions from {url}")
-        
+
         try:
             with urllib.request.urlopen(url, timeout=10) as response:
                 data = json.loads(response.read().decode('utf-8'))
@@ -43,42 +44,56 @@ def browse_extensions(
             typer.echo(f"Error: Failed to fetch extensions from {url}", err=True)
             typer.echo(f"Details: {str(e)}", err=True)
             raise typer.Exit(1)
-        
-        # Display extensions in a flat format (one per line)
+
+        # Display extensions in a table format
         # The API returns either a list directly or a dict with 'extensions' key
         if isinstance(data, list):
             extensions = data
         else:
             extensions = data.get('extensions', [])
-        
+
         if not extensions:
             typer.echo("No extensions found.")
             return
-        
+
         typer.echo(f"\nAvailable Gemini Extensions ({len(extensions)}):\n")
-        
-        for ext in extensions:
+
+        # Prepare table data
+        table_data = []
+        headers = ["#", "Name", "Description", "Author/Repo", "Stars", "URL"]
+
+        for i, ext in enumerate(extensions, 1):
             name = ext.get('extensionName', 'Unknown')
             description = ext.get('extensionDescription', '') or ext.get('repoDescription', 'No description')
             full_name = ext.get('fullName', '')
             url = ext.get('url', '')
             stars = ext.get('stars', 0)
-            
-            # Format: name - description [author/repo] (⭐ stars) - URL
-            line = f"• {name}"
-            if description:
-                line += f" - {description}"
-            if full_name:
-                line += f" [{full_name}]"
-            if stars > 0:
-                line += f" (⭐ {stars})"
-            if url:
-                line += f" - {url}"
-            
-            typer.echo(line)
-        
+
+            # Truncate long descriptions for better table display
+            if len(description) > 60:
+                description = description[:57] + "..."
+
+            # Format stars
+            stars_display = f"⭐ {stars}" if stars > 0 else ""
+
+            table_data.append([
+                i,
+                name,
+                description,
+                full_name,
+                stars_display,
+                url
+            ])
+
+        # Display table
+        typer.echo(tabulate(
+            table_data,
+            headers=headers,
+            tablefmt="grid"
+        ))
+
         typer.echo("")  # Empty line at the end
-        
+
     except ImportError:
         typer.echo("Error: urllib is required but not available", err=True)
         raise typer.Exit(1)

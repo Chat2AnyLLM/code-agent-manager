@@ -46,6 +46,7 @@ def _ensure_tools_loaded() -> None:
 
     # Import tool modules so their subclasses are registered
     from . import (  # noqa: F401
+        ampcode,
         blackbox,
         claude,
         codebuddy,
@@ -121,6 +122,7 @@ def get_registered_tools() -> Dict[str, Type[CLITool]]:
 def __getattr__(name: str):
     """Lazy-load tool classes when explicitly imported."""
     tool_map = {
+        "AmpcodeTool": "ampcode",
         "BlackboxTool": "blackbox",
         "ClaudeTool": "claude",
         "CodeBuddyTool": "codebuddy",

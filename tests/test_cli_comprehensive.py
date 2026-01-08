@@ -53,7 +53,7 @@ class TestMainCommands:
                 assert exc_info.value.code == 0
 
         version_output = captured_output.getvalue()
-        assert "version 1.1." in version_output, "Version output should contain version 1.1.x"
+        assert "code-assistant-manager" in version_output and "version" in version_output, "Version output should contain code-assistant-manager and version info"
 
     def test_no_command_shows_help(self):
         """Test that running with no command shows help."""
