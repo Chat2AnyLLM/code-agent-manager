@@ -154,9 +154,18 @@ def backup_configs(ctx: UninstallContext) -> Optional[Path]:
         return None
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_dir = (
-        Path.home() / f".config/code-assistant-manager/backup/uninstall_{timestamp}"
-    )
+    # Use platform-appropriate config directory for backup
+    import os
+    if os.name == 'nt':  # Windows
+        appdata = os.environ.get('APPDATA')
+        if appdata:
+            config_dir = Path(appdata) / "code-assistant-manager"
+        else:
+            config_dir = Path.home() / ".config" / "code-assistant-manager"
+    else:
+        config_dir = Path.home() / ".config" / "code-assistant-manager"
+
+    backup_dir = config_dir / f"backup/uninstall_{timestamp}"
     backup_dir.mkdir(parents=True, exist_ok=True)
 
     typer.echo(f"\n{Colors.BOLD}Backing up configuration files...{Colors.RESET}")

@@ -282,29 +282,40 @@ class ConfigManager:
         logger.debug(f"Initializing ConfigManager with config_path: {config_path}")
         if config_path is None:
             # Lookup order for providers.json (installed location first):
-            # 1) ~/.config/code-assistant-manager/providers.json
-            # 2) ./providers.json (current working directory)
-            # 3) $HOME/providers.json
+            # 1. ~/.config/code-assistant-manager/providers.json (Linux/Unix/Windows)
+            # 2. %APPDATA%/code-assistant-manager/providers.json (Windows roaming)
+            # 3. %LOCALAPPDATA%/code-assistant-manager/providers.json (Windows local)
+            # 4. ./providers.json (current working directory)
+            # 5. ~/providers.json (home directory root)
             script_dir = Path(__file__).parent
             home_config = (
                 Path.home() / ".config" / "code-assistant-manager" / "providers.json"
             )
+
+            # Windows-specific config locations (checked after ~/.config)
+            import os
+            windows_configs = []
+            if os.name == 'nt':  # Windows
+                appdata = os.environ.get('APPDATA')
+                local_appdata = os.environ.get('LOCALAPPDATA')
+                if appdata:
+                    windows_configs.append(Path(appdata) / "code-assistant-manager" / "providers.json")
+                if local_appdata:
+                    windows_configs.append(Path(local_appdata) / "code-assistant-manager" / "providers.json")
+
             cwd_config = Path.cwd() / "providers.json"
             home_root_config = Path.home() / "providers.json"
 
-            logger.debug(
-                f"Checking config locations: home={home_config}, cwd={cwd_config}, home_root={home_root_config}"
-            )
+            # Check all locations in order of preference - ~/.config first for all platforms
+            config_locations = [home_config] + windows_configs + [cwd_config, home_root_config]
 
-            if home_config.exists():
-                config_path = str(home_config)
-                logger.debug(f"Using home config: {config_path}")
-            elif cwd_config.exists():
-                config_path = str(cwd_config)
-                logger.debug(f"Using cwd config: {config_path}")
-            elif home_root_config.exists():
-                config_path = str(home_root_config)
-                logger.debug(f"Using home root config: {config_path}")
+            logger.debug(f"Checking config locations: {[str(p) for p in config_locations]}")
+
+            for config_path_obj in config_locations:
+                if config_path_obj.exists():
+                    config_path = str(config_path_obj)
+                    logger.debug(f"Using config: {config_path}")
+                    break
             else:
                 # Fallback to bundled providers.json in the package
                 config_path = str(script_dir / "providers.json")
@@ -832,6 +843,16 @@ def get_config_path() -> Optional[Path]:
         Path.home() / ".code-assistant-manager" / "config.json",
         Path.cwd() / ".code-assistant-manager" / "config.json",
     ]
+
+    # Add Windows-specific locations (after ~/.config)
+    import os
+    if os.name == 'nt':  # Windows
+        appdata = os.environ.get('APPDATA')
+        local_appdata = os.environ.get('LOCALAPPDATA')
+        if appdata:
+            locations.insert(1, Path(appdata) / "code-assistant-manager" / "config.json")
+        if local_appdata:
+            locations.insert(2, Path(local_appdata) / "code-assistant-manager" / "config.json")
 
     for config_path in locations:
         if config_path.exists() and config_path.is_file():

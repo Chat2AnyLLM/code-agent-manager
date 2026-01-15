@@ -68,7 +68,15 @@ class Menu(ABC):
     @staticmethod
     def _clear_screen():
         """Clear the terminal screen."""
-        subprocess.run(["clear"] if os.name == "posix" else ["cls"], check=False)
+        try:
+            if os.name == "posix":
+                subprocess.run(["clear"], check=False)
+            else:
+                # Windows: use cls through shell since it's a builtin
+                subprocess.run(["cmd", "/c", "cls"], check=False)
+        except Exception:
+            # Fallback: just print newlines
+            print("\n" * 50)
 
     def _calculate_menu_width(self) -> int:
         """Calculate menu width based on content with smarter sizing for long titles."""

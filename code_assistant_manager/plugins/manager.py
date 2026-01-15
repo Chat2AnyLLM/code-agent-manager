@@ -159,7 +159,19 @@ class PluginManager:
                               for testing purposes
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            # Default to platform-appropriate config directory
+            import os
+            if os.name == 'nt':  # Windows
+                # Try Windows locations first
+                appdata = os.environ.get('APPDATA')
+                if appdata:
+                    config_dir = Path(appdata) / "code-assistant-manager"
+                else:
+                    # Fallback to home directory
+                    config_dir = Path.home() / ".config" / "code-assistant-manager"
+            else:
+                # Unix-like systems (Linux, macOS)
+                config_dir = Path.home() / ".config" / "code-assistant-manager"
         self.config_dir = Path(config_dir)
         self.plugins_file = self.config_dir / "plugins.json"
         self.marketplaces_file = self.config_dir / "marketplaces.json"

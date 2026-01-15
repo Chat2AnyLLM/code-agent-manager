@@ -19,6 +19,7 @@ from .copilot import CopilotAgentHandler
 from .droid import DroidAgentHandler
 from .gemini import GeminiAgentHandler
 from .opencode import OpenCodeAgentHandler
+from .qwen import QwenAgentHandler
 from .models import Agent, AgentRepo
 from ..fetcher import Fetcher
 
@@ -93,6 +94,7 @@ AGENT_HANDLERS: Dict[str, Type[BaseAgentHandler]] = {
     "codebuddy": CodebuddyAgentHandler,
     "copilot": CopilotAgentHandler,
     "opencode": OpenCodeAgentHandler,
+    "qwen": QwenAgentHandler,
 }
 
 # Valid app types for agents
@@ -106,10 +108,23 @@ class AgentManager:
         """Initialize agent manager.
 
         Args:
-            config_dir: Configuration directory (defaults to ~/.config/code-assistant-manager)
+            config_dir: Configuration directory (defaults to platform-appropriate location)
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            # Default to platform-appropriate config directory
+            import os
+            if os.name == 'nt':  # Windows
+                # Try Windows locations first
+                appdata = os.environ.get('APPDATA')
+                if appdata:
+                    config_dir = Path(appdata) / "code-assistant-manager"
+                else:
+                    # Fallback to home directory
+                    config_dir = Path.home() / ".config" / "code-assistant-manager"
+            else:
+                # Unix-like systems (Linux, macOS)
+                config_dir = Path.home() / ".config" / "code-assistant-manager"
+
         self.config_dir = Path(config_dir)
         self.agents_file = self.config_dir / "agents.json"
         self.repos_file = self.config_dir / "agent_repos.json"

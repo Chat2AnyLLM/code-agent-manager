@@ -4,10 +4,13 @@
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Code Quality](https://img.shields.io/badge/code%20quality-A+-brightgreen.svg)](https://github.com/Chat2AnyLLM/code-assistant-manager/actions)
+[![Windows Support](https://img.shields.io/badge/Windows-Supported-blue.svg)](https://github.com/Chat2AnyLLM/code-assistant-manager)
 
 **One CLI to Rule Them All.**
 <br>
 Tired of juggling multiple AI coding assistants? **CAM** is a unified Python CLI to manage configurations, prompts, skills, and plugins for **17 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, Blackbox, Goose, Continue, and more from a single, polished terminal interface.
+
+**🪟 Windows Support:** Full Windows compatibility with dedicated installers and configuration management.
 
 </div>
 
@@ -24,10 +27,23 @@ Choose your preferred installation method:
 pip install code-assistant-manager
 ```
 
+### Windows Installation
+
+For Windows users, use the dedicated PowerShell installer:
+
+```powershell
+# Download and run the PowerShell installer
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Chat2AnyLLM/code-assistant-manager/main/install.ps1" -OutFile "install.ps1"
+.\install.ps1
+
+# Or use the batch installer (alternative)
+install.bat
+```
+
 ### Alternative Methods
 
 ```bash
-# Install using the install script
+# Install using the install script (Linux/macOS)
 ./install.sh
 
 # Or install directly from the web
@@ -38,6 +54,29 @@ git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
 cd code-assistant-manager
 pip install -e ".[dev]"
 ```
+
+---
+
+## Platform Support
+
+CAM is cross-platform and works on **Linux**, **macOS**, and **Windows**.
+
+### Windows Features
+
+- **Unified Configuration:** Uses `~/.config/code-assistant-manager/` paths (consistent with Unix systems)
+- **PowerShell Integration:** Native PowerShell installer with automatic PATH configuration
+- **Cross-Platform Compatibility:** All features work identically across platforms
+- **Environment Variables:** Full support for Windows environment variable configuration
+
+### Configuration Locations
+
+CAM automatically detects configuration files in the following order:
+
+1. `~/.config/code-assistant-manager/providers.json` (primary location)
+2. `%APPDATA%/code-assistant-manager/providers.json` (Windows roaming)
+3. `%LOCALAPPDATA%/code-assistant-manager/providers.json` (Windows local)
+4. `./providers.json` (current directory)
+5. `~/providers.json` (home directory)
 
 ---
 

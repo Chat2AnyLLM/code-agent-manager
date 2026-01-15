@@ -26,10 +26,22 @@ class RepoConfigLoader:
         """Initialize the repo config loader.
 
         Args:
-            config_dir: Configuration directory (defaults to ~/.config/code-assistant-manager)
+            config_dir: Configuration directory (defaults to platform-appropriate location)
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            # Default to platform-appropriate config directory
+            import os
+            if os.name == 'nt':  # Windows
+                # Try Windows locations first
+                appdata = os.environ.get('APPDATA')
+                if appdata:
+                    config_dir = Path(appdata) / "code-assistant-manager"
+                else:
+                    # Fallback to home directory
+                    config_dir = Path.home() / ".config" / "code-assistant-manager"
+            else:
+                # Unix-like systems (Linux, macOS)
+                config_dir = Path.home() / ".config" / "code-assistant-manager"
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
@@ -38,8 +50,17 @@ class RepoConfigLoader:
 
         # Setup cache directory
         cache_config = self.config.get("cache", {})
-        cache_dir = cache_config.get("directory", "~/.cache/code-assistant-manager/repos")
-        self.cache_dir = Path(cache_dir).expanduser()
+        cache_dir_name = cache_config.get("directory", "~/.cache/code-assistant-manager/repos")
+        cache_dir = Path(cache_dir_name).expanduser()
+
+        # Use platform-appropriate cache directory
+        import os
+        if os.name == 'nt' and cache_dir_name.startswith("~/"):  # Windows and default path
+            local_appdata = os.environ.get('LOCALAPPDATA')
+            if local_appdata:
+                cache_dir = Path(local_appdata) / "code-assistant-manager" / "repos"
+
+        self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_ttl = cache_config.get("ttl_seconds", 3600)
         self.cache_enabled = cache_config.get("enabled", True)

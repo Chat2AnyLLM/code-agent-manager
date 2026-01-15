@@ -20,6 +20,7 @@ from .copilot import CopilotAgentHandler
 from .droid import DroidAgentHandler
 from .gemini import GeminiAgentHandler
 from .opencode import OpenCodeAgentHandler
+from .qwen import QwenAgentHandler
 from .manager import VALID_APP_TYPES, AgentManager, AGENT_HANDLERS
 from .models import Agent, AgentRepo
 
@@ -44,6 +45,7 @@ __all__ = [
     "CodebuddyAgentHandler",
     "CopilotAgentHandler",
     "OpenCodeAgentHandler",
+    "QwenAgentHandler",
     "get_handler",
     "VALID_APP_TYPES",
 ]

@@ -112,10 +112,23 @@ class SkillManager:
         """Initialize skill manager.
 
         Args:
-            config_dir: Configuration directory (defaults to ~/.config/code-assistant-manager)
+            config_dir: Configuration directory (defaults to platform-appropriate location)
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            # Default to platform-appropriate config directory
+            import os
+            if os.name == 'nt':  # Windows
+                # Try Windows locations first
+                appdata = os.environ.get('APPDATA')
+                if appdata:
+                    config_dir = Path(appdata) / "code-assistant-manager"
+                else:
+                    # Fallback to home directory
+                    config_dir = Path.home() / ".config" / "code-assistant-manager"
+            else:
+                # Unix-like systems (Linux, macOS)
+                config_dir = Path.home() / ".config" / "code-assistant-manager"
+
         self.config_dir = Path(config_dir)
         self.skills_file = self.config_dir / "skills.json"
         self.repos_file = self.config_dir / "skill_repos.json"

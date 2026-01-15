@@ -90,6 +90,16 @@ def find_env_file(
         Path.home() / ".config" / "code-assistant-manager" / ".env",
     ]
 
+    # Add Windows-specific locations
+    import os
+    if os.name == 'nt':  # Windows
+        appdata = os.environ.get('APPDATA')
+        local_appdata = os.environ.get('LOCALAPPDATA')
+        if appdata:
+            locations.append(Path(appdata) / "code-assistant-manager" / ".env")
+        if local_appdata:
+            locations.append(Path(local_appdata) / "code-assistant-manager" / ".env")
+
     for env_file in locations:
         if env_file.exists() and env_file.is_file():
             return env_file

@@ -77,7 +77,9 @@ class CLITool:
         """Check if a command is available in the system PATH."""
         logger.debug(f"Checking if command '{command}' is available")
         try:
-            self._run_command(["which", command], capture_output=True, check=True)
+            # Use 'where' on Windows, 'which' on Unix-like systems
+            check_cmd = ["where", command] if os.name == "nt" else ["which", command]
+            self._run_command(check_cmd, capture_output=True, check=True)
             logger.debug(f"Command '{command}' is available")
             return True
         except subprocess.CalledProcessError:

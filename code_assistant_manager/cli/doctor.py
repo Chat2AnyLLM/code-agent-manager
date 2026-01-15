@@ -88,6 +88,15 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
         Path.home() / ".config" / "code-assistant-manager" / ".env",
     ]
 
+    # Add Windows-specific env file locations
+    if os.name == 'nt':  # Windows
+        appdata = os.environ.get('APPDATA')
+        local_appdata = os.environ.get('LOCALAPPDATA')
+        if appdata:
+            env_file_paths.append(Path(appdata) / "code-assistant-manager" / ".env")
+        if local_appdata:
+            env_file_paths.append(Path(local_appdata) / "code-assistant-manager" / ".env")
+
     # If dotenv can find an env file, include it as well
     found_env = find_env_file()
     if found_env and found_env not in env_file_paths:
@@ -98,6 +107,15 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
         Path.cwd() / "providers.json",
         Path.home() / "providers.json",
     ]
+
+    # Add Windows-specific config file locations
+    if os.name == 'nt':  # Windows
+        appdata = os.environ.get('APPDATA')
+        local_appdata = os.environ.get('LOCALAPPDATA')
+        if appdata:
+            config_file_paths.insert(1, Path(appdata) / "code-assistant-manager" / "providers.json")
+        if local_appdata:
+            config_file_paths.insert(2, Path(local_appdata) / "code-assistant-manager" / "providers.json")
     env_found = False
     config_found = False
 
@@ -266,7 +284,18 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
     typer.echo()
     typer.echo(f"{Colors.BOLD}Cache Check{Colors.RESET}")
     try:
-        cache_dir = Path.home() / ".cache" / "code-assistant-manager"
+        # Use platform-appropriate cache directory
+        if os.name == 'nt':  # Windows
+            # On Windows, use %LOCALAPPDATA% for cache
+            local_appdata = os.environ.get('LOCALAPPDATA')
+            if local_appdata:
+                cache_dir = Path(local_appdata) / "code-assistant-manager" / "cache"
+            else:
+                cache_dir = Path.home() / ".cache" / "code-assistant-manager"
+        else:
+            # Unix-like systems (Linux, macOS)
+            cache_dir = Path.home() / ".cache" / "code-assistant-manager"
+
         if cache_dir.exists():
             check_passed(f"Cache directory exists: {cache_dir}")
             # Check cache size (rough estimate)
