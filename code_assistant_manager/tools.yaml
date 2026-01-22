@@ -405,3 +405,34 @@ tools:
     filesystem:
       touched:
         - "~/.kimi/config.toml (Kimi CLI configuration file)"
+
+  aichat:
+    enabled: true
+    install_cmd: cargo install aichat
+    cli_command: aichat
+    description: "AIChat - AI-powered chat CLI with multiple LLM support"
+    env:
+      exported:
+        AICHAT_BASE_URL: "Populated from selected endpoint.endpoint."
+        AICHAT_API_KEY: "Resolved from endpoint configuration and environment (masked in output)."
+        AICHAT_MODEL: "Model ID selected via code-assistant-manager prompt."
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        endpoint: "Base URL for OpenAI-compatible API."
+        list_models_cmd: "Shell command returning available models for the endpoint."
+      optional:
+        api_key_env: "Environment variable name containing the API key."
+        supported_client: "Comma-separated list used to filter endpoints; must include aichat."
+        keep_proxy_config: "When true, preserve proxy variables during model discovery."
+        use_proxy: "When true, apply proxies from common config to runtime requests."
+        description: "Display label shown during endpoint selection."
+      model_listing_env:
+        endpoint: "Provided to list_models_cmd as env var endpoint."
+        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        proxies: "Proxy variables removed unless keep_proxy_config is true."
+    cli_parameters:
+      injected: []
+    filesystem:
+      touched:
+        - "~/.config/aichat/config.yaml (AIChat configuration file)"

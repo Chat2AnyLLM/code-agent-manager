@@ -46,6 +46,7 @@ def _ensure_tools_loaded() -> None:
 
     # Import tool modules so their subclasses are registered
     from . import (  # noqa: F401
+        aichat,
         ampcode,
         blackbox,
         claude,
@@ -123,6 +124,7 @@ def get_registered_tools() -> Dict[str, Type[CLITool]]:
 def __getattr__(name: str):
     """Lazy-load tool classes when explicitly imported."""
     tool_map = {
+        "AIChatTool": "aichat",
         "AmpcodeTool": "ampcode",
         "BlackboxTool": "blackbox",
         "ClaudeTool": "claude",
@@ -136,6 +138,7 @@ def __getattr__(name: str):
         "GeminiTool": "gemini",
         "GooseTool": "goose",
         "IfLowTool": "iflow",
+        "KimiTool": "kimi",
         "NeovateTool": "neovate",
         "OpenCodeTool": "opencode",
         "QoderCLITool": "qodercli",
@@ -145,7 +148,9 @@ def __getattr__(name: str):
 
     if name in tool_map:
         module_name = tool_map[name]
-        module = __import__(f"code_assistant_manager.tools.{module_name}", fromlist=[name])
+        module = __import__(
+            f"code_assistant_manager.tools.{module_name}", fromlist=[name]
+        )
         return getattr(module, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
