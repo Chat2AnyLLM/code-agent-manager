@@ -16,6 +16,7 @@ from .iflow import IFlowConfig
 from .neovate import NeovateConfig
 from .qoder import QoderConfig
 from .zed import ZedConfig
+from .opencode import OpenCodeConfig
 
 # Registry
 _CONFIG_CLASSES: Dict[str, Type[BaseToolConfig]] = {
@@ -32,6 +33,7 @@ _CONFIG_CLASSES: Dict[str, Type[BaseToolConfig]] = {
     "neovate": NeovateConfig,
     "qodercli": QoderConfig,
     "zed": ZedConfig,
+    "opencode": OpenCodeConfig,
 }
 
 

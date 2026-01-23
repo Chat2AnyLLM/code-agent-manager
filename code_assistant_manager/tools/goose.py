@@ -123,6 +123,46 @@ class GooseTool(CLITool):
             if self.endpoint_manager._is_client_supported(ep, "goose")
         ]
 
+    def _validate_and_fix_config(self) -> None:
+        """Validate that config.yaml references valid custom providers.
+
+        If config references a provider that doesn't exist, try to use an available one.
+        """
+        config_file = Path.home() / ".config" / "goose" / "config.yaml"
+        if not config_file.exists():
+            return
+
+        try:
+            with open(config_file, "r", encoding="utf-8") as f:
+                config_data = yaml.safe_load(f) or {}
+        except Exception:
+            return
+
+        provider_name = config_data.get("GOOSE_PROVIDER")
+        model_name = config_data.get("GOOSE_MODEL")
+
+        # Check if current provider exists
+        custom_providers = self._get_custom_providers()
+
+        if provider_name and provider_name in custom_providers:
+            # Provider exists, verify model exists
+            if model_name and model_name in custom_providers[provider_name]:
+                # Everything is valid
+                return
+            else:
+                # Provider exists but model doesn't; use first available model
+                if custom_providers[provider_name]:
+                    first_model = custom_providers[provider_name][0]
+                    self._write_default_to_config(provider_name, first_model)
+                    print(f"Fixed: Updated model to '{first_model}'")
+        else:
+            # Provider doesn't exist; use first available provider and model
+            if custom_providers:
+                first_provider = next(iter(custom_providers.keys()))
+                first_model = custom_providers[first_provider][0]
+                self._write_default_to_config(first_provider, first_model)
+                print(f"Fixed: Updated provider to '{first_provider}' and model to '{first_model}'")
+
     def _get_custom_providers(self) -> Dict[str, List[str]]:
         """Read existing custom providers from ~/.config/goose/custom_providers/.
 
@@ -387,9 +427,22 @@ class GooseTool(CLITool):
 
 
     def _write_default_to_config(self, provider_name: str, model_name: str) -> None:
-        """Write provider and model to goose config.yaml."""
+        """Write provider and model to goose config.yaml.
+
+        Validates that the provider and model exist in custom providers before writing.
+        """
         config_file = Path.home() / ".config" / "goose" / "config.yaml"
         config_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Validate that the provider and model exist
+        custom_providers = self._get_custom_providers()
+        if provider_name not in custom_providers:
+            print(f"Warning: Provider '{provider_name}' not found in custom providers. Skipping config update.")
+            return
+
+        if model_name not in custom_providers[provider_name]:
+            print(f"Warning: Model '{model_name}' not found in provider '{provider_name}'. Skipping config update.")
+            return
 
         config_data = {}
         if config_file.exists():
@@ -416,6 +469,9 @@ class GooseTool(CLITool):
 
         # Load environment variables first
         self._load_environment()
+
+        # Validate and fix config if needed
+        self._validate_and_fix_config()
 
         # Check if Goose is installed
         if not self._ensure_tool_installed(
