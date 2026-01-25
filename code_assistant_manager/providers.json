@@ -29,6 +29,17 @@
       "keep_proxy_config": false,
       "use_proxy": false,
       "enabled": false
+    },
+    "example-azure-openai": {
+      "endpoint": "https://example.openai.azure.com/openai/v1",
+      "api_key_env": "AZURE_OPENAI_API_KEY",
+      "supported_client": "openai",
+      "list_models_cmd": "python -m code_assistant_manager.azure_openai_models",
+      "list_of_models": [],
+      "keep_proxy_config": false,
+      "use_proxy": false,
+      "enabled": true,
+      "description": "Example Azure OpenAI endpoint"
     }
   },
   "common": {
