@@ -201,6 +201,32 @@ class CodexTool(CLITool):
                 return 0
             selected_profile = profiles[idx]
 
+        # Configure wire_api based on model type
+        from code_assistant_manager.configs import get_tool_config
+        codex_config = get_tool_config("codex")
+        if codex_config:
+            # Determine the provider for the selected profile
+            config_data = codex_config.load_config("user")
+            profile_provider = None
+            if config_data and "profiles" in config_data and selected_profile in config_data["profiles"]:
+                profile_provider = config_data["profiles"][selected_profile].get("model_provider")
+
+            if profile_provider and selected_profile.startswith("gpt"):
+                # Set wire_api to 'responses' for GPT models
+                try:
+                    codex_config.set_value(f"model_providers.{profile_provider}.wire_api", "responses", "user")
+                    print(f"[code-assistant-manager] Set codex.model_providers.{profile_provider}.wire_api = 'responses' for GPT model")
+                except Exception as e:
+                    print(f"[code-assistant-manager] Warning: Failed to set wire_api config: {e}")
+            elif profile_provider:
+                # Unset wire_api for non-GPT models
+                try:
+                    found = codex_config.unset_value(f"model_providers.{profile_provider}.wire_api", "user")
+                    if found:
+                        print(f"[code-assistant-manager] Unset codex.model_providers.{profile_provider}.wire_api for non-GPT model")
+                except Exception as e:
+                    print(f"[code-assistant-manager] Warning: Failed to unset wire_api config: {e}")
+
         env = os.environ.copy()
         if selected_profile in profile_env:
             env_key, api_key = profile_env[selected_profile]
