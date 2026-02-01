@@ -373,16 +373,10 @@ def install_plugin(
         help="Plugin name or marketplace:plugin-name. Examples: 'code-reviewer' or 'awesome-plugins:code-reviewer'",
     ),
     marketplace: Optional[str] = typer.Option(
-        None,
-        "--marketplace",
-        "-m",
-        help="Marketplace name (alternative to marketplace:plugin-name format)",
+        None, "--marketplace", help="Marketplace name (alternative to marketplace:plugin-name format)",
     ),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type to install to ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type to install to ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
     """Install a plugin from available marketplaces.
@@ -490,10 +484,7 @@ def uninstall_plugin(
     plugin: str = typer.Argument(..., help="Plugin name to uninstall"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type to uninstall from ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type to uninstall from ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
     """Uninstall an installed plugin.
@@ -615,10 +606,7 @@ def _remove_plugin_from_settings(handler, plugin: str) -> bool:
 def enable_plugin(
     plugin: str = typer.Argument(..., help="Plugin name to enable"),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
     """Enable a disabled plugin."""
@@ -657,10 +645,7 @@ def enable_plugin(
 def disable_plugin(
     plugin: str = typer.Argument(..., help="Plugin name to disable"),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
     """Disable an enabled plugin."""
@@ -699,10 +684,7 @@ def disable_plugin(
 def validate_plugin(
     path: str = typer.Argument(..., help="Path to plugin or marketplace to validate"),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
     """Validate a plugin or marketplace manifest."""

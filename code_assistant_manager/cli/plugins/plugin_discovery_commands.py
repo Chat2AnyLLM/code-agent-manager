@@ -169,10 +169,7 @@ def view_plugin(
         help="Plugin name to view (e.g., 'document-skills' or 'awesome-plugins:document-skills')",
     ),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
     """View detailed information about a specific plugin.
@@ -292,10 +289,7 @@ def view_plugin(
 @plugin_app.command("status")
 def plugin_status(
     app_type: Optional[str] = typer.Option(
-        None,
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)}). If not specified, shows status for all apps.",
+        None, "--app", help=f"App type ({', '.join(VALID_APP_TYPES)}). If not specified, shows status for all apps.",
     ),
 ):
     """Show plugin system status for an app, or all apps if none specified."""
@@ -481,10 +475,7 @@ def show_app_info(app: str, show_cam_config: bool = True):
 @plugin_app.command("status")
 def plugin_status(
     app_type: Optional[str] = typer.Option(
-        None,
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)}). If not specified, shows status for all apps.",
+        None, "--app", help=f"App type ({', '.join(VALID_APP_TYPES)}). If not specified, shows status for all apps.",
     ),
 ):
     """Show plugin system status for an app, or all apps if none specified."""

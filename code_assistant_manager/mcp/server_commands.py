@@ -26,7 +26,7 @@ MCPManagerFactory = lambda: _manager_module.MCPManager()
 @app.command()
 def list(
     client: Optional[str] = typer.Option(
-        None, "--client", "-c", help="Show only servers installed for this client"
+        None, "--client", help="Show only servers installed for this client"
     ),
     interactive: bool = typer.Option(
         False, "--interactive", "-i", help="Use interactive mode"
@@ -223,10 +223,10 @@ def add(
         ..., help="Server names to install (comma-separated)"
     ),
     client: str = typer.Option(
-        "claude", "--client", "-c", help="Client to install to (claude, codex, all)"
+        "claude", "--client", help="Client to install to (claude, codex, all)"
     ),
     method: Optional[str] = typer.Option(
-        None, "--method", "-m", help="Installation method to use"
+        None, "--method", help="Installation method to use"
     ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Force installation if server already exists"
@@ -235,7 +235,7 @@ def add(
         False, "--interactive", "-i", help="Use interactive mode for server selection"
     ),
     scope: str = typer.Option(
-        "user", "--scope", "-s", help="Configuration scope (user or project)"
+        "user", "--scope", help="Configuration scope (user or project)"
     ),
 ):
     """Add MCP servers to a client."""
@@ -302,13 +302,13 @@ def remove(
         ..., help="Server names to remove (comma-separated)"
     ),
     client: str = typer.Option(
-        "claude", "--client", "-c", help="Client to remove from (claude, codex, all)"
+        "claude", "--client", help="Client to remove from (claude, codex, all)"
     ),
     interactive: bool = typer.Option(
         False, "--interactive", "-i", help="Use interactive mode for server selection"
     ),
     scope: str = typer.Option(
-        "user", "--scope", "-s", help="Configuration scope (user or project)"
+        "user", "--scope", help="Configuration scope (user or project)"
     ),
 ):
     """Remove MCP servers from a client."""
@@ -372,13 +372,13 @@ def update(
         ..., help="Server names to update (comma-separated)"
     ),
     client: str = typer.Option(
-        "claude", "--client", "-c", help="Client to update in (claude, codex, all)"
+        "claude", "--client", help="Client to update in (claude, codex, all)"
     ),
     interactive: bool = typer.Option(
         False, "--interactive", "-i", help="Use interactive mode for server selection"
     ),
     scope: str = typer.Option(
-        "user", "--scope", "-s", help="Configuration scope (user or project)"
+        "user", "--scope", help="Configuration scope (user or project)"
     ),
 ):
     """Update/reinstall MCP servers for a client."""

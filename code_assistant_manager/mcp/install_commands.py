@@ -36,7 +36,7 @@ def install(
     server_name: str,
     client: str,
     method: Optional[str] = typer.Option(
-        None, "--method", "-m", help="Installation method to use"
+        None, "--method", help="Installation method to use"
     ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Force installation if server already exists"

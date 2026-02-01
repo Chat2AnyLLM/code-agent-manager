@@ -33,10 +33,7 @@ def marketplace_add(
         help="Marketplace source (URL, path, or GitHub repo) or 'fetch' to fetch and add from GitHub",
     ),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type ({', '.join(VALID_APP_TYPES)})",
     ),
     save: bool = typer.Option(
         False,
@@ -180,10 +177,7 @@ def marketplace_add(
 @marketplace_app.command("list")
 def marketplace_list(
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type ({', '.join(VALID_APP_TYPES)})",
     ),
     show_installed: bool = typer.Option(
         False,
@@ -317,10 +311,7 @@ def marketplace_remove(
     ),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
     """Remove a configured marketplace."""
@@ -349,10 +340,7 @@ def marketplace_update(
         help="Marketplace name to update (updates all if not specified)",
     ),
     app_type: Optional[str] = typer.Option(
-        None,
-        "--app",
-        "-a",
-        help=f"App type to update marketplaces for ({', '.join(VALID_APP_TYPES)}). Updates all apps if not specified.",
+        None, "--app", help=f"App type to update marketplaces for ({', '.join(VALID_APP_TYPES)}). Updates all apps if not specified.",
     ),
 ):
     """Update installed marketplace(s) from their source.
@@ -466,10 +454,7 @@ def marketplace_install(
         help="Install all configured marketplaces",
     ),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type(s) to install marketplace to ({', '.join(VALID_APP_TYPES)}, all). Comma-separated.",
+        "claude", "--app", help=f"App type(s) to install marketplace to ({', '.join(VALID_APP_TYPES)}, all). Comma-separated.",
     ),
 ):
     """Install a configured marketplace or all marketplaces to Claude or CodeBuddy.
@@ -599,10 +584,7 @@ def marketplace_uninstall(
     ),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help=f"App type to uninstall marketplace from ({', '.join(VALID_APP_TYPES)})",
+        "claude", "--app", help=f"App type to uninstall marketplace from ({', '.join(VALID_APP_TYPES)})",
     ),
 ):
     """Uninstall a marketplace or all marketplaces from Claude or CodeBuddy.
