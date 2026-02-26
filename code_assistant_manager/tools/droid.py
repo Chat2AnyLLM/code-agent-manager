@@ -211,19 +211,19 @@ class DroidTool(CLITool):
             parts = entry.split("|")
             if len(parts) < 5:
                 continue
-            display, base_url, api_key, provider, max_tokens = parts[:5]
+            display, base_url, api_key, provider, *_ = parts
             model_id = display.split("[")[0].strip()
-            try:
-                max_tokens_val = int(max_tokens)
-            except ValueError:
-                max_tokens_val = 0
+            provider_value = (provider or "").strip() or "generic-chat-completion-api"
+            if "claude" in model_id.lower():
+                provider_value = "anthropic"
+            max_tokens_val = 64000
             models.append(
                 {
                     "displayName": display,
                     "model": model_id,
                     "baseUrl": base_url,
                     "apiKey": api_key,
-                    "provider": provider or "generic-chat-completion-api",
+                    "provider": provider_value,
                     "maxOutputTokens": max_tokens_val,
                 }
             )

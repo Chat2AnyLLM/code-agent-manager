@@ -186,14 +186,17 @@ class TestDroidTool:
         """Test building models JSON for Droid."""
         tool = DroidTool(config_manager)
         entries = [
-            "model1 [ep1]|https://api.com|key|provider|16384",
-            "model2 [ep2]|https://api2.com|key2|provider|65536",
+            "model1 [ep1]|https://api.com|key||16384",
+            "claude-3 [ep2]|https://api2.com|key2|provider|65536",
         ]
         models = tool._build_models_json(entries)
         assert len(models) == 2
         assert models[0]["model"] == "model1"
         assert models[0]["baseUrl"] == "https://api.com"
-        assert models[1]["maxOutputTokens"] == 65536
+        assert models[0]["maxOutputTokens"] == 64000
+        assert models[1]["maxOutputTokens"] == 64000
+        assert models[0]["provider"] == "generic-chat-completion-api"
+        assert models[1]["provider"] == "anthropic"
 
     @patch.dict(os.environ, {"CODE_ASSISTANT_MANAGER_NONINTERACTIVE": "1"})
     def test_droid_process_endpoint_prefers_api_key_env_reference(self, config_manager):
