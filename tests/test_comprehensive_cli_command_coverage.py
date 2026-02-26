@@ -35,9 +35,21 @@ class TestCompletionCommands:
         assert result.exit_code == 0
         assert "code-assistant-manager zsh completion" in result.output
 
+    def test_completion_fish_command(self, runner):
+        """Test fish completion command."""
+        result = runner.invoke(app, ["completion", "fish"])
+        assert result.exit_code == 0
+        assert "code-assistant-manager fish completion" in result.output
+
+    def test_completion_powershell_command(self, runner):
+        """Test powershell completion command."""
+        result = runner.invoke(app, ["completion", "powershell"])
+        assert result.exit_code == 0
+        assert "code-assistant-manager powershell completion" in result.output
+
     def test_completion_invalid_shell(self, runner):
         """Test completion with invalid shell."""
-        result = runner.invoke(app, ["completion", "fish"])
+        result = runner.invoke(app, ["completion", "nushell"])
         assert result.exit_code != 0
         assert "Unsupported shell" in result.output or "Error" in result.output
 

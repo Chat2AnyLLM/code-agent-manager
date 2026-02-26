@@ -724,7 +724,7 @@ class TestCompletionCommand:
 
     def test_completion_invalid_shell(self):
         """Test completion with invalid shell."""
-        with patch("sys.argv", ["code-assistant-manager", "completion", "fish"]):
+        with patch("sys.argv", ["code-assistant-manager", "completion", "nushell"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1

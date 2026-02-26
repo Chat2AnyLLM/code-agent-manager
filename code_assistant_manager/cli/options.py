@@ -18,7 +18,9 @@ INSTALL_ALIAS_TARGET_OPTION = typer.Argument("all", help="Tool to install or 'al
 KEEP_CONFIG_OPTION = typer.Option(
     False, "--keep-config", "-k", help="Keep configuration files (don't backup)"
 )
-SHELL_OPTION = typer.Argument(..., help="Shell type (bash, zsh)")
+SHELL_OPTION = typer.Argument(
+    ..., help="Shell type (bash, zsh, fish, powershell, pwsh)"
+)
 SCOPE_OPTION = typer.Option(
     "user", "--scope", help="Configuration scope (user, project)",
 )

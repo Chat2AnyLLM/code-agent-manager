@@ -62,21 +62,32 @@ def _get_logger():
 
 # Lazy-loaded completion scripts to improve startup time
 _completion_scripts = {}
+SUPPORTED_COMPLETION_SHELLS = ("bash", "zsh", "fish", "powershell", "pwsh")
+
+
+def _normalize_completion_shell(shell: str) -> str:
+    """Normalize shell aliases for completion generation."""
+    return "powershell" if shell == "pwsh" else shell
 
 
 def _generate_completion_script(shell: str) -> str:
     """Generate a comprehensive completion script for the given shell."""
-    if shell in _completion_scripts:
-        return _completion_scripts[shell]
+    normalized_shell = _normalize_completion_shell(shell)
+    if normalized_shell in _completion_scripts:
+        return _completion_scripts[normalized_shell]
 
-    if shell == "bash":
+    if normalized_shell == "bash":
         script = _generate_bash_completion()
-    elif shell == "zsh":
+    elif normalized_shell == "zsh":
         script = _generate_zsh_completion()
+    elif normalized_shell == "fish":
+        script = _generate_fish_completion()
+    elif normalized_shell == "powershell":
+        script = _generate_powershell_completion()
     else:
         script = f"# Unsupported shell: {shell}"
 
-    _completion_scripts[shell] = script
+    _completion_scripts[normalized_shell] = script
     return script
 
 
@@ -209,7 +220,7 @@ _code_assistant_manager_completions()
             return 0
             ;;
         completion|comp|c)
-            COMPREPLY=( $(compgen -W "bash zsh" -- ${cur}) )
+            COMPREPLY=( $(compgen -W "bash zsh fish powershell pwsh" -- ${cur}) )
             return 0
             ;;
         --config)
@@ -468,7 +479,7 @@ _code_assistant_manager_completions()
                 ;;
             completion|comp|c)
                 case "${COMP_WORDS[2]}" in
-                    bash|zsh)
+                    bash|zsh|fish|powershell|pwsh)
                         COMPREPLY=( $(compgen -W "--help" -- ${cur}) )
                         return 0
                         ;;
@@ -901,7 +912,7 @@ _code_assistant_manager() {
                     ;;
                 completion|comp|c)
                     if (( CURRENT == 2 )); then
-                        _values 'shell' 'bash' 'zsh'
+                        _values 'shell' 'bash' 'zsh' 'fish' 'powershell' 'pwsh'
                     else
                         _values 'option' '--help[Show help]'
                     fi
@@ -928,6 +939,65 @@ _code_assistant_manager "$@"
 
 # Also register for 'cam' alias
 compdef _code_assistant_manager cam"""
+
+
+def _generate_fish_completion() -> str:
+    """Generate fish completion script."""
+    return """# code-assistant-manager fish completion
+
+set -l __cam_commands launch l config cf mcp m prompt p skill s plugin pl agent ag extensions ext upgrade u install i uninstall un doctor d version v completion comp c
+set -l __cam_tools aichat claude codex copilot gemini droid qwen codebuddy iflow qodercli zed neovate crush cursor-agent ampcode
+set -l __cam_completion_shells bash zsh fish powershell pwsh
+
+complete -c code-assistant-manager -f
+complete -c cam -f
+
+complete -c code-assistant-manager -n "__fish_use_subcommand" -a "$__cam_commands"
+complete -c cam -n "__fish_use_subcommand" -a "$__cam_commands"
+
+complete -c code-assistant-manager -n "__fish_seen_subcommand_from launch l upgrade u install i uninstall un" -a "$__cam_tools"
+complete -c cam -n "__fish_seen_subcommand_from launch l upgrade u install i uninstall un" -a "$__cam_tools"
+
+complete -c code-assistant-manager -n "__fish_seen_subcommand_from completion comp c" -a "$__cam_completion_shells"
+complete -c cam -n "__fish_seen_subcommand_from completion comp c" -a "$__cam_completion_shells"
+"""
+
+
+def _generate_powershell_completion() -> str:
+    """Generate PowerShell completion script."""
+    return """# code-assistant-manager powershell completion
+
+$codeAssistantCommands = @('launch','l','config','cf','mcp','m','prompt','p','skill','s','plugin','pl','agent','ag','extensions','ext','upgrade','u','install','i','uninstall','un','doctor','d','version','v','completion','comp','c')
+$codeAssistantTools = @('aichat','claude','codex','copilot','gemini','droid','qwen','codebuddy','iflow','qodercli','zed','neovate','crush','cursor-agent','ampcode')
+$completionShells = @('bash','zsh','fish','powershell','pwsh')
+
+Register-ArgumentCompleter -Native -CommandName code-assistant-manager, cam -ScriptBlock {
+    param($wordToComplete, $commandAst, $cursorPosition)
+
+    $elements = $commandAst.CommandElements | ForEach-Object { $_.Value }
+
+    if ($elements.Count -le 1) {
+        $codeAssistantCommands | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+        return
+    }
+
+    $subcommand = $elements[1]
+    if ($subcommand -in @('launch','l','upgrade','u','install','i','uninstall','un')) {
+        $codeAssistantTools | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+        return
+    }
+
+    if ($subcommand -in @('completion','comp','c')) {
+        $completionShells | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+    }
+}
+"""
 
 
 app = typer.Typer(
@@ -960,34 +1030,57 @@ def global_options(
 
 # Completion commands - lightweight and always available
 @app.command()
-def completion(shell: str = typer.Argument(..., help="Shell type (bash, zsh)")):
+def completion(
+    shell: str = typer.Argument(
+        ..., help="Shell type (bash, zsh, fish, powershell, pwsh)"
+    )
+):
     """Generate shell completion scripts."""
-    if shell not in ["bash", "zsh"]:
-        typer.echo(f"Error: Unsupported shell {shell!r}. Supported shells: bash, zsh")
+    if shell not in SUPPORTED_COMPLETION_SHELLS:
+        supported_shells = ", ".join(SUPPORTED_COMPLETION_SHELLS)
+        typer.echo(
+            f"Error: Unsupported shell {shell!r}. Supported shells: {supported_shells}"
+        )
         raise typer.Exit(1)
+    normalized_shell = _normalize_completion_shell(shell)
 
     # Generate basic completion script with common commands
-    completion_script = _generate_completion_script(shell)
+    completion_script = _generate_completion_script(normalized_shell)
 
-    typer.echo(f"# Shell completion script for {shell}")
+    typer.echo(f"# Shell completion script for {normalized_shell}")
     typer.echo("# To install, run one of the following:")
     typer.echo("#")
-    typer.echo("# Option 1: Add to ~/.bashrc or ~/.zshrc")
-    typer.echo(
-        f"# echo 'source <(code-assistant-manager completion {shell})' >> ~/.{shell}rc"
-    )
-    typer.echo("#")
-    typer.echo("# Option 2: Save to file and source it")
-    typer.echo(
-        f"# code-assistant-manager completion {shell} > ~/.{shell}_completion_code_assistant_manager"
-    )
-    typer.echo(
-        f"# echo 'source ~/.{shell}_completion_code_assistant_manager' >> ~/.{shell}rc"
-    )
-    typer.echo("#")
-    typer.echo(
-        "# Restart your shell or run 'source ~/.bashrc' (or ~/.zshrc) to apply changes"
-    )
+    if normalized_shell in ["bash", "zsh"]:
+        typer.echo("# Option 1: Add to ~/.bashrc or ~/.zshrc")
+        typer.echo(
+            f"# echo 'source <(code-assistant-manager completion {normalized_shell})' >> ~/.{normalized_shell}rc"
+        )
+        typer.echo("#")
+        typer.echo("# Option 2: Save to file and source it")
+        typer.echo(
+            f"# code-assistant-manager completion {normalized_shell} > ~/.{normalized_shell}_completion_code_assistant_manager"
+        )
+        typer.echo(
+            f"# echo 'source ~/.{normalized_shell}_completion_code_assistant_manager' >> ~/.{normalized_shell}rc"
+        )
+        typer.echo("#")
+        typer.echo(
+            "# Restart your shell or run 'source ~/.bashrc' (or ~/.zshrc) to apply changes"
+        )
+    elif normalized_shell == "fish":
+        typer.echo("# Option 1: Install to fish completions directory")
+        typer.echo(
+            "# code-assistant-manager completion fish > ~/.config/fish/completions/code-assistant-manager.fish"
+        )
+        typer.echo("#")
+        typer.echo("# Option 2: Load for current session only")
+        typer.echo("# source (code-assistant-manager completion fish | psub)")
+    else:
+        typer.echo("# Save to your PowerShell profile and reload")
+        typer.echo(
+            "# code-assistant-manager completion powershell | Out-File -Encoding utf8 -Append $PROFILE"
+        )
+        typer.echo("# . $PROFILE")
     typer.echo()
     typer.echo("# Completion script:")
     typer.echo("=" * 50)
@@ -996,14 +1089,20 @@ def completion(shell: str = typer.Argument(..., help="Shell type (bash, zsh)")):
 
 @app.command("c", hidden=True)
 def completion_alias_short(
-    shell: str = typer.Argument(..., help="Shell type (bash, zsh)"),
+    shell: str = typer.Argument(
+        ..., help="Shell type (bash, zsh, fish, powershell, pwsh)"
+    ),
 ):
     """Alias for 'completion' command."""
     return completion(shell)
 
 
 @app.command("comp", hidden=True)
-def completion_alias(shell: str = typer.Argument(..., help="Shell type (bash, zsh)")):
+def completion_alias(
+    shell: str = typer.Argument(
+        ..., help="Shell type (bash, zsh, fish, powershell, pwsh)"
+    )
+):
     """Alias for 'completion' command."""
     return completion(shell)
 

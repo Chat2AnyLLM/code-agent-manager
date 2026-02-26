@@ -583,9 +583,16 @@ class TestShortCompletionCommand:
                 main()
             assert exc_info.value.code == 0
 
-    def test_comp_invalid_shell(self):
-        """Test 'comp fish' with invalid shell."""
+    def test_comp_fish(self):
+        """Test 'comp fish' generates fish completion."""
         with patch("sys.argv", ["code-assistant-manager", "comp", "fish"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    def test_comp_invalid_shell(self):
+        """Test 'comp nushell' with invalid shell."""
+        with patch("sys.argv", ["code-assistant-manager", "comp", "nushell"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
@@ -615,9 +622,16 @@ class TestShortCompletionCAlias:
                 main()
             assert exc_info.value.code == 0
 
-    def test_c_invalid_shell(self):
-        """Test 'c fish' with invalid shell."""
+    def test_c_fish(self):
+        """Test 'c fish' generates fish completion."""
         with patch("sys.argv", ["code-assistant-manager", "c", "fish"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    def test_c_invalid_shell(self):
+        """Test 'c nushell' with invalid shell."""
+        with patch("sys.argv", ["code-assistant-manager", "c", "nushell"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1

@@ -862,7 +862,7 @@ class TestCompletionCommands:
 
     def test_completion_invalid_shell(self, runner):
         """Test completion with invalid shell."""
-        result = runner.invoke(app, ["completion", "fish"])
+        result = runner.invoke(app, ["completion", "nushell"])
         assert result.exit_code == 1
         assert "Unsupported shell" in result.output
 
