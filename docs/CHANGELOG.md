@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-02-26
+
 ### Added
 - **Fancy Name Generation**: ✨ Auto-generate creative prompt names like "Cosmic Coder" or "Quantum Assistant" when adding or importing prompts
 - **Enhanced Prompt Update Command**: New `cam prompt update` command with `--file` option to update prompt content, description, name, and default status
