@@ -32,16 +32,10 @@ def _get_skill_manager() -> SkillManager:
 @skill_app.command("list")
 def list_skills(
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help="App type(s) to check installed status (claude, codex, copilot, gemini, qwen, all)",
+        "claude", "--app", help="App type(s) to check installed status (claude, codex, copilot, gemini, qwen, all)",
     ),
     query: Optional[str] = typer.Option(
-        None,
-        "--query",
-        "-q",
-        help="Filter skills by repository name (e.g., 'BrownFineSecurity/iothackbot')",
+        None, "--query", help="Filter skills by repository name (e.g., 'BrownFineSecurity/iothackbot')",
     ),
 ):
     """List all skills."""
@@ -269,11 +263,11 @@ def show_skill(skill_key: str = typer.Argument(..., help="Skill identifier")):
 @skill_app.command("create")
 def create_skill(
     skill_key: str = typer.Argument(..., help="Unique identifier for the skill"),
-    name: str = typer.Option(..., "--name", "-n", help="Skill name"),
+    name: str = typer.Option(..., "--name", help="Skill name"),
     description: str = typer.Option(
-        ..., "--description", "-d", help="Skill description"
+        ..., "--description", help="Skill description"
     ),
-    directory: str = typer.Option(..., "--directory", "-dir", help="Skill directory"),
+    directory: str = typer.Option(..., "--directory", help="Skill directory"),
     repo_owner: Optional[str] = typer.Option(
         None, "--repo-owner", help="Repository owner"
     ),
@@ -313,12 +307,12 @@ def create_skill(
 @skill_app.command("update")
 def update_skill(
     skill_key: str = typer.Argument(..., help="Skill identifier"),
-    name: Optional[str] = typer.Option(None, "--name", "-n", help="New skill name"),
+    name: Optional[str] = typer.Option(None, "--name", help="New skill name"),
     description: Optional[str] = typer.Option(
-        None, "--description", "-d", help="New skill description"
+        None, "--description", help="New skill description"
     ),
     directory: Optional[str] = typer.Option(
-        None, "--directory", "-dir", help="New skill directory"
+        None, "--directory", help="New skill directory"
     ),
 ):
     """Update an existing skill."""
@@ -373,10 +367,7 @@ def delete_skill(
 def install_skill(
     skill_key: str = typer.Argument(..., help="Skill identifier"),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help="App type(s) to install to (claude, codex, gemini, qwen, all)",
+        "claude", "--app", help="App type(s) to install to (claude, codex, gemini, qwen, all)",
     ),
 ):
     """Install a skill to one or more app skills directories."""
@@ -401,10 +392,7 @@ def install_skill(
 def uninstall_skill(
     skill_key: str = typer.Argument(..., help="Skill identifier"),
     app_type: str = typer.Option(
-        "claude",
-        "--app",
-        "-a",
-        help="App type(s) to uninstall from (claude, codex, gemini, qwen, all)",
+        "claude", "--app", help="App type(s) to uninstall from (claude, codex, gemini, qwen, all)",
     ),
 ):
     """Uninstall a skill from one or more app skills directories."""
@@ -451,9 +439,9 @@ def list_repos():
 
 @skill_app.command("add-repo")
 def add_repo(
-    owner: str = typer.Option(..., "--owner", "-o", help="Repository owner"),
-    name: str = typer.Option(..., "--name", "-n", help="Repository name"),
-    branch: str = typer.Option("main", "--branch", "-b", help="Repository branch"),
+    owner: str = typer.Option(..., "--owner", help="Repository owner"),
+    name: str = typer.Option(..., "--name", help="Repository name"),
+    branch: str = typer.Option("main", "--branch", help="Repository branch"),
     skills_path: Optional[str] = typer.Option(
         None, "--skills-path", help="Skills subdirectory path"
     ),
@@ -478,8 +466,8 @@ def add_repo(
 
 @skill_app.command("remove-repo")
 def remove_repo(
-    owner: str = typer.Option(..., "--owner", "-o", help="Repository owner"),
-    name: str = typer.Option(..., "--name", "-n", help="Repository name"),
+    owner: str = typer.Option(..., "--owner", help="Repository owner"),
+    name: str = typer.Option(..., "--name", help="Repository name"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):
     """Remove a skill repository."""
@@ -498,7 +486,7 @@ def remove_repo(
 
 @skill_app.command("import")
 def import_skills(
-    file: Path = typer.Option(..., "--file", "-f", help="JSON file to import from")
+    file: Path = typer.Option(..., "--file", help="JSON file to import from")
 ):
     """Import skills from a JSON file."""
     manager = _get_skill_manager()
@@ -517,7 +505,7 @@ def import_skills(
 
 @skill_app.command("export")
 def export_skills(
-    file: Path = typer.Option(..., "--file", "-f", help="JSON file to export to")
+    file: Path = typer.Option(..., "--file", help="JSON file to export to")
 ):
     """Export skills to a JSON file."""
     manager = _get_skill_manager()
@@ -533,10 +521,7 @@ def export_skills(
 @skill_app.command("status")
 def skill_status(
     app_type: Optional[str] = typer.Option(
-        None,
-        "--app",
-        "-a",
-        help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
+        None, "--app", help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
     ),
 ):
     """Show skill installation status across apps (alias: installed)."""
@@ -546,10 +531,7 @@ def skill_status(
 @skill_app.command("installed")
 def list_installed_skills(
     app_type: Optional[str] = typer.Option(
-        None,
-        "--app",
-        "-a",
-        help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
+        None, "--app", help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
     ),
 ):
     """Show installed skills for each app."""
@@ -603,10 +585,7 @@ def list_installed_skills(
 @skill_app.command("uninstall-all")
 def uninstall_all_skills(
     app_type: str = typer.Option(
-        ...,
-        "--app",
-        "-a",
-        help="App type(s) to uninstall all skills from (claude, codex, gemini, qwen, all)",
+        ..., "--app", help="App type(s) to uninstall all skills from (claude, codex, gemini, qwen, all)",
     ),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):

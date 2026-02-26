@@ -154,8 +154,8 @@ def show_prompt(
 @prompt_app.command("add")
 def add_prompt(
     name: Optional[str] = typer.Argument(None, help="Name for the prompt (auto-generated if not provided)"),
-    description: Optional[str] = typer.Option(None, "--description", "-d", help="Description of the prompt"),
-    file: Optional[Path] = typer.Option(None, "--file", "-f", help="Read content from file"),
+    description: Optional[str] = typer.Option(None, "--description", help="Description of the prompt"),
+    file: Optional[Path] = typer.Option(None, "--file", help="Read content from file"),
     default: bool = typer.Option(False, "--default", help="Set as default prompt"),
 ):
     """Add a new prompt from file, stdin, or interactive input.
@@ -233,10 +233,10 @@ def add_prompt(
 @prompt_app.command("update")
 def update_prompt(
     name: str = typer.Argument(..., help="Name of the prompt to update"),
-    description: Optional[str] = typer.Option(None, "--description", "-d", help="Update the description"),
-    file: Optional[Path] = typer.Option(None, "--file", "-f", help="Read new content from file"),
-    new_name: Optional[str] = typer.Option(None, "--name", "-n", help="Rename the prompt"),
-    default: Optional[bool] = typer.Option(None, "--default/--no-default", help="Set or unset as default prompt"),
+    description: Optional[str] = typer.Option(None, "--description", help="Update the description"),
+    file: Optional[Path] = typer.Option(None, "--file", help="Read new content from file"),
+    new_name: Optional[str] = typer.Option(None, "--name", help="Rename the prompt"),
+    set_default: Optional[bool] = typer.Option(None, "--set-default", help="Set or unset as default prompt"),
 ):
     """Update a configured prompt's content, description, name, or default status.
 
@@ -285,11 +285,11 @@ def update_prompt(
         )
 
         # Handle default status change
-        if default is True:
+        if set_default is True:
             manager.clear_default()  # Clear any existing default
             manager.set_default(prompt.id)
             typer.echo(f"  Set as default prompt")
-        elif default is False and prompt.is_default:
+        elif set_default is False and prompt.is_default:
             manager.clear_default()
             typer.echo(f"  Unset as default prompt")
 
@@ -332,9 +332,9 @@ def remove_prompt(
 @prompt_app.command("import")
 def import_prompt(
     name: Optional[str] = typer.Argument(None, help="Name for the imported prompt (auto-generated if not provided)"),
-    app: str = typer.Option(..., "--app", "-a", help=f"App to import from ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
-    level: str = typer.Option("user", "--level", "-l", help="Level: user or project"),
-    project_dir: Optional[Path] = typer.Option(None, "--project-dir", "-d", help="Project directory (for project level)"),
+    app: str = typer.Option(..., "--app", help=f"App to import from ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
+    level: str = typer.Option("user", "--level", help="Level: user or project"),
+    project_dir: Optional[Path] = typer.Option(None, "--project-dir", help="Project directory (for project level)"),
     description: Optional[str] = typer.Option(None, "--description", help="Description of the prompt"),
 ):
     """Import a prompt from an app's live prompt file.
@@ -420,9 +420,9 @@ def import_prompt(
 @prompt_app.command("install")
 def install_prompt(
     name: str = typer.Argument(..., help="Prompt name to install"),
-    app: str = typer.Option(..., "--app", "-a", help=f"Target app ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
-    level: str = typer.Option("user", "--level", "-l", help="Level: user or project"),
-    project_dir: Optional[Path] = typer.Option(None, "--project-dir", "-d", help="Project directory (for project level)"),
+    app: str = typer.Option(..., "--app", help=f"Target app ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
+    level: str = typer.Option("user", "--level", help="Level: user or project"),
+    project_dir: Optional[Path] = typer.Option(None, "--project-dir", help="Project directory (for project level)"),
 ):
     """Install a prompt to an app's prompt file.
     
@@ -459,9 +459,9 @@ def install_prompt(
 
 @prompt_app.command("uninstall")
 def uninstall_prompt(
-    app: str = typer.Option(..., "--app", "-a", help=f"Target app ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
-    level: str = typer.Option("user", "--level", "-l", help="Level: user or project"),
-    project_dir: Optional[Path] = typer.Option(None, "--project-dir", "-d", help="Project directory (for project level)"),
+    app: str = typer.Option(..., "--app", help=f"Target app ({', '.join(VALID_APP_TYPES)}) - Note: opencode prompt = rules"),
+    level: str = typer.Option("user", "--level", help="Level: user or project"),
+    project_dir: Optional[Path] = typer.Option(None, "--project-dir", help="Project directory (for project level)"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):
     """Uninstall/clear the prompt file for an app.
@@ -504,7 +504,7 @@ def uninstall_prompt(
 
 @prompt_app.command("status")
 def status(
-    project_dir: Optional[Path] = typer.Option(None, "--project-dir", "-d", help="Project directory for project-level status"),
+    project_dir: Optional[Path] = typer.Option(None, "--project-dir", help="Project directory for project-level status"),
 ):
     """Show configured and installed prompts for all apps."""
     manager = _get_manager()

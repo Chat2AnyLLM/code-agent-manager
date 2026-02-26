@@ -1113,7 +1113,7 @@ def _create_lazy_tool_command(tool_name: str):
     def tool_command(
         ctx: Context,
         config: Optional[str] = typer.Option(
-            None, "--config", "-c", help="Path to settings.conf configuration file"
+            None, "--config", help="Path to settings.conf configuration file"
         ),
     ):
         """Launch the specified AI code editor."""
@@ -1217,10 +1217,7 @@ def _create_placeholder_commands():
             def placeholder_cmd(
                 ctx: Context,
                 config: Optional[str] = typer.Option(
-                    None,
-                    "--config",
-                    "-c",
-                    help="Path to settings.conf configuration file",
+                    None, "--config", help="Path to settings.conf configuration file",
                 ),
             ):
                 # Replace this placeholder with the real command
@@ -1255,7 +1252,7 @@ def create_editor_subcommands():
         def command(
             ctx: Context,
             config: Optional[str] = typer.Option(
-                None, "--config", "-c", help="Path to settings.conf configuration file"
+                None, "--config", help="Path to settings.conf configuration file"
             ),
         ):
             """Launch the specified AI code editor."""
@@ -1388,7 +1385,7 @@ def doctor(
     ctx: Context,
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
 ):
     """Run diagnostic checks on the code-assistant-manager installation (alias: d)"""
@@ -1452,7 +1449,7 @@ def upgrade_command(
         False, "--verbose", "-v", help="Enable verbose installer output"
     ),
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
 ):
     """Upgrade CLI tools (alias: u). If not installed, will install."""
@@ -1517,7 +1514,7 @@ def upgrade_alias_cmd(
     ctx: Context,
     target: str = typer.Argument("all", help="Tool to upgrade or 'all'"),
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
 ):
     """Alias for 'upgrade' command."""
@@ -1538,7 +1535,7 @@ def install_command(
         False, "--verbose", "-v", help="Enable verbose installer output"
     ),
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
 ):
     """Install CLI tools (alias: i). Same as upgrade - if not installed, will install. If installed, will try to upgrade."""
@@ -1556,7 +1553,7 @@ def install_alias_cmd(
     ctx: Context,
     target: str = typer.Argument("all", help="Tool to install or 'all'"),
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
 ):
     """Alias for 'install' command."""
@@ -1578,7 +1575,7 @@ def uninstall_command(
         False, "--keep-config", "-k", help="Keep configuration files"
     ),
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
 ):
     """Uninstall CLI tools and backup their configuration files."""
@@ -1603,7 +1600,7 @@ def uninstall_alias(
         False, "--keep-config", "-k", help="Keep configuration files"
     ),
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
 ):
     """Alias for 'uninstall' command."""
@@ -1636,7 +1633,7 @@ def doctor_alias(
     ctx: Context,
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
 ):
     """Alias for 'doctor' command."""
@@ -1652,7 +1649,7 @@ def doctor_alias(
 @config_app.command("validate")
 def validate_config(
     config: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to config file"
+        None, "--config", help="Path to config file"
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
 ):
@@ -1859,10 +1856,10 @@ def set_config(
     ),
     value: str = typer.Argument(..., help="Value to set"),
     app: str = typer.Option(
-        None, "-a", "--app", help="App/tool to operate on (claude, codex, droid, etc.)"
+        None, "--app", help="App/tool to operate on (claude, codex, droid, etc.)"
     ),
     scope: str = typer.Option(
-        "user", "--scope", "-s", help="Configuration scope (user, project)"
+        "user", "--scope", help="Configuration scope (user, project)"
     ),
 ):
     """Set a configuration value for code assistants.
@@ -1951,10 +1948,10 @@ def unset_config(
         ..., help="Configuration key path (e.g., 'model' or 'codex.model')"
     ),
     app: str = typer.Option(
-        None, "-a", "--app", help="App/tool to operate on (claude, codex, droid, etc.)"
+        None, "--app", help="App/tool to operate on (claude, codex, droid, etc.)"
     ),
     scope: str = typer.Option(
-        "user", "--scope", "-s", help="Configuration scope (user, project)"
+        "user", "--scope", help="Configuration scope (user, project)"
     ),
 ):
     """Unset a configuration value for code assistants.
@@ -2070,10 +2067,10 @@ def show_config(
         None, help="Specific config key path to show (optional)"
     ),
     app: str = typer.Option(
-        "claude", "-a", "--app", help="App to show config for (default: claude)"
+        "claude", "--app", help="App to show config for (default: claude)"
     ),
     scope: Optional[str] = typer.Option(
-        None, "--scope", "-s", help="Filter by scope (user, project)"
+        None, "--scope", help="Filter by scope (user, project)"
     ),
 ):
     """Show configuration for an AI editor app in dotted notation format.

@@ -3,9 +3,9 @@
 import typer
 
 # Module-level typer.Option constants to fix B008 linting errors
-CONFIG_FILE_OPTION = typer.Option(None, "--config", "-c", help="Path to config file")
+CONFIG_FILE_OPTION = typer.Option(None, "--config", help="Path to config file")
 CONFIG_OPTION = typer.Option(
-    None, "--config", "-c", help="Path to settings.conf configuration file"
+    None, "--config", help="Path to settings.conf configuration file"
 )
 DEBUG_OPTION = typer.Option(False, "--debug", "-d", help="Enable debug logging")
 ENDPOINTS_OPTION = typer.Option(
@@ -20,10 +20,7 @@ KEEP_CONFIG_OPTION = typer.Option(
 )
 SHELL_OPTION = typer.Argument(..., help="Shell type (bash, zsh)")
 SCOPE_OPTION = typer.Option(
-    "user",
-    "--scope",
-    "-s",
-    help="Configuration scope (user, project)",
+    "user", "--scope", help="Configuration scope (user, project)",
 )
 TARGET_OPTION = typer.Argument("all", help="Tool to upgrade or 'all'")
 TOOL_ARGS_OPTION = typer.Argument(None, help="Arguments for the editor")

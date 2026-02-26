@@ -27,29 +27,20 @@ AGENTS_PATH_OPTION = typer.Option(
 )
 AGENT_KEY_ARGUMENT = typer.Argument(..., help="Agent identifier")
 APP_TYPE_OPTION = typer.Option(
-    "claude",
-    "--app",
-    "-a",
-    help="App type(s) to install to (claude, codex, gemini, droid, codebuddy, opencode, all). Comma-separated.",
+    "claude", "--app", help="App type(s) to install to (claude, codex, gemini, droid, codebuddy, opencode, all). Comma-separated.",
 )
 FORCE_OPTION = typer.Option(False, "--force", "-f", help="Skip confirmation")
-OWNER_OPTION = typer.Option(..., "--owner", "-o", help="Repository owner")
-NAME_OPTION = typer.Option(..., "--name", "-n", help="Repository name")
-BRANCH_OPTION = typer.Option("main", "--branch", "-b", help="Repository branch")
+OWNER_OPTION = typer.Option(..., "--owner", help="Repository owner")
+NAME_OPTION = typer.Option(..., "--name", help="Repository name")
+BRANCH_OPTION = typer.Option("main", "--branch", help="Repository branch")
 AGENTS_PATH_OPTION_REPO = typer.Option(
     None, "--agents-path", help="Agents subdirectory path"
 )
 APP_TYPE_OPTION_ALL = typer.Option(
-    None,
-    "--app",
-    "-a",
-    help="App type(s) to show (claude, codex, gemini, droid, codebuddy, opencode, all). Default shows all.",
+    None, "--app", help="App type(s) to show (claude, codex, gemini, droid, codebuddy, opencode, all). Default shows all.",
 )
 APP_TYPE_OPTION_UNINSTALL = typer.Option(
-    ...,
-    "--app",
-    "-a",
-    help="App type(s) to uninstall all agents from (claude, codex, gemini, droid, codebuddy, opencode, all). Comma-separated.",
+    ..., "--app", help="App type(s) to uninstall all agents from (claude, codex, gemini, droid, codebuddy, opencode, all). Comma-separated.",
 )
 from code_assistant_manager.plugins.fetch import parse_github_url
 

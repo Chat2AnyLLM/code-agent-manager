@@ -54,7 +54,7 @@ def endpoints(
 @app.command()
 def status(
     client: Optional[str] = typer.Option(
-        None, "--client", "-c", help="Show status for specific client (or 'all')"
+        None, "--client", help="Show status for specific client (or 'all')"
     ),
 ):
     """Show MCP server installation status across clients."""

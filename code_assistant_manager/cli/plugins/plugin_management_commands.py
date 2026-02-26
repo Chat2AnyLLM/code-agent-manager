@@ -35,28 +35,16 @@ def list_plugins(
         help="Show all plugins from marketplaces (not just enabled). Deprecated: use without marketplace argument instead.",
     ),
     app_type: Optional[str] = typer.Option(
-        None,
-        "--app",
-        "-a",
-        help=f"App type to show plugins for ({', '.join(VALID_APP_TYPES)}). Shows all apps if not specified.",
+        None, "--app", help=f"App type to show plugins for ({', '.join(VALID_APP_TYPES)}). Shows all apps if not specified.",
     ),
     query: Optional[str] = typer.Option(
-        None,
-        "--query",
-        "-q",
-        help="Filter plugins by name or description",
+        None, "--query", help="Filter plugins by name or description",
     ),
     category: Optional[str] = typer.Option(
-        None,
-        "--category",
-        "-c",
-        help="Filter plugins by category",
+        None, "--category", help="Filter plugins by category",
     ),
     limit: int = typer.Option(
-        50,
-        "--limit",
-        "-n",
-        help="Maximum number of plugins to show",
+        50, "--limit", help="Maximum number of plugins to show",
     ),
 ):
     """List installed and available plugins from configured marketplaces.
@@ -428,17 +416,14 @@ def list_repos():
 
 @plugin_app.command("add-repo")
 def add_repo(
-    owner: str = typer.Option(..., "--owner", "-o", help="Repository owner"),
-    name: str = typer.Option(..., "--name", "-n", help="Repository name"),
-    branch: str = typer.Option("main", "--branch", "-b", help="Repository branch"),
+    owner: str = typer.Option(..., "--owner", help="Repository owner"),
+    name: str = typer.Option(..., "--name", help="Repository name"),
+    branch: str = typer.Option("main", "--branch", help="Repository branch"),
     description: Optional[str] = typer.Option(
-        None, "--description", "-d", help="Repository description"
+        None, "--description", help="Repository description"
     ),
     repo_type: str = typer.Option(
-        "marketplace",
-        "--type",
-        "-t",
-        help="Repository type (plugin or marketplace)",
+        "marketplace", "--type", help="Repository type (plugin or marketplace)",
     ),
     plugin_path: Optional[str] = typer.Option(
         None, "--plugin-path", help="Plugin path within the repository"
