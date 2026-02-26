@@ -192,8 +192,28 @@ class TestDroidTool:
         models = tool._build_models_json(entries)
         assert len(models) == 2
         assert models[0]["model"] == "model1"
-        assert models[0]["base_url"] == "https://api.com"
-        assert models[1]["max_tokens"] == 65536
+        assert models[0]["baseUrl"] == "https://api.com"
+        assert models[1]["maxOutputTokens"] == 65536
+
+    @patch.dict(os.environ, {"CODE_ASSISTANT_MANAGER_NONINTERACTIVE": "1"})
+    def test_droid_process_endpoint_prefers_api_key_env_reference(self, config_manager):
+        """Test Droid entries use ${API_KEY_ENV} in settings.json-compatible output when available."""
+        tool = DroidTool(config_manager)
+        tool.endpoint_manager = MagicMock()
+        tool.endpoint_manager.get_endpoint_config.return_value = (
+            True,
+            {
+                "endpoint": "https://api.example.com",
+                "actual_api_key": "raw-key",
+                "api_key_env": "FACTORY_TEST_KEY",
+            },
+        )
+        tool.endpoint_manager.fetch_models.return_value = (True, ["model1"])
+
+        entries = tool._process_endpoint("endpoint1")
+        assert entries is not None
+        assert len(entries) == 1
+        assert "${FACTORY_TEST_KEY}" in entries[0]
 
     @patch("code_assistant_manager.tools.subprocess.run")
     @patch("code_assistant_manager.tools.select_model")

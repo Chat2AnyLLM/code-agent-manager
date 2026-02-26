@@ -72,21 +72,25 @@ class DroidTool(CLITool):
                 return None
 
         # Build entries for each selected model
+        api_key_env = str(endpoint_config.get("api_key_env", "")).strip()
+        api_key_value = (
+            f"${{{api_key_env}}}" if api_key_env else endpoint_config["actual_api_key"]
+        )
         entries = []
         for model in selected_models:
             display_name = f"{model} [{endpoint_name}]"
-            entry = f"{display_name}|{endpoint_config['endpoint']}|{endpoint_config['actual_api_key']}|generic-chat-completion-api|65536"
+            entry = f"{display_name}|{endpoint_config['endpoint']}|{api_key_value}|generic-chat-completion-api|65536"
             entries.append(entry)
 
         return entries
 
     def _write_droid_settings(self, selected_entries: List[str]) -> Path:
-        """Persist Droid custom models to ~/.factory/config.json."""
+        """Persist Droid custom models to ~/.factory/settings.json."""
         config_dir = Path.home() / ".factory"
-        config_file = config_dir / "config.json"
+        config_file = config_dir / "settings.json"
         config_dir.mkdir(parents=True, exist_ok=True)
 
-        # Preserve existing settings (plugins, etc) and only update custom_models.
+        # Preserve existing settings (plugins, etc) and only update customModels.
         settings: dict = {}
         if config_file.exists():
             try:
@@ -98,7 +102,7 @@ class DroidTool(CLITool):
         json_models = self._build_models_json(selected_entries)
 
         # Canonical location for Droid BYOK custom models.
-        settings["custom_models"] = json_models
+        settings["customModels"] = json_models
 
         with open(config_file, "w", encoding="utf-8") as f:
             json.dump(settings, f, indent=2)
@@ -131,7 +135,7 @@ class DroidTool(CLITool):
         - Loads environment variables
         - Ensures required commands are available
         - Aggregates selected models from configured endpoints
-        - Writes custom_models to ~/.factory/config.json and runs the `droid` CLI
+        - Writes customModels to ~/.factory/settings.json and runs the `droid` CLI
 
         Args:
             args: List of arguments to pass to the Droid CLI
@@ -178,7 +182,7 @@ class DroidTool(CLITool):
 
         print(f"Total models selected: {len(selected_entries)}\n")
 
-        # Persist Droid custom models to ~/.factory/config.json
+        # Persist Droid custom models to ~/.factory/settings.json
         settings_file = self._write_droid_settings(selected_entries)
         print(f"Droid settings written to {settings_file}\n")
 
@@ -201,13 +205,13 @@ class DroidTool(CLITool):
         return self._run_tool_with_env(command, env, "droid", interactive=True)
 
     def _build_models_json(self, entries: List[str]) -> List[dict]:
-        """Build models JSON from pipe-delimited entries (compat with legacy implementation)."""
+        """Build models JSON from pipe-delimited entries for Droid settings.json."""
         models: List[dict] = []
         for entry in entries:
             parts = entry.split("|")
             if len(parts) < 5:
                 continue
-            display, base_url, api_key, _provider, max_tokens = parts[:5]
+            display, base_url, api_key, provider, max_tokens = parts[:5]
             model_id = display.split("[")[0].strip()
             try:
                 max_tokens_val = int(max_tokens)
@@ -215,12 +219,12 @@ class DroidTool(CLITool):
                 max_tokens_val = 0
             models.append(
                 {
-                    "model_display_name": display,
+                    "displayName": display,
                     "model": model_id,
-                    "base_url": base_url,
-                    "api_key": api_key,
-                    "provider": "generic-chat-completion-api",
-                    "max_tokens": max_tokens_val,
+                    "baseUrl": base_url,
+                    "apiKey": api_key,
+                    "provider": provider or "generic-chat-completion-api",
+                    "maxOutputTokens": max_tokens_val,
                 }
             )
         return models

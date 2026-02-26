@@ -40,7 +40,7 @@ The Code Assistant Manager Python package now has complete implementations for a
 - Optional upgrade to latest version
 - Multi-endpoint model configuration
 - Generates ~/.factory/settings.json with selected models
-- JSON format: custom_models array with model display names, base URLs, API keys, providers, max tokens
+- JSON format: customModels array with displayName, model, baseUrl, apiKey, provider, maxOutputTokens
 - Per-endpoint model selection (with skip option)
 
 #### 6. **CopilotTool** ✅
