@@ -15,25 +15,29 @@ Tired of juggling multiple AI coding assistants? **CAM** is a unified Python CLI
 
 ## Installation
 
-Choose your preferred installation method:
-
 ### Quick Install (Recommended)
 
+Since CAM is not yet published to PyPI, install it locally:
+
 ```bash
-# Install via pip (Python 3.9+)
-pip install code-assistant-manager
+# Clone the repository
+git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
+cd code-assistant-manager
+
+# Run the install script
+./install.sh
 ```
 
 ### Alternative Methods
 
 ```bash
-# Install using the install script
+# Install using the install script directly
 ./install.sh
 
-# Or install directly from the web
+# Or install from the web
 curl -fsSL https://raw.githubusercontent.com/Chat2AnyLLM/code-assistant-manager/main/install.sh | bash
 
-# Install from source
+# Install from source directly
 git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
 cd code-assistant-manager
 pip install -e ".[dev]"
