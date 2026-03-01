@@ -62,12 +62,18 @@ pip install -e ".[dev]"
    GEMINI_API_KEY="your-gemini-key"
    ```
 
-3. **Launch the interactive menu:**
+3. **Source the environment file and verify setup:**
+   ```bash
+   source ~/.env
+   cam doctor
+   ```
+
+4. **Launch the interactive menu:**
    ```bash
    cam launch
    ```
 
-4. **Select your assistant and start coding!**
+5. **Select your assistant and start coding!**
 
 ### Configuration files
 
