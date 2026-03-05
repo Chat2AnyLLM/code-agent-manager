@@ -22,6 +22,7 @@ from code_assistant_manager.skills.codex import CodexSkillHandler
 from code_assistant_manager.skills.copilot import CopilotSkillHandler
 from code_assistant_manager.skills.droid import DroidSkillHandler
 from code_assistant_manager.skills.gemini import GeminiSkillHandler
+from code_assistant_manager.skills.pi_coding_agent import PiCodingAgentSkillHandler
 from code_assistant_manager.skills.models import Skill
 
 
@@ -154,6 +155,21 @@ class TestDroidSkillHandler:
         assert handler._default_skills_dir == expected_path
 
 
+class TestPiCodingAgentSkillHandler:
+    """Tests for PiCodingAgentSkillHandler."""
+
+    def test_app_name(self):
+        """Test that app_name returns 'pi-coding-agent'."""
+        handler = PiCodingAgentSkillHandler()
+        assert handler.app_name == "pi-coding-agent"
+
+    def test_default_skills_dir(self):
+        """Test that _default_skills_dir returns the correct path."""
+        handler = PiCodingAgentSkillHandler()
+        expected_path = Path.home() / ".pi" / "agent" / "skills"
+        assert handler._default_skills_dir == expected_path
+
+
 class TestSkillInstallation:
     """Tests for skill installation functionality."""
 
@@ -248,6 +264,7 @@ class TestHandlerRegistry:
             CodexSkillHandler(),
             GeminiSkillHandler(),
             DroidSkillHandler(),
+            PiCodingAgentSkillHandler(),
         ]
 
         app_names = [h.app_name for h in handlers]
@@ -262,6 +279,7 @@ class TestHandlerRegistry:
             CodexSkillHandler(),
             GeminiSkillHandler(),
             DroidSkillHandler(),
+            PiCodingAgentSkillHandler(),
         ]
 
         default_dirs = [h._default_skills_dir for h in handlers]

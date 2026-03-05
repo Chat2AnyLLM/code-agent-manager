@@ -436,3 +436,41 @@ tools:
     filesystem:
       touched:
         - "~/.config/aichat/config.yaml (AIChat configuration file)"
+
+  pi-coding-agent:
+    enabled: true
+    install_cmd: npm install -g @mariozechner/pi-coding-agent
+    cli_command: pi
+    description: "Pi Coding Agent"
+    env:
+      managed:
+        NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    configuration:
+      required:
+        defaultProvider: "LLM provider name (e.g., 'anthropic')"
+        defaultModel: "Model ID to use (e.g., 'claude-sonnet-4-20250514')"
+      optional:
+        defaultThinkingLevel: "Valid values: off, minimal, low, medium, high, xhigh"
+        hideThinkingBlock: "Hide thinking blocks from output (boolean)"
+        theme: "UI theme (default: dark)"
+        quietStartup: "Skip startup messages (boolean)"
+        enableSkillCommands: "Enable interactive skill commands (boolean, default: true)"
+        steeringMode: "Message delivery mode (one-at-a-time or all)"
+        transport: "Message transport (sse, websocket, or auto)"
+      notes:
+        - "Settings are stored at ~/.pi/agent/settings.json (global) and .pi/settings.json (project)"
+        - "Project settings override global settings via JSON merging"
+        - "Skills are loaded from: ~/.pi/agent/skills/, ~/.agents/skills/, .pi/skills/, .agents/skills/"
+        - "Custom skill paths can be added to the 'skills' array in settings.json"
+        - "Use --no-skills to disable automatic skill discovery at startup"
+        - "Use --skill <path> to explicitly load specific skills"
+    cli_parameters:
+      injected: []
+    filesystem:
+      touched:
+        - "~/.pi/agent/settings.json (Global Pi configuration)"
+        - ".pi/settings.json (Project-level Pi configuration)"
+        - "~/.pi/agent/skills/ (Global skills directory)"
+        - "~/.agents/skills/ (Alternative global skills directory)"
+        - ".pi/skills/ (Project skills directory)"
+        - ".agents/skills/ (Alternative project skills directory)"

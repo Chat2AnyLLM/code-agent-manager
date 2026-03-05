@@ -19,7 +19,7 @@ from code_assistant_manager.skills import (
 logger = logging.getLogger(__name__)
 
 skill_app = typer.Typer(
-    help="Manage skills for AI assistants (Claude, Codex, Copilot, Gemini, Droid, CodeBuddy, Qwen)",
+    help="Manage skills for AI assistants (Claude, Codex, Copilot, Gemini, Droid, CodeBuddy, Qwen, Pi Coding Agent)",
     no_args_is_help=True,
 )
 
@@ -32,7 +32,7 @@ def _get_skill_manager() -> SkillManager:
 @skill_app.command("list")
 def list_skills(
     app_type: str = typer.Option(
-        "claude", "--app", help="App type(s) to check installed status (claude, codex, copilot, gemini, qwen, all)",
+        "claude", "--app", help="App type(s) to check installed status (claude, codex, copilot, gemini, droid, codebuddy, qwen, pi-coding-agent, all)",
     ),
     query: Optional[str] = typer.Option(
         None, "--query", help="Filter skills by repository name (e.g., 'BrownFineSecurity/iothackbot')",
@@ -367,7 +367,7 @@ def delete_skill(
 def install_skill(
     skill_key: str = typer.Argument(..., help="Skill identifier"),
     app_type: str = typer.Option(
-        "claude", "--app", help="App type(s) to install to (claude, codex, gemini, qwen, all)",
+        "claude", "--app", help="App type(s) to install to (claude, codex, copilot, gemini, droid, codebuddy, qwen, pi-coding-agent, all)",
     ),
 ):
     """Install a skill to one or more app skills directories."""
@@ -392,7 +392,7 @@ def install_skill(
 def uninstall_skill(
     skill_key: str = typer.Argument(..., help="Skill identifier"),
     app_type: str = typer.Option(
-        "claude", "--app", help="App type(s) to uninstall from (claude, codex, gemini, qwen, all)",
+        "claude", "--app", help="App type(s) to uninstall from (claude, codex, copilot, gemini, droid, codebuddy, qwen, pi-coding-agent, all)",
     ),
 ):
     """Uninstall a skill from one or more app skills directories."""
@@ -521,7 +521,7 @@ def export_skills(
 @skill_app.command("status")
 def skill_status(
     app_type: Optional[str] = typer.Option(
-        None, "--app", help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
+        None, "--app", help="App type(s) to show (claude, codex, copilot, gemini, droid, codebuddy, qwen, pi-coding-agent, all). Default shows all.",
     ),
 ):
     """Show skill installation status across apps (alias: installed)."""
@@ -531,7 +531,7 @@ def skill_status(
 @skill_app.command("installed")
 def list_installed_skills(
     app_type: Optional[str] = typer.Option(
-        None, "--app", help="App type(s) to show (claude, codex, gemini, qwen, all). Default shows all.",
+        None, "--app", help="App type(s) to show (claude, codex, copilot, gemini, droid, codebuddy, qwen, pi-coding-agent, all). Default shows all.",
     ),
 ):
     """Show installed skills for each app."""
@@ -585,7 +585,7 @@ def list_installed_skills(
 @skill_app.command("uninstall-all")
 def uninstall_all_skills(
     app_type: str = typer.Option(
-        ..., "--app", help="App type(s) to uninstall all skills from (claude, codex, gemini, qwen, all)",
+        ..., "--app", help="App type(s) to uninstall all skills from (claude, codex, copilot, gemini, droid, codebuddy, qwen, pi-coding-agent, all)",
     ),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):

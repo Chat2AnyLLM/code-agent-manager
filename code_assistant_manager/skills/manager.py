@@ -18,6 +18,7 @@ from .codex import CodexSkillHandler
 from .copilot import CopilotSkillHandler
 from .droid import DroidSkillHandler
 from .gemini import GeminiSkillHandler
+from .pi_coding_agent import PiCodingAgentSkillHandler
 from .qwen import QwenSkillHandler
 from .models import Skill, SkillRepo
 
@@ -98,6 +99,7 @@ SKILL_HANDLERS: Dict[str, Type[BaseSkillHandler]] = {
     "gemini": GeminiSkillHandler,
     "droid": DroidSkillHandler,
     "codebuddy": CodebuddySkillHandler,
+    "pi-coding-agent": PiCodingAgentSkillHandler,
     "qwen": QwenSkillHandler,
 }
 

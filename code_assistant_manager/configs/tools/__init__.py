@@ -17,6 +17,7 @@ from .neovate import NeovateConfig
 from .qoder import QoderConfig
 from .zed import ZedConfig
 from .opencode import OpenCodeConfig
+from .pi_coding_agent import PiCodingAgentConfig
 
 # Registry
 _CONFIG_CLASSES: Dict[str, Type[BaseToolConfig]] = {
@@ -34,6 +35,7 @@ _CONFIG_CLASSES: Dict[str, Type[BaseToolConfig]] = {
     "qodercli": QoderConfig,
     "zed": ZedConfig,
     "opencode": OpenCodeConfig,
+    "pi-coding-agent": PiCodingAgentConfig,
 }
 
 

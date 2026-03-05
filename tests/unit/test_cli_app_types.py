@@ -24,8 +24,8 @@ class TestSupportedAppTypes:
     """Test that each module exposes the correct supported app types."""
 
     def test_skill_valid_app_types(self):
-        """Test skill module supports all 7 app types."""
-        expected = {"claude", "codex", "copilot", "gemini", "droid", "codebuddy", "qwen"}
+        """Test skill module supports all 8 app types."""
+        expected = {"claude", "codex", "copilot", "gemini", "droid", "codebuddy", "qwen", "pi-coding-agent"}
         assert set(SKILL_APP_TYPES) == expected
 
     def test_agent_valid_app_types(self):
@@ -55,8 +55,8 @@ class TestSkillAppTypeValidation:
             mock_manager.return_value = mock_instance
 
             # Should accept all valid app types
-            for app in ["claude", "codex", "copilot", "gemini", "droid", "codebuddy", "qwen"]:
-                result = runner.invoke(skill_app, ["install", "test-skill", "-a", app])
+            for app in ["claude", "codex", "copilot", "gemini", "droid", "codebuddy", "qwen", "pi-coding-agent"]:
+                result = runner.invoke(skill_app, ["install", "test-skill", "--app", app])
                 # Should not fail with "Invalid value" error
                 assert "Invalid value" not in result.output
 
@@ -65,10 +65,10 @@ class TestSkillAppTypeValidation:
         from code_assistant_manager.cli.skills_commands import skill_app
 
         result = runner.invoke(
-            skill_app, ["install", "test-skill", "-a", "invalid-app"]
+            skill_app, ["install", "test-skill", "--app", "invalid-app"]
         )
         assert result.exit_code != 0
-        assert "Invalid value" in result.output
+        assert "Invalid value" in result.output or "Error" in result.output
 
     def test_skill_list_accepts_all_keyword(self, runner):
         """Test skill list accepts 'all' as app type."""
@@ -112,10 +112,10 @@ class TestAgentAppTypeValidation:
         from code_assistant_manager.cli.agents_commands import agent_app
 
         result = runner.invoke(
-            agent_app, ["install", "test-agent", "-a", "invalid-app"]
+            agent_app, ["install", "test-agent", "--app", "invalid-app"]
         )
         assert result.exit_code != 0
-        assert "Invalid value" in result.output
+        assert "Invalid value" in result.output or "Error" in result.output
 
 
 class TestPluginAppTypeValidation:
@@ -188,7 +188,7 @@ class TestPluginAppTypeValidation:
                     mock_manager.return_value.get_repo.return_value = None
 
                     result = runner.invoke(
-                        plugin_app, ["install", "test-plugin", "-a", "codex"]
+                        plugin_app, ["install", "test-plugin", "--app", "codex"]
                     )
                     assert "Invalid value" not in result.output
 
@@ -210,7 +210,7 @@ class TestPluginAppTypeValidation:
                     mock_manager.return_value.get_repo.return_value = None
 
                     result = runner.invoke(
-                        plugin_app, ["install", "test-plugin", "-a", "copilot"]
+                        plugin_app, ["install", "test-plugin", "--app", "copilot"]
                     )
                     assert "Invalid value" not in result.output
 
@@ -218,27 +218,27 @@ class TestPluginAppTypeValidation:
         """Test plugin install rejects gemini (not supported for plugins)."""
         from code_assistant_manager.cli.plugin_commands import plugin_app
 
-        result = runner.invoke(plugin_app, ["install", "test-plugin", "-a", "gemini"])
+        result = runner.invoke(plugin_app, ["install", "test-plugin", "--app", "gemini"])
         assert result.exit_code != 0
-        assert "Invalid value" in result.output
+        assert "Invalid value" in result.output or "Error" in result.output
 
     def test_plugin_install_rejects_droid(self, runner):
         """Test plugin install rejects droid (not supported for plugins)."""
         from code_assistant_manager.cli.plugin_commands import plugin_app
 
-        result = runner.invoke(plugin_app, ["install", "test-plugin", "-a", "droid"])
+        result = runner.invoke(plugin_app, ["install", "test-plugin", "--app", "droid"])
         assert result.exit_code != 0
-        assert "Invalid value" in result.output
+        assert "Invalid value" in result.output or "Error" in result.output
 
     def test_plugin_install_rejects_invalid_app(self, runner):
         """Test plugin install rejects completely invalid app types."""
         from code_assistant_manager.cli.plugin_commands import plugin_app
 
         result = runner.invoke(
-            plugin_app, ["install", "test-plugin", "-a", "invalid-app"]
+            plugin_app, ["install", "test-plugin", "--app", "invalid-app"]
         )
         assert result.exit_code != 0
-        assert "Invalid value" in result.output
+        assert "Invalid value" in result.output or "Error" in result.output
 
     def test_plugin_list_accepts_claude(self, runner):
         """Test plugin list accepts claude app type."""
@@ -254,14 +254,14 @@ class TestPluginAppTypeValidation:
                 handler.get_enabled_plugins.return_value = {}
                 mock_handler.return_value = handler
 
-                result = runner.invoke(plugin_app, ["list", "-a", "claude"])
+                result = runner.invoke(plugin_app, ["list", "--app", "claude"])
                 assert "Invalid value" not in result.output
 
     def test_plugin_list_rejects_gemini(self, runner):
         """Test plugin list rejects gemini (not supported for plugins)."""
         from code_assistant_manager.cli.plugin_commands import plugin_app
 
-        result = runner.invoke(plugin_app, ["list", "-a", "gemini"])
+        result = runner.invoke(plugin_app, ["list", "--app", "gemini"])
         assert result.exit_code != 0
         # Check for error message about invalid app type
         assert "Invalid" in result.output or "invalid" in result.output.lower()

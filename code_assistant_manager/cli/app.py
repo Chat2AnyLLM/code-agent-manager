@@ -5,6 +5,14 @@ from typing import List, Optional
 import typer
 from typer import Context
 
+# Import get_registered_tools and ConfigManager at module level for dynamic command creation
+from code_assistant_manager.tools import (
+    get_registered_tools,
+    display_all_tool_endpoints,
+    display_tool_endpoints,
+)
+from code_assistant_manager.config import ConfigManager
+
 try:
     import tomllib
 except ImportError:
@@ -1425,6 +1433,10 @@ config_app = typer.Typer(
 # Add the editor app as a subcommand to the main app
 app.add_typer(editor_app, name="launch")
 app.add_typer(editor_app, name="l", hidden=True)
+
+# Create dynamic editor subcommands for each registered tool
+create_editor_subcommands()
+
 # Add the config app as a subcommand to the main app
 app.add_typer(config_app, name="config")
 app.add_typer(config_app, name="cf", hidden=True)
