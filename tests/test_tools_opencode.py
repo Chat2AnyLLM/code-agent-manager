@@ -192,3 +192,60 @@ class TestOpenCodeTool:
 
                 result = tool.run([])
                 assert result == 0
+
+    def test_write_opencode_config_appends_existing(self, opencode_config):
+        """Test that _write_opencode_config merges into existing config instead of overwriting."""
+        config = ConfigManager(opencode_config)
+        tool = OpenCodeTool(config)
+
+        existing_config = {
+            "$schema": "https://opencode.ai/config.json",
+            "model": "old-provider/old-model",
+            "provider": {
+                "old-provider": {
+                    "npm": "@ai-sdk/openai-compatible",
+                    "name": "Old Provider",
+                    "options": {"baseURL": "https://old.example.com/v1"},
+                    "models": {
+                        "old-model": {
+                            "name": "old-model",
+                            "limit": {"context": 128000, "output": 4096}
+                        }
+                    }
+                }
+            },
+            "mcp": {"my-server": {"command": "npx my-mcp-server"}},
+            "theme": "dark",
+        }
+
+        with patch("pathlib.Path.home") as mock_home:
+            tmp_config_dir = Path(tempfile.mkdtemp())
+            opencode_dir = tmp_config_dir / ".config" / "opencode"
+            opencode_dir.mkdir(parents=True)
+            config_file = opencode_dir / "opencode.json"
+            config_file.write_text(json.dumps(existing_config), encoding="utf-8")
+            mock_home.return_value = tmp_config_dir
+
+            selected_models = {"test-provider": ["gpt-4"]}
+
+            with patch.object(tool.endpoint_manager, "get_endpoint_config") as mock_get_config:
+                mock_get_config.return_value = (True, {
+                    "endpoint": "https://api.test.com/v1",
+                    "description": "Test Provider",
+                    "api_key": "test-key"
+                })
+
+                result_file = tool._write_opencode_config(selected_models)
+                written = json.loads(result_file.read_text(encoding="utf-8"))
+
+            # Existing provider must still be present
+            assert "old-provider" in written["provider"]
+            assert "old-model" in written["provider"]["old-provider"]["models"]
+
+            # New provider must be added
+            assert "test-provider" in written["provider"]
+            assert "gpt-4" in written["provider"]["test-provider"]["models"]
+
+            # MCP and other top-level keys must be preserved
+            assert written["mcp"] == {"my-server": {"command": "npx my-mcp-server"}}
+            assert written.get("theme") == "dark"
