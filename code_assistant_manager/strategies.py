@@ -71,6 +71,11 @@ class ClaudeEnvironmentStrategy(EnvironmentStrategy):
         endpoint_config = context.endpoint_config
         env["ANTHROPIC_BASE_URL"] = str(endpoint_config.url)
         env["ANTHROPIC_AUTH_TOKEN"] = endpoint_config.get_api_key_value() or ""
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = (
+            os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+            or endpoint_config.get_api_key_value()
+            or ""
+        )
         env["ANTHROPIC_MODEL"] = str(primary_model)
         env["ANTHROPIC_SMALL_FAST_MODEL"] = str(secondary_model)
         env["CLAUDE_MODEL_2"] = str(secondary_model)

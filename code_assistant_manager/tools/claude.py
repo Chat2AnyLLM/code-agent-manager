@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import List
 
 from .base import CLITool
@@ -47,6 +48,11 @@ class ClaudeTool(CLITool):
                 ToolEnvironmentBuilder(endpoint_config, model_vars)
                 .set_base_url("ANTHROPIC_BASE_URL")
                 .set_api_key("ANTHROPIC_AUTH_TOKEN")
+                .set_custom_var(
+                    "CLAUDE_CODE_OAUTH_TOKEN",
+                    os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+                    or endpoint_config.get("actual_api_key", ""),
+                )
                 .set_model("ANTHROPIC_MODEL", "primary_model")
                 .set_model("ANTHROPIC_SMALL_FAST_MODEL", "secondary_model")
                 .set_model("CLAUDE_MODEL_2", "secondary_model")
@@ -71,6 +77,7 @@ class ClaudeTool(CLITool):
             print(
                 f"ANTHROPIC_BASE_URL={env['ANTHROPIC_BASE_URL']} "
                 f"ANTHROPIC_AUTH_TOKEN=dummy "
+                f"CLAUDE_CODE_OAUTH_TOKEN=*** "
                 f"ANTHROPIC_MODEL={primary_model} "
                 f"ANTHROPIC_DEFAULT_SONNET_MODEL={primary_model} "
                 f"ANTHROPIC_SMALL_FAST_MODEL={secondary_model} "

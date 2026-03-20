@@ -446,8 +446,41 @@ class TestToolEnvironmentVariables:
         env_used = mock_run.call_args[1]["env"]
         assert env_used["ANTHROPIC_BASE_URL"] == "https://api.example.com"
         assert env_used["ANTHROPIC_AUTH_TOKEN"] == "key123"
+        assert env_used["CLAUDE_CODE_OAUTH_TOKEN"] == "key123"
         assert env_used["ANTHROPIC_MODEL"] == "claude-3"
         assert env_used["NODE_TLS_REJECT_UNAUTHORIZED"] == "0"
+
+    @patch("code_assistant_manager.tools.subprocess.run")
+    @patch("code_assistant_manager.tools.select_two_models")
+    @patch.object(ClaudeTool, "_ensure_tool_installed", return_value=True)
+    @patch("code_assistant_manager.tools.EndpointManager")
+    @patch.dict(
+        os.environ,
+        {
+            "CODE_ASSISTANT_MANAGER_NONINTERACTIVE": "1",
+            "CLAUDE_CODE_OAUTH_TOKEN": "oauth-token-from-env",
+        },
+    )
+    def test_claude_environment_prefers_existing_oauth_token(
+        self, mock_em_class, mock_install, mock_select, mock_run, config_manager
+    ):
+        """Test Claude uses an existing OAuth token from the environment."""
+        mock_em = MagicMock()
+        mock_em_class.return_value = mock_em
+
+        mock_em.select_endpoint.return_value = (True, "endpoint1")
+        mock_em.get_endpoint_config.return_value = (
+            True,
+            {"endpoint": "https://api.example.com", "actual_api_key": "key123"},
+        )
+        mock_em.fetch_models.return_value = (True, ["claude-3"])
+        mock_select.return_value = (True, ("claude-3", "claude-2"))
+
+        tool = ClaudeTool(config_manager)
+        tool.run([])
+
+        env_used = mock_run.call_args[1]["env"]
+        assert env_used["CLAUDE_CODE_OAUTH_TOKEN"] == "oauth-token-from-env"
 
 
 class TestToolErrorHandling:
