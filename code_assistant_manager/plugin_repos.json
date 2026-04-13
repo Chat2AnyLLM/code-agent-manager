@@ -101,5 +101,14 @@
     "repoOwner": "thedotmack",
     "repoName": "claude-mem",
     "repoBranch": "main"
+  },
+  "studiomeyer-marketplace": {
+    "name": "studiomeyer-marketplace",
+    "description": "StudioMeyer MCP Suite for Claude Code \u2014 4 hosted plugins (Memory, CRM, GEO, Crew). 119 MCP tools, 21 slash commands, 5 skills, 3 subagents. Magic Link auth, EU Frankfurt. Free tier.",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "studiomeyer-io",
+    "repoName": "studiomeyer-marketplace",
+    "repoBranch": "main"
   }
 }
