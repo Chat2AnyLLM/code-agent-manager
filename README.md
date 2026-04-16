@@ -28,6 +28,20 @@ cd code-assistant-manager
 ./install.sh
 ```
 
+Or use pipx (Works on MacOS)
+
+```bash                                                                                                                                                  
+  # Install pipx if not present                                                                                                                                          
+  brew install pipx                                               
+                                                                                                                                                                         
+  # Clone the repository                                          
+  git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
+  cd code-assistant-manager                                          
+                                                                                                                                                                         
+  # Install using pipx
+  pipx install . 
+```
+
 ### Alternative Methods
 
 ```bash
