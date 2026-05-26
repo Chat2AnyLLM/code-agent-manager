@@ -1,4 +1,13 @@
 {
+  "armoriq": {
+    "name": "armoriq",
+    "description": "ArmorIQ intent-based security enforcement for Claude Code: declared intent plans, natural-language policy rules, intent-drift blocking, optional CSRG cryptographic proofs, and central audit logging. Same model also ships for OpenAI Codex and GitHub Copilot CLI under the ArmorIQ marketplace.",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "armoriq",
+    "repoName": "armorClaude",
+    "repoBranch": "main"
+  },
   "compounding-engineering": {
     "name": "compounding-engineering",
     "description": "A Claude Code plugin for compounding engineering practices",
