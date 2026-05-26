@@ -110,5 +110,14 @@
     "repoOwner": "studiomeyer-io",
     "repoName": "studiomeyer-marketplace",
     "repoBranch": "main"
+  },
+  "align": {
+    "name": "align",
+    "description": "Personal evals for Claude Code and Cowork: per-claim human grading of LLM outputs, archived as markdown corrections.",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "ggrigo",
+    "repoName": "align",
+    "repoBranch": "main"
   }
 }
