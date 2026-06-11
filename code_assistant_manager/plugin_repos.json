@@ -110,5 +110,14 @@
     "repoOwner": "studiomeyer-io",
     "repoName": "studiomeyer-marketplace",
     "repoBranch": "main"
+  },
+  "compass": {
+    "name": "compass",
+    "description": "Eval-gated guardrails, red-team layer, cost-tier router, and SLSA-signed releases for Claude Code",
+    "enabled": true,
+    "type": "marketplace",
+    "repoOwner": "dshakes",
+    "repoName": "compass",
+    "repoBranch": "main"
   }
 }
