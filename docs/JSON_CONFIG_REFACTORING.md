@@ -60,7 +60,7 @@ Old `.conf` files are no longer used. Users should:
 
 The system automatically looks for files in this order:
 1. `providers.json` (in project directory)
-2. `~/.config/code-assistant-manager/providers.json`
+2. `~/.config/code-agent-manager/providers.json`
 3. `code_assistant_manager/providers.json` (fallback)
 
 ## Next Steps

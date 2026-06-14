@@ -52,7 +52,7 @@ class TestGetConfigLocations:
             Path("/home/user/.config/Google/Gemini/mcp.json"),
             Path("/home/user/.gemini/mcp.json"),
             Path("/home/user/.gemini/settings.json"),
-            Path("/home/jzhu/code-assistant-manager/.gemini/settings.json"),  # CWD path
+            Path("/home/jzhu/code-agent-manager/.gemini/settings.json"),  # CWD path
         ]
 
         for path in gemini_paths:

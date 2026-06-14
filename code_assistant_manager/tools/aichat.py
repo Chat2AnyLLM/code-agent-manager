@@ -109,7 +109,7 @@ clients:
                 endpoint_config=endpoint_config,
                 model=model,
             )
-            print(f"[code-assistant-manager] Updated aichat config: {config_path}")
+            print(f"[code-agent-manager] Updated aichat config: {config_path}")
         except Exception as e:
             error_path = config_path or "~/.config/aichat/config.yaml"
             return self._handle_error(f"Failed to write {error_path}", e)

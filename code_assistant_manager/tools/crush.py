@@ -455,7 +455,7 @@ class CrushTool(CLITool):
         """Handle MCP subcommands for Crush."""
         if not args:
             help_text = """
- Usage: code-assistant-manager crush mcp <command> [options]
+ Usage: code-agent-manager crush mcp <command> [options]
 
 ╭─ Commands ───────────────────────────────────────────────────────────────────╮
 │ add [server_name]      Add MCP servers (all or specific server)              │
@@ -465,11 +465,11 @@ class CrushTool(CLITool):
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
  Examples:
-   code-assistant-manager crush mcp add              Add all MCP servers
-   code-assistant-manager crush mcp add memory       Add specific server
-   code-assistant-manager crush mcp list             List configured servers
-   code-assistant-manager crush mcp remove memory    Remove specific server
-   code-assistant-manager crush mcp refresh          Refresh all servers
+   code-agent-manager crush mcp add              Add all MCP servers
+   code-agent-manager crush mcp add memory       Add specific server
+   code-agent-manager crush mcp list             List configured servers
+   code-agent-manager crush mcp remove memory    Remove specific server
+   code-agent-manager crush mcp refresh          Refresh all servers
 """
             print(help_text)
             return 1
@@ -501,11 +501,11 @@ class CrushTool(CLITool):
             else:
                 help_text = """
 ╭─ Error ──────────────────────────────────────────────────────────────────────╮
-│ Usage: code-assistant-manager crush mcp add [server_name]                                │
+│ Usage: code-agent-manager crush mcp add [server_name]                                │
 │                                                                             │
 │ Examples:                                                                   │
-│   code-assistant-manager crush mcp add              Add all MCP servers                │
-│   code-assistant-manager crush mcp add memory       Add specific server                │
+│   code-agent-manager crush mcp add              Add all MCP servers                │
+│   code-agent-manager crush mcp add memory       Add specific server                │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 """
                 print(help_text)
@@ -536,11 +536,11 @@ class CrushTool(CLITool):
             else:
                 help_text = """
 ╭─ Error ──────────────────────────────────────────────────────────────────────╮
-│ Usage: code-assistant-manager crush mcp remove [server_name]                            │
+│ Usage: code-agent-manager crush mcp remove [server_name]                            │
 │                                                                             │
 │ Examples:                                                                   │
-│   code-assistant-manager crush mcp remove           Remove all MCP servers             │
-│   code-assistant-manager crush mcp remove memory    Remove specific server             │
+│   code-agent-manager crush mcp remove           Remove all MCP servers             │
+│   code-agent-manager crush mcp remove memory    Remove specific server             │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 """
                 print(help_text)

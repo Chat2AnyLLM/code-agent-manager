@@ -25,7 +25,7 @@ class TestCLIIntegration:
     @pytest.fixture
     def temp_config_dir(self, tmp_path):
         """Create temporary config directory."""
-        config_dir = tmp_path / ".config" / "code-assistant-manager"
+        config_dir = tmp_path / ".config" / "code-agent-manager"
         config_dir.mkdir(parents=True)
         return config_dir
 
@@ -852,13 +852,13 @@ class TestCompletionCommands:
         """Test completion bash generation."""
         result = runner.invoke(app, ["completion", "bash"])
         assert result.exit_code == 0
-        assert "# code-assistant-manager bash completion" in result.output
+        assert "# code-agent-manager bash completion" in result.output
 
     def test_completion_zsh(self, runner):
         """Test completion zsh generation."""
         result = runner.invoke(app, ["completion", "zsh"])
         assert result.exit_code == 0
-        assert "# code-assistant-manager zsh completion" in result.output
+        assert "# code-agent-manager zsh completion" in result.output
 
     def test_completion_invalid_shell(self, runner):
         """Test completion with invalid shell."""

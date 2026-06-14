@@ -15,14 +15,14 @@ Successfully reconstructed the MCPTool class with proper structure, functionalit
 ### 2. Key Features Implemented
 
 #### Top-level Commands:
-- `code-assistant-manager mcp add [--all]` - Add MCP servers for all tools
-- `code-assistant-manager mcp list [--all]` - List MCP servers for all tools
-- `code-assistant-manager mcp remove [--all]` - Remove MCP servers for all tools
+- `code-agent-manager mcp add [--all]` - Add MCP servers for all tools
+- `code-agent-manager mcp list [--all]` - List MCP servers for all tools
+- `code-agent-manager mcp remove [--all]` - Remove MCP servers for all tools
 
 #### Tool-specific Subcommands:
-- `code-assistant-manager mcp claude <add|list|remove> [server]` - Manage Claude MCP servers
-- `code-assistant-manager mcp codex <add|list|remove> [server]` - Manage Codex MCP servers
-- `code-assistant-manager mcp gemini <add|list|remove> [server]` - Manage Gemini MCP servers
+- `code-agent-manager mcp claude <add|list|remove> [server]` - Manage Claude MCP servers
+- `code-agent-manager mcp codex <add|list|remove> [server]` - Manage Codex MCP servers
+- `code-agent-manager mcp gemini <add|list|remove> [server]` - Manage Gemini MCP servers
 
 #### Core Methods:
 - `run()` - Main entry point with command routing
@@ -77,7 +77,7 @@ Successfully reconstructed the MCPTool class with proper structure, functionalit
 
 ✓ File has valid Python syntax
 ✓ MCPTool class properly registered
-✓ Command appears in `code-assistant-manager --help`
+✓ Command appears in `code-agent-manager --help`
 ✓ All test cases pass (14/14)
 ✓ Integration with existing tool framework
 ✓ Help command works
@@ -92,7 +92,7 @@ Successfully reconstructed the MCPTool class with proper structure, functionalit
 
 ```bash
 # List Claude MCP servers (displays in squared frame)
-code-assistant-manager mcp claude list
+code-agent-manager mcp claude list
 
 Output:
 =====================================================================================================
@@ -106,22 +106,22 @@ Output:
 =====================================================================================================
 
 # List all MCP servers for all tools (multiple frames)
-code-assistant-manager mcp list --all
+code-agent-manager mcp list --all
 
 # Add all MCP servers for all tools
-code-assistant-manager mcp add --all
+code-agent-manager mcp add --all
 
 # Add specific server for Codex
-code-assistant-manager mcp codex add context7
+code-agent-manager mcp codex add context7
 
 # Remove all servers for Gemini
-code-assistant-manager mcp gemini remove
+code-agent-manager mcp gemini remove
 
 # Remove all MCP servers for all tools
-code-assistant-manager mcp remove --all
+code-agent-manager mcp remove --all
 
 # Error handling (also in frames)
-code-assistant-manager mcp claude add nonexistent
+code-agent-manager mcp claude add nonexistent
 
 Output:
 =================================================================

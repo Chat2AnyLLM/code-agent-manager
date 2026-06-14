@@ -1,10 +1,10 @@
 # Design Patterns Implementation Guide
 
-This document describes the design patterns implemented in code-assistant-manager and how to use them.
+This document describes the design patterns implemented in code-agent-manager and how to use them.
 
 ## Overview
 
-The code-assistant-manager codebase has been enhanced with industry-standard design patterns to improve maintainability, testability, and extensibility. This implementation follows the **Strangler Fig Pattern** - new patterns are added alongside existing code without breaking changes.
+The code-agent-manager codebase has been enhanced with industry-standard design patterns to improve maintainability, testability, and extensibility. This implementation follows the **Strangler Fig Pattern** - new patterns are added alongside existing code without breaking changes.
 
 ## Implemented Patterns
 
@@ -217,7 +217,7 @@ config_repo = JsonConfigRepository(
 )
 
 cache_repo = FileCacheRepository(
-    cache_dir=Path.home() / '.cache' / 'code-assistant-manager',
+    cache_dir=Path.home() / '.cache' / 'code-agent-manager',
     ttl_seconds=86400
 )
 

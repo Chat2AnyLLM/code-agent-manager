@@ -40,10 +40,10 @@ class CodeBuddyTool(CLITool):
 
         # Display API key status
         if env["CODEBUDDY_API_KEY"]:
-            print("[code-assistant-manager] CODEBUDDY_API_KEY loaded (masked)")
+            print("[code-agent-manager] CODEBUDDY_API_KEY loaded (masked)")
         else:
             print(
-                "[code-assistant-manager] CODEBUDDY_API_KEY not set; model list may be limited"
+                "[code-agent-manager] CODEBUDDY_API_KEY not set; model list may be limited"
             )
 
         # Set TLS environment for Node.js

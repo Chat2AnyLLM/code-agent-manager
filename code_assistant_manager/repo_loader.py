@@ -26,11 +26,12 @@ class RepoConfigLoader:
         """Initialize the repo config loader.
 
         Args:
-            config_dir: Configuration directory (defaults to ~/.config/code-assistant-manager)
+            config_dir: Configuration directory (defaults to ~/.config/code-agent-manager)
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            config_dir = Path.home() / ".config" / "code-agent-manager"
         self.config_dir = Path(config_dir)
+
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
         # Load config.yaml
@@ -38,7 +39,7 @@ class RepoConfigLoader:
 
         # Setup cache directory
         cache_config = self.config.get("cache", {})
-        cache_dir = cache_config.get("directory", "~/.cache/code-assistant-manager/repos")
+        cache_dir = cache_config.get("directory", "~/.cache/code-agent-manager/repos")
         self.cache_dir = Path(cache_dir).expanduser()
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_ttl = cache_config.get("ttl_seconds", 3600)
@@ -166,7 +167,7 @@ class RepoConfigLoader:
         # Fetch from remote
         try:
             logger.info(f"Fetching remote repos from: {url}")
-            request = Request(url, headers={"User-Agent": "code-assistant-manager"})
+            request = Request(url, headers={"User-Agent": "code-agent-manager"})
 
             with urlopen(request, timeout=10) as response:
                 data = json.loads(response.read().decode("utf-8"))

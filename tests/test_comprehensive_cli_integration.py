@@ -32,7 +32,7 @@ class TestEndToEndCLIWorkflows:
     @pytest.fixture
     def temp_config_dir(self, tmp_path):
         """Create temporary config directory."""
-        config_dir = tmp_path / ".config" / "code-assistant-manager"
+        config_dir = tmp_path / ".config" / "code-agent-manager"
         config_dir.mkdir(parents=True)
         return config_dir
 
@@ -206,7 +206,7 @@ class TestConcurrentOperations:
         """Test concurrent plugin operations don't cause race conditions."""
         from code_assistant_manager.cli.plugins.plugin_install_commands import _get_handler, _set_plugin_enabled
 
-        config_dir = tmp_path / ".config" / "code-assistant-manager"
+        config_dir = tmp_path / ".config" / "code-agent-manager"
         config_dir.mkdir(parents=True)
         settings_file = tmp_path / ".claude" / "settings.json"
         settings_file.parent.mkdir(parents=True)

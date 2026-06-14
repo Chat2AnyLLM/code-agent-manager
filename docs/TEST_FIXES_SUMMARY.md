@@ -100,7 +100,7 @@ def test_claude_tool_run_success(self, mock_em_class, ...):
 ```python
 def test_cli_handles_keyboard_interrupt(self, temp_config):
     """Test CLI handles keyboard interrupt gracefully."""
-    with patch('sys.argv', ['code-assistant-manager', 'claude', '--config', temp_config]):
+    with patch('sys.argv', ['code-agent-manager', 'claude', '--config', temp_config]):
         with patch('code_assistant_manager.tools.ClaudeTool.run', side_effect=KeyboardInterrupt()):
             # May raise KeyboardInterrupt or return, both are acceptable
             try:

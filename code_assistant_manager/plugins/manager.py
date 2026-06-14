@@ -159,7 +159,7 @@ class PluginManager:
                               for testing purposes
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            config_dir = Path.home() / ".config" / "code-agent-manager"
         self.config_dir = Path(config_dir)
         self.plugins_file = self.config_dir / "plugins.json"
         self.marketplaces_file = self.config_dir / "marketplaces.json"

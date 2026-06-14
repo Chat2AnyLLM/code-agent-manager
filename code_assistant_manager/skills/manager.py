@@ -114,10 +114,10 @@ class SkillManager:
         """Initialize skill manager.
 
         Args:
-            config_dir: Configuration directory (defaults to ~/.config/code-assistant-manager)
+            config_dir: Configuration directory (defaults to ~/.config/code-agent-manager)
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            config_dir = Path.home() / ".config" / "code-agent-manager"
         self.config_dir = Path(config_dir)
         self.skills_file = self.config_dir / "skills.json"
         self.repos_file = self.config_dir / "skill_repos.json"

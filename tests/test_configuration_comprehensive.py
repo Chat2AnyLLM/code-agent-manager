@@ -336,7 +336,7 @@ class TestSetupAndInitialization:
     @pytest.mark.skip(reason="Test assumes flat config structure but ConfigManager uses structured format")
     def test_first_time_setup_workflow(self, tmp_path, monkeypatch):
         """Test first-time setup workflow."""
-        config_dir = tmp_path / ".config" / "code-assistant-manager"
+        config_dir = tmp_path / ".config" / "code-agent-manager"
         config_dir.mkdir(parents=True)
 
         # Simulate no existing configuration

@@ -1027,7 +1027,7 @@ class ToolFactory:
 
 ## Conclusion
 
-The code-assistant-manager codebase has a solid foundation but would benefit significantly from proper design patterns and OOP principles. The recommended improvements will:
+The code-agent-manager codebase has a solid foundation but would benefit significantly from proper design patterns and OOP principles. The recommended improvements will:
 
 - **Reduce code duplication** by 70%
 - **Improve testability** dramatically

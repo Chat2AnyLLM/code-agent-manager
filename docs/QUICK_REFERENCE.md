@@ -98,9 +98,9 @@ cam skill import --file ~/skills.json
 ## Data Storage
 
 Prompts and skills are stored as JSON in:
-- `~/.config/code-assistant-manager/prompts.json`
-- `~/.config/code-assistant-manager/skills.json`
-- `~/.config/code-assistant-manager/skill_repos.json`
+- `~/.config/code-agent-manager/prompts.json`
+- `~/.config/code-agent-manager/skills.json`
+- `~/.config/code-agent-manager/skill_repos.json`
 
 Backup or version control these files to preserve your configurations.
 

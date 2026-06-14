@@ -1,10 +1,10 @@
-# Quick Start: Using Design Patterns in code-assistant-manager
+# Quick Start: Using Design Patterns in code-agent-manager
 
 ## 🚀 5-Minute Quick Start
 
 ### Installation
 ```bash
-# Already installed if you have code-assistant-manager
+# Already installed if you have code-agent-manager
 pip install -e .
 ```
 

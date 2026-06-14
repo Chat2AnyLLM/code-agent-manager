@@ -41,7 +41,7 @@ After any code changes, reinstall the project using the standard sequence:
 rm -rf dist/*
 ./install.sh uninstall
 ./install.sh
-cp ~/.config/code-assistant-manager/providers.json.bak ~/.config/code-assistant-manager/providers.json
+cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json
 ```
 
 ### Quality Gates

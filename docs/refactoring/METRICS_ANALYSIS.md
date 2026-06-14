@@ -1,7 +1,7 @@
 # Deep Codebase Metrics Analysis
 
 **Generated:** 2025-11-28
-**Repository:** code-assistant-manager
+**Repository:** code-agent-manager
 
 ---
 

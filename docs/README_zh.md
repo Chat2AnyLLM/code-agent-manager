@@ -2,9 +2,9 @@
 
 <div align="center">
 
-[![PyPI Version](https://img.shields.io/pypi/v/code-assistant-manager?color=blue)](https://pypi.org/project/code-assistant-manager/)
+[![PyPI Version](https://img.shields.io/pypi/v/code-agent-manager?color=blue)](https://pypi.org/project/code-agent-manager/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Python Versions](https://img.shields.io/pypi/pyversions/code-assistant-manager.svg)](https://pypi.org/project/code-assistant-manager/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/code-agent-manager.svg)](https://pypi.org/project/code-agent-manager/)
 
 **一个 CLI 统一管理所有 AI 编码助手**
 <br>
@@ -79,11 +79,11 @@ CAM 支持 **16 个 AI 编码助手**：
 
 ```bash
 # 通过 pip 安装（Python 3.9+）
-pip install code-assistant-manager
+pip install code-agent-manager
 
 # 或从源码安装
-git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
-cd code-assistant-manager
+git clone https://github.com/Chat2AnyLLM/code-agent-manager.git
+cd code-agent-manager
 pip install -e ".[dev]"
 ```
 
@@ -91,7 +91,7 @@ pip install -e ".[dev]"
 
 ### 1. 设置配置
 
-在 `~/.config/code-assistant-manager/` 或项目根目录创建 `providers.json` 文件：
+在 `~/.config/code-agent-manager/` 或项目根目录创建 `providers.json` 文件：
 
 ```json
 {
@@ -209,8 +209,8 @@ cam skill fetch                  # 从配置的仓库获取技能
 
 ```bash
 # 克隆并安装
-git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
-cd code-assistant-manager
+git clone https://github.com/Chat2AnyLLM/code-agent-manager.git
+cd code-agent-manager
 pip install -e ".[dev]"
 
 # 运行测试

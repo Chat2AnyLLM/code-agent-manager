@@ -452,7 +452,7 @@ Path-specific instructions support standard glob syntax:
 
 All prompt and skill data is stored in:
 ```
-~/.config/code-assistant-manager/
+~/.config/code-agent-manager/
 ├── prompts.json           # Stored prompts
 ├── skills.json            # Skill metadata
 └── skill_repos.json       # Repository configuration
@@ -460,7 +460,7 @@ All prompt and skill data is stored in:
 
 You can backup this directory to preserve your configurations:
 ```bash
-cp -r ~/.config/code-assistant-manager ~/code-assistant-manager-backup
+cp -r ~/.config/code-agent-manager ~/code-agent-manager-backup
 ```
 
 ## Troubleshooting

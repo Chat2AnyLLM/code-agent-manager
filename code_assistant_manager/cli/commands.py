@@ -130,7 +130,7 @@ def doctor(
     verbose: bool = VERBOSE_DOCTOR_OPTION,
     config: Optional[str] = CONFIG_FILE_OPTION,
 ):
-    """Run diagnostic checks on the code-assistant-manager installation (alias: d)"""
+    """Run diagnostic checks on the code-agent-manager installation (alias: d)"""
 
     # Lazy imports
     from code_assistant_manager.config import ConfigManager
@@ -361,7 +361,7 @@ def version_command():
     """Show version information."""
     from code_assistant_manager import __version__
 
-    typer.echo(f"code-assistant-manager version {__version__}")
+    typer.echo(f"code-agent-manager version {__version__}")
     raise typer.Exit()
 
 

@@ -87,7 +87,7 @@ def find_env_file(
     # Also check home directory and config directory as fallback
     locations = [
         Path.home() / ".env",
-        Path.home() / ".config" / "code-assistant-manager" / ".env",
+        Path.home() / ".config" / "code-agent-manager" / ".env",
     ]
 
     for env_file in locations:

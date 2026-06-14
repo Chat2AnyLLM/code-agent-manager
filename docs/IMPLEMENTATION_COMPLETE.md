@@ -26,7 +26,7 @@
 ## 📁 New File Structure
 
 ```
-code-assistant-manager/
+code-agent-manager/
 ├── CODEBASE_ANALYSIS.md              # Detailed analysis & recommendations
 ├── DESIGN_PATTERNS_README.md         # Usage guide & examples
 ├── PHASE1_IMPLEMENTATION_SUMMARY.md  # Implementation summary

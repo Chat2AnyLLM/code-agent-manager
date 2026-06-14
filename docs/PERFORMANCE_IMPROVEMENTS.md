@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the performance and efficiency improvements implemented in code-assistant-manager v1.0.0. These changes optimize CLI startup time, reduce redundant file I/O operations, and improve memory efficiency.
+This document describes the performance and efficiency improvements implemented in code-agent-manager v1.0.0. These changes optimize CLI startup time, reduce redundant file I/O operations, and improve memory efficiency.
 
 ## Implementation Details
 

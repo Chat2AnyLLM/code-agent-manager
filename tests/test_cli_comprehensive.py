@@ -25,7 +25,7 @@ class TestMainCommands:
 
         captured_output = io.StringIO()
         with redirect_stdout(captured_output):
-            with patch("sys.argv", ["code-assistant-manager", "--help"]):
+            with patch("sys.argv", ["code-agent-manager", "--help"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 0
@@ -47,17 +47,17 @@ class TestMainCommands:
 
         captured_output = io.StringIO()
         with redirect_stdout(captured_output):
-            with patch("sys.argv", ["code-assistant-manager", "version"]):
+            with patch("sys.argv", ["code-agent-manager", "version"]):
                 with pytest.raises(SystemExit) as exc_info:
                     app()
                 assert exc_info.value.code == 0
 
         version_output = captured_output.getvalue()
-        assert "code-assistant-manager" in version_output and "version" in version_output, "Version output should contain code-assistant-manager and version info"
+        assert "code-agent-manager" in version_output and "version" in version_output, "Version output should contain code-agent-manager and version info"
 
     def test_no_command_shows_help(self):
         """Test that running with no command shows help."""
-        with patch("sys.argv", ["code-assistant-manager"]):
+        with patch("sys.argv", ["code-agent-manager"]):
             with pytest.raises(SystemExit) as exc_info:
                 app()
             # With no_args_is_help=True, exit code should be 0
@@ -69,14 +69,14 @@ class TestLaunchCommand:
 
     def test_launch_help(self):
         """Test launch command help."""
-        with patch("sys.argv", ["code-assistant-manager", "launch", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "launch", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_launch_alias_help(self):
         """Test launch alias 'l' help."""
-        with patch("sys.argv", ["code-assistant-manager", "l", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "l", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -87,7 +87,7 @@ class TestLaunchCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "claude",
                 "--config",
@@ -104,7 +104,7 @@ class TestLaunchCommand:
         """Test launching codex with custom config."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "codex", "--config", temp_config],
+            ["code-agent-manager", "launch", "codex", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -116,7 +116,7 @@ class TestLaunchCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "copilot",
                 "--config",
@@ -133,7 +133,7 @@ class TestLaunchCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "gemini",
                 "--config",
@@ -149,7 +149,7 @@ class TestLaunchCommand:
         """Test launching droid."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "droid", "--config", temp_config],
+            ["code-agent-manager", "launch", "droid", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -160,7 +160,7 @@ class TestLaunchCommand:
         """Test launching qwen."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "qwen", "--config", temp_config],
+            ["code-agent-manager", "launch", "qwen", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -172,7 +172,7 @@ class TestLaunchCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "codebuddy",
                 "--config",
@@ -188,7 +188,7 @@ class TestLaunchCommand:
         """Test launching iflow."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "iflow", "--config", temp_config],
+            ["code-agent-manager", "launch", "iflow", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -200,7 +200,7 @@ class TestLaunchCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "claude",
                 "--config",
@@ -220,7 +220,7 @@ class TestLaunchCommand:
         """Test launch alias 'l' with tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "l", "claude", "--config", temp_config],
+            ["code-agent-manager", "l", "claude", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -230,7 +230,7 @@ class TestLaunchCommand:
         """Test launching non-existent tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "nonexistent_tool"],
+            ["code-agent-manager", "launch", "nonexistent_tool"],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 app()
@@ -243,14 +243,14 @@ class TestUpgradeCommand:
 
     def test_upgrade_help(self):
         """Test upgrade command help."""
-        with patch("sys.argv", ["code-assistant-manager", "upgrade", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "upgrade", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_upgrade_alias_u_help(self):
         """Test upgrade alias 'u' help."""
-        with patch("sys.argv", ["code-assistant-manager", "u", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "u", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -261,7 +261,7 @@ class TestUpgradeCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "upgrade",
                 "claude",
                 "--config",
@@ -278,7 +278,7 @@ class TestUpgradeCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "upgrade",
                 "all",
                 "--config",
@@ -295,7 +295,7 @@ class TestUpgradeCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "upgrade",
                 "claude",
                 "--config",
@@ -313,7 +313,7 @@ class TestUpgradeCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "upgrade",
                 "claude",
                 "--config",
@@ -330,7 +330,7 @@ class TestUpgradeCommand:
         """Test upgrade alias 'u' with single tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "u", "claude", "--config", temp_config],
+            ["code-agent-manager", "u", "claude", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -342,14 +342,14 @@ class TestInstallCommand:
 
     def test_install_help(self):
         """Test install command help."""
-        with patch("sys.argv", ["code-assistant-manager", "install", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "install", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_install_alias_i_help(self):
         """Test install alias 'i' help."""
-        with patch("sys.argv", ["code-assistant-manager", "i", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "i", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -360,7 +360,7 @@ class TestInstallCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "install",
                 "claude",
                 "--config",
@@ -377,7 +377,7 @@ class TestInstallCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "install",
                 "all",
                 "--config",
@@ -394,7 +394,7 @@ class TestInstallCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "install",
                 "claude",
                 "--config",
@@ -411,7 +411,7 @@ class TestInstallCommand:
         """Test install alias 'i' with single tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "i", "claude", "--config", temp_config],
+            ["code-agent-manager", "i", "claude", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -422,7 +422,7 @@ class TestInstallCommand:
         """Test install alias 'i' with all tools."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "i", "all", "--config", temp_config],
+            ["code-agent-manager", "i", "all", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -434,14 +434,14 @@ class TestUninstallCommand:
 
     def test_uninstall_help(self):
         """Test uninstall command help."""
-        with patch("sys.argv", ["code-assistant-manager", "uninstall", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "uninstall", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_uninstall_alias_un_help(self):
         """Test uninstall alias 'un' help."""
-        with patch("sys.argv", ["code-assistant-manager", "un", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "un", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -458,7 +458,7 @@ class TestUninstallCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "uninstall",
                 "claude",
                 "--force",
@@ -483,7 +483,7 @@ class TestUninstallCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "uninstall",
                 "all",
                 "--force",
@@ -509,7 +509,7 @@ class TestUninstallCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "uninstall",
                 "claude",
                 "--force",
@@ -535,7 +535,7 @@ class TestUninstallCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "uninstall",
                 "claude",
                 "--force",
@@ -560,7 +560,7 @@ class TestUninstallCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "un",
                 "claude",
                 "--force",
@@ -578,14 +578,14 @@ class TestDoctorCommand:
 
     def test_doctor_help(self):
         """Test doctor command help."""
-        with patch("sys.argv", ["code-assistant-manager", "doctor", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "doctor", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_doctor_alias_d_help(self):
         """Test doctor alias 'd' help."""
-        with patch("sys.argv", ["code-assistant-manager", "d", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "d", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -595,7 +595,7 @@ class TestDoctorCommand:
         """Test doctor command execution."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "doctor", "--config", temp_config],
+            ["code-agent-manager", "doctor", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -607,7 +607,7 @@ class TestDoctorCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "doctor",
                 "--verbose",
                 "--config",
@@ -623,7 +623,7 @@ class TestDoctorCommand:
         """Test doctor alias 'd' execution."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "d"],
+            ["code-agent-manager", "d"],
         ):
             with patch("code_assistant_manager.cli.commands.doctor", return_value=0):
                 with pytest.raises(SystemExit) as exc_info:
@@ -637,7 +637,7 @@ class TestValidateCommand:
     def test_validate_help(self):
         """Test validate command help."""
         with patch(
-            "sys.argv", ["code-assistant-manager", "config", "validate", "--help"]
+            "sys.argv", ["code-agent-manager", "config", "validate", "--help"]
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -647,7 +647,7 @@ class TestValidateCommand:
         """Test validating valid config."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "config", "validate", "--config", temp_config],
+            ["code-agent-manager", "config", "validate", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -658,7 +658,7 @@ class TestValidateCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "config",
                 "validate",
                 "--config",
@@ -678,7 +678,7 @@ class TestValidateCommand:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "config",
                 "validate",
                 "--config",
@@ -696,35 +696,35 @@ class TestCompletionCommand:
 
     def test_completion_help(self):
         """Test completion command help."""
-        with patch("sys.argv", ["code-assistant-manager", "completion", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "completion", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_completion_bash(self):
         """Test generating bash completion."""
-        with patch("sys.argv", ["code-assistant-manager", "completion", "bash"]):
+        with patch("sys.argv", ["code-agent-manager", "completion", "bash"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_completion_zsh(self):
         """Test generating zsh completion."""
-        with patch("sys.argv", ["code-assistant-manager", "completion", "zsh"]):
+        with patch("sys.argv", ["code-agent-manager", "completion", "zsh"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_completion_alias_comp_bash(self):
         """Test completion alias 'comp' with bash."""
-        with patch("sys.argv", ["code-assistant-manager", "comp", "bash"]):
+        with patch("sys.argv", ["code-agent-manager", "comp", "bash"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_completion_invalid_shell(self):
         """Test completion with invalid shell."""
-        with patch("sys.argv", ["code-assistant-manager", "completion", "nushell"]):
+        with patch("sys.argv", ["code-agent-manager", "completion", "nushell"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
@@ -735,21 +735,21 @@ class TestMCPCommand:
 
     def test_mcp_help(self):
         """Test MCP command help."""
-        with patch("sys.argv", ["code-assistant-manager", "mcp", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "mcp", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_mcp_server_help(self):
         """Test MCP list help command (updated from 'mcp server')."""
-        with patch("sys.argv", ["code-assistant-manager", "mcp", "list", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "mcp", "list", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code in [0, 2]  # May show help or error
 
     def test_mcp_server_list(self):
         """Test MCP list command (updated from 'mcp server list')."""
-        with patch("sys.argv", ["code-assistant-manager", "mcp", "list"]):
+        with patch("sys.argv", ["code-agent-manager", "mcp", "list"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code in [0, 1, 2]
@@ -762,7 +762,7 @@ class TestGlobalOptions:
         """Test --debug global flag."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "doctor", "--config", temp_config],
+            ["code-agent-manager", "doctor", "--config", temp_config],
         ):
             with patch(
                 "code_assistant_manager.cli.doctor.run_doctor_checks", return_value=0
@@ -774,10 +774,10 @@ class TestGlobalOptions:
     def test_config_option_with_different_commands(self, temp_config):
         """Test --config option with various commands."""
         commands = [
-            ["code-assistant-manager", "upgrade", "claude"],
-            ["code-assistant-manager", "install", "claude"],
-            ["code-assistant-manager", "doctor"],
-            ["code-assistant-manager", "validate"],
+            ["code-agent-manager", "upgrade", "claude"],
+            ["code-agent-manager", "install", "claude"],
+            ["code-agent-manager", "doctor"],
+            ["code-agent-manager", "validate"],
         ]
 
         for cmd in commands:
@@ -803,14 +803,14 @@ class TestErrorHandling:
 
     def test_invalid_command(self):
         """Test running invalid command."""
-        with patch("sys.argv", ["code-assistant-manager", "invalid-command"]):
+        with patch("sys.argv", ["code-agent-manager", "invalid-command"]):
             with pytest.raises(SystemExit) as exc_info:
                 app()
             assert exc_info.value.code == 2
 
     def test_missing_required_argument(self):
         """Test command without required argument."""
-        with patch("sys.argv", ["code-assistant-manager", "launch"]):
+        with patch("sys.argv", ["code-agent-manager", "launch"]):
             with patch(
                 "code_assistant_manager.menu.menus.display_centered_menu",
                 return_value=(False, None),
@@ -826,7 +826,7 @@ class TestErrorHandling:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "doctor",
                 "--config",
                 "/nonexistent/path/config.json",
@@ -844,7 +844,7 @@ class TestErrorHandling:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "claude",
                 "--config",
@@ -868,7 +868,7 @@ class TestCommandCombinations:
         for tool in tools:
             with patch(
                 "sys.argv",
-                ["code-assistant-manager", "launch", tool, "--config", temp_config],
+                ["code-agent-manager", "launch", tool, "--config", temp_config],
             ):
                 with patch(
                     f"code_assistant_manager.tools.{tool.capitalize()}Tool.run",
@@ -882,10 +882,10 @@ class TestCommandCombinations:
     def test_all_upgrade_commands(self, temp_config):
         """Test all variants of upgrade command."""
         variants = [
-            ["code-assistant-manager", "upgrade", "all"],
-            ["code-assistant-manager", "u", "all"],
-            ["code-assistant-manager", "install", "all"],
-            ["code-assistant-manager", "i", "all"],
+            ["code-agent-manager", "upgrade", "all"],
+            ["code-agent-manager", "u", "all"],
+            ["code-agent-manager", "install", "all"],
+            ["code-agent-manager", "i", "all"],
         ]
 
         for cmd in variants:
@@ -903,14 +903,14 @@ class TestCommandCombinations:
     def test_help_for_all_commands(self):
         """Test --help for all main commands."""
         commands = [
-            ["code-assistant-manager", "launch", "--help"],
-            ["code-assistant-manager", "upgrade", "--help"],
-            ["code-assistant-manager", "install", "--help"],
-            ["code-assistant-manager", "uninstall", "--help"],
-            ["code-assistant-manager", "doctor", "--help"],
-            ["code-assistant-manager", "config", "--help"],
-            ["code-assistant-manager", "completion", "--help"],
-            ["code-assistant-manager", "mcp", "--help"],
+            ["code-agent-manager", "launch", "--help"],
+            ["code-agent-manager", "upgrade", "--help"],
+            ["code-agent-manager", "install", "--help"],
+            ["code-agent-manager", "uninstall", "--help"],
+            ["code-agent-manager", "doctor", "--help"],
+            ["code-agent-manager", "config", "--help"],
+            ["code-agent-manager", "completion", "--help"],
+            ["code-agent-manager", "mcp", "--help"],
         ]
 
         for cmd in commands:

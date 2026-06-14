@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_doctor_checks(config, verbose: bool = False) -> int:
-    """Run comprehensive diagnostic checks on the code-assistant-manager installation."""
+    """Run comprehensive diagnostic checks on the code-agent-manager installation."""
     issues_found = 0
 
     def check_passed(message: str):
@@ -85,7 +85,7 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
         Path(__file__).parent.parent.parent / ".env",
         Path.cwd() / ".env",
         Path.home() / ".env",
-        Path.home() / ".config" / "code-assistant-manager" / ".env",
+        Path.home() / ".config" / "code-agent-manager" / ".env",
     ]
 
     # If dotenv can find an env file, include it as well
@@ -94,7 +94,7 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
         env_file_paths.insert(0, Path(found_env))
 
     config_file_paths = [
-        Path.home() / ".config" / "code-assistant-manager" / "providers.json",
+        Path.home() / ".config" / "code-agent-manager" / "providers.json",
         Path.cwd() / "providers.json",
         Path.home() / "providers.json",
     ]
@@ -238,7 +238,7 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
             else:
                 check_warning(
                     f"{tool_name} is not installed",
-                    f"Run 'code-assistant-manager upgrade {tool_name}' to install",
+                    f"Run 'code-agent-manager upgrade {tool_name}' to install",
                 )
         except Exception as e:
             check_warning(f"Error checking {tool_name}: {e}")
@@ -266,7 +266,7 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
     typer.echo()
     typer.echo(f"{Colors.BOLD}Cache Check{Colors.RESET}")
     try:
-        cache_dir = Path.home() / ".cache" / "code-assistant-manager"
+        cache_dir = Path.home() / ".cache" / "code-agent-manager"
         if cache_dir.exists():
             check_passed(f"Cache directory exists: {cache_dir}")
             # Check cache size (rough estimate)
@@ -358,7 +358,7 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
     typer.echo(f"{Colors.BOLD}Summary{Colors.RESET}")
     if issues_found == 0:
         typer.echo(
-            f"{Colors.GREEN}✓ All checks passed! Your code-assistant-manager installation is healthy.{Colors.RESET}"
+            f"{Colors.GREEN}✓ All checks passed! Your code-agent-manager installation is healthy.{Colors.RESET}"
         )
         return 0
     else:

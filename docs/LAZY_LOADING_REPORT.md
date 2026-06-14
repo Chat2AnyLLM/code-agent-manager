@@ -99,9 +99,9 @@ All existing code continues to work:
 
 ## Files Modified
 
-1. `/home/jzhu/code-assistant-manager/code_assistant_manager/lazy_loader.py` - NEW
-2. `/home/jzhu/code-assistant-manager/code_assistant_manager/tools/__init__.py` - MODIFIED
-3. `/home/jzhu/code-assistant-manager/code_assistant_manager/cli/app.py` - MODIFIED
+1. `/home/jzhu/code-agent-manager/code_assistant_manager/lazy_loader.py` - NEW
+2. `/home/jzhu/code-agent-manager/code_assistant_manager/tools/__init__.py` - MODIFIED
+3. `/home/jzhu/code-agent-manager/code_assistant_manager/cli/app.py` - MODIFIED
 
 ## Installation & Usage
 

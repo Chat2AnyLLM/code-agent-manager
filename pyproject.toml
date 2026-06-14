@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "code-assistant-manager"
+name = "code-agent-manager"
 dynamic = ["version"]
 description = "CLI utilities for working with AI coding assistants"
 readme = "README.md"
@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/Chat2AnyLLM/code-assistant-manager"
+"Homepage" = "https://github.com/Chat2AnyLLM/code-agent-manager"
 
 [project.optional-dependencies]
 dev = [
@@ -70,7 +70,7 @@ exclude = ["tests*", "build*"]
 ]
 
 [project.scripts]
-code-assistant-manager = "code_assistant_manager.cli:main"
+code-agent-manager = "code_assistant_manager.cli:main"
 cam = "code_assistant_manager.cli:main"
 
 [tool.black]

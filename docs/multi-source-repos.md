@@ -4,9 +4,9 @@ Code Assistant Manager now supports loading repository configurations from multi
 
 ## Installation
 
-When you install code-assistant-manager, the `config.yaml` file is automatically copied to:
+When you install code-agent-manager, the `config.yaml` file is automatically copied to:
 ```
-~/.config/code-assistant-manager/config.yaml
+~/.config/code-agent-manager/config.yaml
 ```
 
 You can edit this file to customize repository sources, add your own remote sources, or disable sources you don't need.
@@ -16,9 +16,9 @@ You can edit this file to customize repository sources, add your own remote sour
 Repository configurations (for skills, agents, and plugins) are loaded from multiple sources in priority order:
 
 1. **Local files** (highest priority) - Your custom repos
-   - `~/.config/code-assistant-manager/skill_repos.json`
-   - `~/.config/code-assistant-manager/agent_repos.json`
-   - `~/.config/code-assistant-manager/plugin_repos.json`
+   - `~/.config/code-agent-manager/skill_repos.json`
+   - `~/.config/code-agent-manager/agent_repos.json`
+   - `~/.config/code-agent-manager/plugin_repos.json`
 
 2. **Remote URLs** - Community repos (with caching)
    - `https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/skill_repos.json`
@@ -45,7 +45,7 @@ It defines the default sources for each repository type.
 
 You can override the configuration by creating:
 ```
-~/.config/code-assistant-manager/config.yaml
+~/.config/code-agent-manager/config.yaml
 ```
 
 ### Configuration Format
@@ -57,7 +57,7 @@ repositories:
     sources:
       # Local user file (highest priority)
       - type: local
-        path: ~/.config/code-assistant-manager/skill_repos.json
+        path: ~/.config/code-agent-manager/skill_repos.json
       
       # Remote awesome repository configs
       - type: remote
@@ -67,7 +67,7 @@ repositories:
   agents:
     sources:
       - type: local
-        path: ~/.config/code-assistant-manager/agent_repos.json
+        path: ~/.config/code-agent-manager/agent_repos.json
       - type: remote
         url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/agent_repos.json
   
@@ -75,14 +75,14 @@ repositories:
   plugins:
     sources:
       - type: local
-        path: ~/.config/code-assistant-manager/plugin_repos.json
+        path: ~/.config/code-agent-manager/plugin_repos.json
       - type: remote
         url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/plugin_repos.json
 
 # Cache settings for remote sources
 cache:
   enabled: true
-  directory: ~/.cache/code-assistant-manager/repos
+  directory: ~/.cache/code-agent-manager/repos
   ttl_seconds: 3600  # Cache remote sources for 1 hour
 ```
 
@@ -90,7 +90,7 @@ cache:
 
 ### Option 1: Local File (Recommended for personal repos)
 
-Create a local repo file at `~/.config/code-assistant-manager/skill_repos.json`:
+Create a local repo file at `~/.config/code-agent-manager/skill_repos.json`:
 
 ```json
 {
@@ -108,14 +108,14 @@ Local repos have highest priority and will override remote repos with the same k
 
 ### Option 2: Add Remote Source
 
-Edit `~/.config/code-assistant-manager/config.yaml` to add more remote sources:
+Edit `~/.config/code-agent-manager/config.yaml` to add more remote sources:
 
 ```yaml
 repositories:
   skills:
     sources:
       - type: local
-        path: ~/.config/code-assistant-manager/skill_repos.json
+        path: ~/.config/code-agent-manager/skill_repos.json
       - type: remote
         url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/skill_repos.json
       # Add your custom remote source
@@ -127,7 +127,7 @@ repositories:
 
 Remote repositories are cached locally to:
 ```
-~/.cache/code-assistant-manager/repos/
+~/.cache/code-agent-manager/repos/
 ```
 
 Cache files are named based on the repository type and source URL.
@@ -144,7 +144,7 @@ Cache files are named based on the repository type and source URL.
 
 To force refresh from remote sources, delete the cache directory:
 ```bash
-rm -rf ~/.cache/code-assistant-manager/repos/
+rm -rf ~/.cache/code-agent-manager/repos/
 ```
 
 ## How Sources are Merged
@@ -170,13 +170,13 @@ repositories:
     sources:
       # Company repos (highest priority)
       - type: local
-        path: ~/.config/code-assistant-manager/skill_repos.json
+        path: ~/.config/code-agent-manager/skill_repos.json
       # Community repos
       - type: remote
         url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/skill_repos.json
 ```
 
-Create `~/.config/code-assistant-manager/skill_repos.json`:
+Create `~/.config/code-agent-manager/skill_repos.json`:
 ```json
 {
   "mycompany/internal-skills": {
@@ -197,7 +197,7 @@ repositories:
   skills:
     sources:
       - type: local
-        path: ~/.config/code-assistant-manager/skill_repos.json
+        path: ~/.config/code-agent-manager/skill_repos.json
       # Stable community repos
       - type: remote
         url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/skill_repos.json
@@ -209,9 +209,9 @@ repositories:
 ### Use Case 3: Offline Development
 
 Create local copies of all repos in:
-- `~/.config/code-assistant-manager/skill_repos.json`
-- `~/.config/code-assistant-manager/agent_repos.json`
-- `~/.config/code-assistant-manager/plugin_repos.json`
+- `~/.config/code-agent-manager/skill_repos.json`
+- `~/.config/code-agent-manager/agent_repos.json`
+- `~/.config/code-agent-manager/plugin_repos.json`
 
 Comment out or remove remote sources from config.yaml. Now everything works offline!
 

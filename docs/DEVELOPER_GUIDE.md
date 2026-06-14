@@ -111,7 +111,7 @@ class MyCommand(BaseCommand):
 ## Code Structure
 
 ```
-code-assistant-manager/
+code-agent-manager/
 ├── code_assistant_manager/
 │   ├── cli/
 │   │   ├── __init__.py
@@ -419,7 +419,7 @@ All user inputs are validated:
 
 Model lists are cached with TTL to reduce API calls:
 
-- Cache location: `${XDG_CACHE_HOME:-$HOME/.cache}/code-assistant-manager`
+- Cache location: `${XDG_CACHE_HOME:-$HOME/.cache}/code-agent-manager`
 - Configurable TTL in seconds
 - Atomic cache file operations
 - Cache validation and refresh options
@@ -441,8 +441,8 @@ Model lists are cached with TTL to reduce API calls:
 4. Run tests to verify setup
 
 ```bash
-git clone https://github.com/your-org/code-assistant-manager.git
-cd code-assistant-manager
+git clone https://github.com/your-org/code-agent-manager.git
+cd code-agent-manager
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -e .

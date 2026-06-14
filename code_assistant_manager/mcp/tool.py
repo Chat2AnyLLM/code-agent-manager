@@ -12,7 +12,7 @@ class MCPTool(CLITool):
     tool_key = None
     install_description = "MCP Server Manager"
 
-    def __init__(self, config, prog_name: str = "code-assistant-manager mcp"):
+    def __init__(self, config, prog_name: str = "code-agent-manager mcp"):
         super().__init__(config)
         # Only initialize manager if needed for server commands
         self._manager = None
@@ -51,7 +51,7 @@ class MCPTool(CLITool):
                 print(f"   • {path}")
             print("   All MCP server configurations now come from the registry.")
             print(
-                "   Use 'code-assistant-manager mcp server list' to see available servers."
+                "   Use 'code-agent-manager mcp server list' to see available servers."
             )
             print("   You can safely delete these legacy config files.\n")
 
@@ -106,7 +106,7 @@ class MCPTool(CLITool):
             print(help_text)
             return 1
 
-    def _print_help(self, prog_name: str = "code-assistant-manager mcp"):
+    def _print_help(self, prog_name: str = "code-agent-manager mcp"):
         """Print help information in typer style."""
         help_text = f"""Usage: {prog_name} [OPTIONS] COMMAND [ARGS]...
 

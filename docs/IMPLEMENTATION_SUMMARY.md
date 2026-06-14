@@ -14,7 +14,7 @@ Successfully implemented comprehensive prompt and skill management functionality
   - Create, read, update, delete operations
   - Enable/disable prompts
   - Import/export from JSON files
-  - Persistent storage in `~/.config/code-assistant-manager/prompts.json`
+  - Persistent storage in `~/.config/code-agent-manager/prompts.json`
 
 #### `code_assistant_manager/skills.py`
 - **Skill class**: Data model with key, name, description, directory, install status, and repository info
@@ -24,7 +24,7 @@ Successfully implemented comprehensive prompt and skill management functionality
   - Install/uninstall skills
   - Manage skill repositories (add/remove)
   - Import/export skills to JSON files
-  - Persistent storage in `~/.config/code-assistant-manager/skills.json` and `skill_repos.json`
+  - Persistent storage in `~/.config/code-agent-manager/skills.json` and `skill_repos.json`
 
 ### 2. CLI Commands
 
@@ -100,7 +100,7 @@ All 24 new tests pass successfully.
 
 ## Key Features
 
-1. **JSON-based Storage**: All data persisted in JSON format under `~/.config/code-assistant-manager/`
+1. **JSON-based Storage**: All data persisted in JSON format under `~/.config/code-agent-manager/`
 2. **Enable/Disable**: Prompts and skills can be toggled without deletion
 3. **Import/Export**: Easy sharing and backup of configurations
 4. **Repository Management**: Skills can be tracked with their source repositories
@@ -139,9 +139,9 @@ cam s list  # short alias
 
 ## Storage Locations
 
-- Prompts: `~/.config/code-assistant-manager/prompts.json`
-- Skills: `~/.config/code-assistant-manager/skills.json`
-- Skill Repos: `~/.config/code-assistant-manager/skill_repos.json`
+- Prompts: `~/.config/code-agent-manager/prompts.json`
+- Skills: `~/.config/code-agent-manager/skills.json`
+- Skill Repos: `~/.config/code-agent-manager/skill_repos.json`
 
 ## Testing
 

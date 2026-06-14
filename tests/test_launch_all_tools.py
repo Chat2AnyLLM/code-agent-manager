@@ -33,7 +33,7 @@ class TestLaunchAllTools:
         """Test launching Claude tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "claude", "--config", temp_config],
+            ["code-agent-manager", "launch", "claude", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -45,7 +45,7 @@ class TestLaunchAllTools:
         """Test launching Codex tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "codex", "--config", temp_config],
+            ["code-agent-manager", "launch", "codex", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -57,7 +57,7 @@ class TestLaunchAllTools:
         """Test launching Gemini tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "gemini", "--config", temp_config],
+            ["code-agent-manager", "launch", "gemini", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -69,7 +69,7 @@ class TestLaunchAllTools:
         """Test launching Qwen tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "qwen", "--config", temp_config],
+            ["code-agent-manager", "launch", "qwen", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -81,7 +81,7 @@ class TestLaunchAllTools:
         """Test launching GitHub Copilot tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "copilot", "--config", temp_config],
+            ["code-agent-manager", "launch", "copilot", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -93,7 +93,7 @@ class TestLaunchAllTools:
         """Test launching CodeBuddy tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "codebuddy", "--config", temp_config],
+            ["code-agent-manager", "launch", "codebuddy", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -105,7 +105,7 @@ class TestLaunchAllTools:
         """Test launching Factory.ai Droid tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "droid", "--config", temp_config],
+            ["code-agent-manager", "launch", "droid", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -117,7 +117,7 @@ class TestLaunchAllTools:
         """Test launching iFlow tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "iflow", "--config", temp_config],
+            ["code-agent-manager", "launch", "iflow", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -129,7 +129,7 @@ class TestLaunchAllTools:
         """Test launching Charmland Crush tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "crush", "--config", temp_config],
+            ["code-agent-manager", "launch", "crush", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -141,7 +141,7 @@ class TestLaunchAllTools:
         """Test launching Cursor Agent tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "cursor-agent", "--config", temp_config],
+            ["code-agent-manager", "launch", "cursor-agent", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -153,7 +153,7 @@ class TestLaunchAllTools:
         """Test launching OpenCode.ai tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "opencode", "--config", temp_config],
+            ["code-agent-manager", "launch", "opencode", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -165,7 +165,7 @@ class TestLaunchAllTools:
     #     """Test launching Continue.dev tool."""
     #     with patch(
     #         "sys.argv",
-    #         ["code-assistant-manager", "launch", "cn", "--config", temp_config],
+    #         ["code-agent-manager", "launch", "cn", "--config", temp_config],
     #     ):
     #         with pytest.raises(SystemExit) as exc_info:
     #             main()
@@ -177,7 +177,7 @@ class TestLaunchAllTools:
         """Test launching Block Goose tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "goose", "--config", temp_config],
+            ["code-agent-manager", "launch", "goose", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -189,7 +189,7 @@ class TestLaunchAllTools:
         """Test launching Blackbox AI tool."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "blackbox", "--config", temp_config],
+            ["code-agent-manager", "launch", "blackbox", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -200,7 +200,7 @@ class TestLaunchAllTools:
         """Test launching non-existent tool fails."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "nonexistent_tool"],
+            ["code-agent-manager", "launch", "nonexistent_tool"],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 app()
@@ -211,7 +211,7 @@ class TestLaunchAllTools:
         """Test that disabled tool 'zed' cannot be launched."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "zed"],
+            ["code-agent-manager", "launch", "zed"],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 app()
@@ -222,7 +222,7 @@ class TestLaunchAllTools:
         """Test that disabled tool 'qodercli' cannot be launched."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "qodercli"],
+            ["code-agent-manager", "launch", "qodercli"],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 app()
@@ -233,7 +233,7 @@ class TestLaunchAllTools:
         """Test that disabled tool 'neovate' cannot be launched."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "neovate"],
+            ["code-agent-manager", "launch", "neovate"],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 app()
@@ -245,7 +245,7 @@ class TestLaunchAllTools:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "claude",
                 "--config",
@@ -262,7 +262,7 @@ class TestLaunchAllTools:
         """Test that launch alias 'l' works the same as 'launch'."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "l", "claude", "--config", temp_config],
+            ["code-agent-manager", "l", "claude", "--config", temp_config],
         ):
             with patch("code_assistant_manager.tools.ClaudeTool.run", return_value=0):
                 with pytest.raises(SystemExit) as exc_info:

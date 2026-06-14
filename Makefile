@@ -1,122 +1,51 @@
-.PHONY: help install dev-install clean test lint format type-check security check pre-commit-install pre-commit-run build release
+.PHONY: help install clean test test-race build release fmt vet check
 
-# Default target
+VERSION ?= dev
+GOFLAGS ?=
+
 help:
 	@echo "Available commands:"
-	@echo "  make install          - Install package for production use"
-	@echo "  make dev-install      - Install package with development dependencies"
-	@echo "  make clean            - Remove build artifacts and caches"
-	@echo "  make test             - Run test suite"
-	@echo "  make test-cov         - Run tests with coverage (HTML + terminal)"
-	@echo "  make test-cov-xml     - Run tests with coverage (HTML + terminal + XML)"
-	@echo "  make test-comprehensive - Run comprehensive tests with full coverage"
-	@echo "  make test-coverage-summary - Show coverage summary report"
-	@echo "  make lint             - Run linting (flake8)"
-	@echo "  make format           - Format code (black, isort)"
-	@echo "  make type-check       - Run type checking (mypy)"
-	@echo "  make security         - Run security checks (bandit)"
-	@echo "  make check            - Run all quality checks (lint, type-check, test)"
-	@echo "  make pre-commit-install - Install pre-commit hooks"
-	@echo "  make pre-commit-run   - Run pre-commit on all files"
-	@echo "  make build            - Build distribution packages"
-	@echo "  make release          - Full release workflow (clean, test, build)"
+	@echo "  make build    - Build Go binaries into dist/"
+	@echo "  make install  - Build and install cam/code-agent-manager"
+	@echo "  make test     - Run Go test suite"
+	@echo "  make test-race - Run Go tests with race detector"
+	@echo "  make fmt      - Format Go code"
+	@echo "  make vet      - Run go vet"
+	@echo "  make check    - Run fmt check, vet, tests, and install smoke test"
+	@echo "  make clean    - Remove build artifacts"
 
-# Installation
 install:
-	pip install -e .
+	VERSION=$(VERSION) ./install.sh install
 
-dev-install:
-	pip install -e ".[dev]"
-	$(MAKE) pre-commit-install
-
-# Cleaning
 clean:
-	rm -rf build/
 	rm -rf dist/
-	rm -rf *.egg-info
-	rm -rf .pytest_cache/
-	rm -rf .mypy_cache/
-	rm -rf .tox/
-	rm -rf htmlcov/
-	rm -rf .coverage
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.orig" -delete
+	find . -type f -name "*.test" -delete
+	find . -type f -name "coverage.out" -delete
 
-# Testing
+build:
+	mkdir -p dist
+	go build $(GOFLAGS) -ldflags "-X main.version=$(VERSION)" -o dist/cam ./cmd/cam
+	go build $(GOFLAGS) -ldflags "-X main.version=$(VERSION)" -o dist/code-agent-manager ./cmd/code-agent-manager
+
 test:
-	pytest tests/ -v
+	go test $(GOFLAGS) ./...
 
-test-cov:
-	pytest tests/ -v --cov=code_assistant_manager --cov-report=html --cov-report=term
+test-race:
+	go test $(GOFLAGS) -race ./...
 
-test-cov-xml:
-	pytest tests/ -v --cov=code_assistant_manager --cov-report=html --cov-report=term --cov-report=xml
+fmt:
+	gofmt -s -w cmd internal
 
-test-comprehensive:
-	pytest tests/ -v --cov=code_assistant_manager --cov-report=html --cov-report=term --cov-report=xml --tb=short --maxfail=5
+fmt-check:
+	@test -z "$$(gofmt -s -l cmd internal)" || (gofmt -s -l cmd internal && exit 1)
 
-test-coverage-summary:
-	python -m coverage report --include="code_assistant_manager/*" --omit="tests/*" --sort=cover
+vet:
+	go vet ./...
 
-# Code quality
-lint:
-	@echo "Running flake8..."
-	flake8 code_assistant_manager/
-
-format:
-	@echo "Running isort..."
-	isort code_assistant_manager/ tests/
-	@echo "Running black..."
-	black code_assistant_manager/ tests/
-
-format-check:
-	@echo "Checking isort..."
-	isort --check-only code_assistant_manager/ tests/
-	@echo "Checking black..."
-	black --check code_assistant_manager/ tests/
-
-type-check:
-	@echo "Running mypy..."
-	mypy code_assistant_manager/
-
-security:
-	@echo "Running bandit..."
-	bandit -r code_assistant_manager/ -c pyproject.toml
-
-docstring-check:
-	@echo "Checking docstring coverage..."
-	interrogate code_assistant_manager/ -c pyproject.toml
-
-# Combined checks
-check: format-check lint type-check test
+check: fmt-check vet test
+	bash tests/verify_go_cli_install.sh
 	@echo "All checks passed!"
 
-# Pre-commit
-pre-commit-install:
-	pre-commit install
-	@echo "Pre-commit hooks installed successfully!"
-
-pre-commit-run:
-	pre-commit run --all-files
-
-pre-commit-update:
-	pre-commit autoupdate
-
-# Building
-build: clean
-	python3 setup.py bdist_wheel
-
-# Release workflow
 release: clean check build
 	@echo "Release build completed successfully!"
-	@echo "Distribution files:"
 	@ls -lh dist/
-
-# Docker commands (future)
-docker-build:
-	@echo "Docker build not yet implemented"
-
-docker-run:
-	@echo "Docker run not yet implemented"

@@ -106,10 +106,10 @@ class AgentManager:
         """Initialize agent manager.
 
         Args:
-            config_dir: Configuration directory (defaults to ~/.config/code-assistant-manager)
+            config_dir: Configuration directory (defaults to ~/.config/code-agent-manager)
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            config_dir = Path.home() / ".config" / "code-agent-manager"
         self.config_dir = Path(config_dir)
         self.agents_file = self.config_dir / "agents.json"
         self.repos_file = self.config_dir / "agent_repos.json"

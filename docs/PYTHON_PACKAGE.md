@@ -7,7 +7,7 @@ shell scripts. All functionality has been preserved with an improved architectur
 
 ### From source
 ```bash
-cd /path/to/code-assistant-manager
+cd /path/to/code-agent-manager
 pip install -e .
 ```
 
@@ -61,9 +61,9 @@ gemini
 Or use the main entry point:
 
 ```bash
-code-assistant-manager claude
-code-assistant-manager codex
-code-assistant-manager droid
+code-agent-manager claude
+code-agent-manager codex
+code-agent-manager droid
 ```
 
 ## Configuration
@@ -165,7 +165,7 @@ pip install -e .
 ### "Configuration file not found"
 Place `settings.conf` in one of these locations:
 - Current directory
-- ~/.config/code-assistant-manager/settings.conf
+- ~/.config/code-agent-manager/settings.conf
 - Same directory as the script
 
 ### "Failed to fetch models"

@@ -96,7 +96,7 @@ max_context_size = 262144
                 model=model,
                 provider_name="kimi"
             )
-            print(f"[code-assistant-manager] Updated kimi config: {config_path}")
+            print(f"[code-agent-manager] Updated kimi config: {config_path}")
         except Exception as e:
             error_path = config_path or "~/.kimi/config.toml"
             return self._handle_error(f"Failed to write {error_path}", e)

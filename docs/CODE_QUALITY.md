@@ -1,6 +1,6 @@
 # Code Quality Tools Setup
 
-This document describes the code quality tools and enforcement mechanisms in place for code-assistant-manager.
+This document describes the code quality tools and enforcement mechanisms in place for code-agent-manager.
 
 ## Overview
 

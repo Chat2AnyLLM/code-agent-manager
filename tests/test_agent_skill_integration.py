@@ -30,7 +30,7 @@ class TestAgentIntegrationWorkflows:
     @pytest.fixture
     def temp_config_dir(self, tmp_path):
         """Create temporary config directory."""
-        config_dir = tmp_path / ".config" / "code-assistant-manager"
+        config_dir = tmp_path / ".config" / "code-agent-manager"
         config_dir.mkdir(parents=True)
         return config_dir
 
@@ -225,7 +225,7 @@ class TestSkillExecutionWorkflows:
 
     def test_skill_configuration_management(self, runner, tmp_path):
         """Test skill-specific configuration management."""
-        skill_config_dir = tmp_path / ".config" / "code-assistant-manager" / "skills"
+        skill_config_dir = tmp_path / ".config" / "code-agent-manager" / "skills"
         skill_config_dir.mkdir(parents=True)
 
         # Create skill configuration
@@ -389,7 +389,7 @@ class TestCrossCuttingIntegration:
 
     def test_prompt_management_integration(self, runner, tmp_path):
         """Test prompt template management and integration."""
-        prompt_dir = tmp_path / ".config" / "code-assistant-manager" / "prompts"
+        prompt_dir = tmp_path / ".config" / "code-agent-manager" / "prompts"
         prompt_dir.mkdir(parents=True)
 
         # Create sample prompt templates
