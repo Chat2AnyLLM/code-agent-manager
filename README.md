@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Code Quality](https://img.shields.io/badge/code%20quality-A+-brightgreen.svg)](https://github.com/Chat2AnyLLM/code-assistant-manager/actions)
+[![Code Quality](https://img.shields.io/badge/code%20quality-A+-brightgreen.svg)](https://github.com/Chat2AnyLLM/code-agent-manager/actions)
 
 **One CLI to Rule Them All.**
 <br>
@@ -21,8 +21,8 @@ Since CAM is not yet published to PyPI, install it locally:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
-cd code-assistant-manager
+git clone https://github.com/Chat2AnyLLM/code-agent-manager.git
+cd code-agent-manager
 
 # Run the install script
 ./install.sh
@@ -35,11 +35,11 @@ cd code-assistant-manager
 ./install.sh
 
 # Or install from the web
-curl -fsSL https://raw.githubusercontent.com/Chat2AnyLLM/code-assistant-manager/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Chat2AnyLLM/code-agent-manager/main/install.sh | bash
 
 # Install from source directly
-git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
-cd code-assistant-manager
+git clone https://github.com/Chat2AnyLLM/code-agent-manager.git
+cd code-agent-manager
 pip install -e ".[dev]"
 ```
 
@@ -49,8 +49,8 @@ pip install -e ".[dev]"
 
 1. **Create your base config files**:
    ```bash
-   mkdir -p ~/.config/code-assistant-manager
-   cp code_assistant_manager/providers.json ~/.config/code-assistant-manager/providers.json
+   mkdir -p ~/.config/code-agent-manager
+   cp code_assistant_manager/providers.json ~/.config/code-agent-manager/providers.json
    touch ~/.env
    chmod 600 ~/.env
    ```
@@ -79,17 +79,17 @@ pip install -e ".[dev]"
 
 CAM uses these main configuration files:
 
-- `~/.config/code-assistant-manager/providers.json`: endpoint/provider settings used by `cam`.
+- `~/.config/code-agent-manager/providers.json`: endpoint/provider settings used by `cam`.
 - `~/.env`: API keys and sensitive environment variables.
-- `~/.config/code-assistant-manager/config.yaml`: repository-source config for skills, agents, and plugins.
+- `~/.config/code-agent-manager/config.yaml`: repository-source config for skills, agents, and plugins.
 
 ### How `config.yaml` is used for skill/agent/plugin repos
 
-- CAM loads `~/.config/code-assistant-manager/config.yaml` first; if missing, it falls back to bundled `code_assistant_manager/config.yaml`.
+- CAM loads `~/.config/code-agent-manager/config.yaml` first; if missing, it falls back to bundled `code_assistant_manager/config.yaml`.
 - The file defines source lists for `skills`, `agents`, and `plugins`.
 - Local JSON sources (`skill_repos.json`, `agent_repos.json`, `plugin_repos.json`) are loaded first.
 - Remote sources are merged after local sources and do not override existing local keys.
-- Remote responses are cached in `~/.cache/code-assistant-manager/repos` (TTL controlled by `config.yaml`).
+- Remote responses are cached in `~/.cache/code-agent-manager/repos` (TTL controlled by `config.yaml`).
 
 ---
 

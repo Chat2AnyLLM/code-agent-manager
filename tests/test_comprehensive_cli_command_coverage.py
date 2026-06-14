@@ -27,25 +27,25 @@ class TestCompletionCommands:
         """Test bash completion command."""
         result = runner.invoke(app, ["completion", "bash"])
         assert result.exit_code == 0
-        assert "code-assistant-manager bash completion" in result.output
+        assert "code-agent-manager bash completion" in result.output
 
     def test_completion_zsh_command(self, runner):
         """Test zsh completion command."""
         result = runner.invoke(app, ["completion", "zsh"])
         assert result.exit_code == 0
-        assert "code-assistant-manager zsh completion" in result.output
+        assert "code-agent-manager zsh completion" in result.output
 
     def test_completion_fish_command(self, runner):
         """Test fish completion command."""
         result = runner.invoke(app, ["completion", "fish"])
         assert result.exit_code == 0
-        assert "code-assistant-manager fish completion" in result.output
+        assert "code-agent-manager fish completion" in result.output
 
     def test_completion_powershell_command(self, runner):
         """Test powershell completion command."""
         result = runner.invoke(app, ["completion", "powershell"])
         assert result.exit_code == 0
-        assert "code-assistant-manager powershell completion" in result.output
+        assert "code-agent-manager powershell completion" in result.output
 
     def test_completion_invalid_shell(self, runner):
         """Test completion with invalid shell."""
@@ -58,12 +58,12 @@ class TestCompletionCommands:
         # Test 'comp' alias
         result = runner.invoke(app, ["comp", "bash"])
         assert result.exit_code == 0
-        assert "code-assistant-manager bash completion" in result.output
+        assert "code-agent-manager bash completion" in result.output
 
         # Test 'c' alias
         result = runner.invoke(app, ["c", "zsh"])
         assert result.exit_code == 0
-        assert "code-assistant-manager zsh completion" in result.output
+        assert "code-agent-manager zsh completion" in result.output
 
 
 class TestConfigSubcommands:
@@ -410,7 +410,7 @@ class TestVersionCommand:
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
         assert __version__ in result.output
-        assert "code-assistant-manager" in result.output
+        assert "code-agent-manager" in result.output
 
     def test_version_alias_command(self, runner):
         """Test version command alias."""

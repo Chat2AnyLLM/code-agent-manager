@@ -1,6 +1,6 @@
 # Name Consistency Fixes - Summary
 
-This document summarizes the fixes applied to resolve naming inconsistencies in the code-assistant-manager CLI.
+This document summarizes the fixes applied to resolve naming inconsistencies in the code-agent-manager CLI.
 
 ## Date
 December 31, 2025
@@ -80,7 +80,7 @@ Could not find .claude-plugin/marketplace.json in test/repo
 
 **Files Changed:**
 - `code_assistant_manager/plugins/fetch.py`
-- User's `~/.config/code-assistant-manager/plugin_repos.json` (cleanup)
+- User's `~/.config/code-agent-manager/plugin_repos.json` (cleanup)
 
 ## Tests Added
 

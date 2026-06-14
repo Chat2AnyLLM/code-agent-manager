@@ -24,7 +24,7 @@ curl -fsSL https://shell.blackbox.ai/api/scripts/blackbox-cli-v2/download.sh | b
 
 ### 1. Provider Configuration
 
-Add a Blackbox provider to your `~/.config/code-assistant-manager/providers.json`:
+Add a Blackbox provider to your `~/.config/code-agent-manager/providers.json`:
 
 ```json
 {
@@ -49,7 +49,7 @@ Set your Blackbox API key as an environment variable:
 export BLACKBOX_API_KEY="your-api-key-here"
 ```
 
-Or add it to your `~/.config/code-assistant-manager/.env` file:
+Or add it to your `~/.config/code-agent-manager/.env` file:
 
 ```env
 BLACKBOX_API_KEY=your-api-key-here
@@ -245,7 +245,7 @@ cp ~/.blackboxcli/settings.json ~/.blackboxcli/settings.json.bak
 - **Blackbox AI**: https://blackbox.ai
 - **Blackbox Dashboard**: https://app.blackbox.ai/dashboard
 - **Blackbox Documentation**: https://docs.blackbox.ai/features/blackbox-cli/getting-started
-- **CAM Repository**: https://github.com/Chat2AnyLLM/code-assistant-manager
+- **CAM Repository**: https://github.com/Chat2AnyLLM/code-agent-manager
 
 ## Related Documentation
 

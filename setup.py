@@ -18,7 +18,7 @@ def read_version():
     return m.group(1) if m else "0.0.0"
 
 setup(
-    name="code-assistant-manager",
+    name="code-agent-manager",
     version=read_version(),
     description="CLI utilities for working with AI coding assistants",
     long_description=long_description,
@@ -49,7 +49,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "code-assistant-manager=code_assistant_manager.cli:main",
+            "code-agent-manager=code_assistant_manager.cli:main",
             "cam=code_assistant_manager.cli:main",
         ]
     },

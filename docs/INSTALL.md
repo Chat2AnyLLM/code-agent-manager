@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide covers all the ways to install and set up code-assistant-manager.
+This guide covers all the ways to install and set up code-agent-manager.
 
 ## Table of Contents
 
@@ -37,10 +37,10 @@ For the fastest installation, run:
 
 ```bash
 # Install from PyPI (if available)
-pip install code-assistant-manager
+pip install code-agent-manager
 
 # Or install from source
-pip install git+https://github.com/Chat2AnyLLM/code-assistant-manager.git
+pip install git+https://github.com/Chat2AnyLLM/code-agent-manager.git
 
 # Or use the automated installer script
 ./install.sh
@@ -54,10 +54,10 @@ If the package is published to PyPI:
 
 ```bash
 # Install for current user
-pip install code-assistant-manager
+pip install code-agent-manager
 
 # Or install system-wide (may require sudo)
-pip install --user code-assistant-manager
+pip install --user code-agent-manager
 ```
 
 ### Method 2: Install from Source
@@ -66,8 +66,8 @@ For the latest development version or if PyPI installation fails:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git
-cd code-assistant-manager
+git clone https://github.com/Chat2AnyLLM/code-agent-manager.git
+cd code-agent-manager
 
 # Install in development mode (recommended for contributors)
 pip install -e .
@@ -94,12 +94,12 @@ Use the provided `install.sh` script for automated installation:
 
 ```bash
 # Download and run the installer
-wget https://raw.githubusercontent.com/Chat2AnyLLM/code-assistant-manager/main/install.sh
+wget https://raw.githubusercontent.com/Chat2AnyLLM/code-agent-manager/main/install.sh
 chmod +x install.sh
 ./install.sh
 
 # Or run directly from the repository
-curl -sSL https://raw.githubusercontent.com/Chat2AnyLLM/code-assistant-manager/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/Chat2AnyLLM/code-agent-manager/main/install.sh | bash
 
 # Install from source instead of PyPI
 ./install.sh source
@@ -124,10 +124,10 @@ After installation, verify that the CLI commands are available:
 
 ```bash
 # Check if commands are installed
-code-assistant-manager --version
+code-agent-manager --version
 cam --version
 
-# Both should output: code-assistant-manager 1.0.3
+# Both should output: code-agent-manager 1.0.3
 ```
 
 ### 2. Configuration Setup
@@ -136,7 +136,7 @@ Create basic configuration files:
 
 ```bash
 # Create providers.json (copy from template)
-cp code_assistant_manager/providers.json ~/.config/code-assistant-manager/providers.json
+cp code_assistant_manager/providers.json ~/.config/code-agent-manager/providers.json
 
 # Create .env file for API keys
 touch ~/.env
@@ -163,10 +163,10 @@ API_KEY_OPENAI=sk-your_openai_key_here
 
 ```bash
 # Check version
-code-assistant-manager --version
+code-agent-manager --version
 
 # Show help
-code-assistant-manager --help
+code-agent-manager --help
 
 # List available commands
 cam --help
@@ -176,20 +176,20 @@ cam --help
 
 ```bash
 # Test basic functionality
-code-assistant-manager doctor
+code-agent-manager doctor
 
 # Check MCP server integration
-code-assistant-manager mcp server list | head -10
+code-agent-manager mcp server list | head -10
 ```
 
 ### Configuration Verification
 
 ```bash
 # Test configuration loading
-code-assistant-manager --endpoints
+code-agent-manager --endpoints
 
 # Test specific endpoint
-code-assistant-manager --endpoints claude
+code-agent-manager --endpoints claude
 ```
 
 ## Troubleshooting
@@ -198,17 +198,17 @@ code-assistant-manager --endpoints claude
 
 #### 1. Command Not Found
 
-If `code-assistant-manager` or `cam` commands are not found:
+If `code-agent-manager` or `cam` commands are not found:
 
 ```bash
 # Check if package is installed
-pip list | grep code-assistant-manager
+pip list | grep code-agent-manager
 
 # Reinstall if missing
 pip install -e .
 
 # Check PATH
-which code-assistant-manager
+which code-agent-manager
 echo $PATH
 ```
 
@@ -222,7 +222,7 @@ python --version
 python3 --version
 
 # Use specific Python version
-python3 -m pip install code-assistant-manager
+python3 -m pip install code-agent-manager
 python3 -m code_assistant_manager --version
 ```
 
@@ -232,12 +232,12 @@ For permission denied errors during installation:
 
 ```bash
 # Install for current user only
-pip install --user code-assistant-manager
+pip install --user code-agent-manager
 
 # Or use virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install code-assistant-manager
+pip install code-agent-manager
 ```
 
 #### 4. Import Errors
@@ -249,8 +249,8 @@ If you get import errors after installation:
 pip install -e .
 
 # Or reinstall normally
-pip uninstall code-assistant-manager
-pip install code-assistant-manager
+pip uninstall code-agent-manager
+pip install code-agent-manager
 ```
 
 ### Debug Mode
@@ -259,16 +259,16 @@ Enable debug logging for troubleshooting:
 
 ```bash
 # Run with debug output
-code-assistant-manager --debug doctor
+code-agent-manager --debug doctor
 ```
 
 ### Getting Help
 
 If issues persist:
 
-1. Check the [GitHub Issues](https://github.com/Chat2AnyLLM/code-assistant-manager/issues)
-2. Run diagnostics: `code-assistant-manager doctor`
-3. Check logs in `~/.cache/code-assistant-manager/`
+1. Check the [GitHub Issues](https://github.com/Chat2AnyLLM/code-agent-manager/issues)
+2. Run diagnostics: `code-agent-manager doctor`
+3. Check logs in `~/.cache/code-agent-manager/`
 
 ## Uninstallation
 
@@ -276,11 +276,11 @@ If issues persist:
 
 ```bash
 # Uninstall the package
-pip uninstall code-assistant-manager
+pip uninstall code-agent-manager
 
 # Remove configuration files (optional)
-rm -rf ~/.config/code-assistant-manager
-rm -rf ~/.cache/code-assistant-manager
+rm -rf ~/.config/code-agent-manager
+rm -rf ~/.cache/code-agent-manager
 ```
 
 ### Clean Uninstall
@@ -289,12 +289,12 @@ For a complete removal including all data:
 
 ```bash
 # Uninstall package
-pip uninstall code-assistant-manager
+pip uninstall code-agent-manager
 
 # Remove all user data
-rm -rf ~/.config/code-assistant-manager/
-rm -rf ~/.cache/code-assistant-manager/
-rm -f ~/.env.code-assistant-manager*
+rm -rf ~/.config/code-agent-manager/
+rm -rf ~/.cache/code-agent-manager/
+rm -f ~/.env.code-agent-manager*
 
 # Remove from PATH (if manually added)
 # Edit your shell profile and remove any custom PATH entries
@@ -306,7 +306,7 @@ If installed in development mode:
 
 ```bash
 # From the source directory
-pip uninstall code-assistant-manager
+pip uninstall code-agent-manager
 
 # Or force reinstall
 pip install -e . --force-reinstall
@@ -320,17 +320,17 @@ For isolated installations:
 
 ```bash
 # Create virtual environment
-python -m venv code-assistant-env
+python -m venv cam-env
 
 # Activate environment
-source code-assistant-env/bin/activate  # Linux/macOS
-# code-assistant-env\Scripts\activate    # Windows
+source cam-env/bin/activate  # Linux/macOS
+# cam-env\Scripts\activate    # Windows
 
 # Install package
-pip install code-assistant-manager
+pip install code-agent-manager
 
 # Use the tool
-code-assistant-manager --version
+code-agent-manager --version
 
 # Deactivate when done
 deactivate
@@ -343,9 +343,9 @@ For containerized usage:
 ```dockerfile
 FROM python:3.11-slim
 
-RUN pip install code-assistant-manager
+RUN pip install code-agent-manager
 
-CMD ["code-assistant-manager", "--help"]
+CMD ["code-agent-manager", "--help"]
 ```
 
 ### Conda Installation
@@ -354,11 +354,11 @@ For conda environments:
 
 ```bash
 # Create conda environment
-conda create -n code-assistant python=3.11
-conda activate code-assistant
+conda create -n cam python=3.11
+conda activate cam
 
 # Install package
-pip install code-assistant-manager
+pip install code-agent-manager
 ```
 
 ## Platform-Specific Notes
@@ -382,8 +382,8 @@ After successful installation:
 
 1. **Configure Endpoints**: Set up your AI service endpoints in `providers.json`
 2. **Add API Keys**: Configure your API keys in `.env` file
-3. **Test Integration**: Run `code-assistant-manager doctor` to verify setup
-4. **Explore Features**: Try `code-assistant-manager --help` to see all options
+3. **Test Integration**: Run `code-agent-manager doctor` to verify setup
+4. **Explore Features**: Try `code-agent-manager --help` to see all options
 
 For detailed configuration instructions, see the main [README.md](README.md) file.</content>
 <parameter name="file_path">INSTALL.md

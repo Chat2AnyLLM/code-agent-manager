@@ -22,7 +22,7 @@ class TestCLIMain:
 
     def test_cli_help(self):
         """Test CLI help output."""
-        with patch("sys.argv", ["code-assistant-manager", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -36,7 +36,7 @@ class TestCLIMain:
         # Capture stdout to check help output
         captured_output = io.StringIO()
         with redirect_stdout(captured_output):
-            with patch("sys.argv", ["code-assistant-manager", "--help"]):
+            with patch("sys.argv", ["code-agent-manager", "--help"]):
                 with pytest.raises(SystemExit):
                     main()
 
@@ -50,12 +50,12 @@ class TestCLIMain:
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
         version_output = result.stdout
-        assert "code-assistant-manager" in version_output
+        assert "code-agent-manager" in version_output
         assert __version__ in version_output, f"Version command should output {__version__}"
 
     def test_cli_no_arguments(self):
         """Test CLI with no arguments."""
-        with patch("sys.argv", ["code-assistant-manager"]):
+        with patch("sys.argv", ["code-agent-manager"]):
             with pytest.raises(SystemExit) as exc_info:
                 app()
             # When no_args_is_help=True, Typer shows help and exits
@@ -64,7 +64,7 @@ class TestCLIMain:
 
     def test_cli_invalid_tool(self):
         """Test CLI with invalid tool."""
-        with patch("sys.argv", ["code-assistant-manager", "launch", "invalid"]):
+        with patch("sys.argv", ["code-agent-manager", "launch", "invalid"]):
             with pytest.raises(SystemExit) as exc_info:
                 app()
             # Invalid commands should exit with error code
@@ -75,7 +75,7 @@ class TestCLIMain:
         """Test CLI claude command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "claude", "--config", temp_config],
+            ["code-agent-manager", "launch", "claude", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -88,7 +88,7 @@ class TestCLIMain:
         """Test CLI codex command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "codex", "--config", temp_config],
+            ["code-agent-manager", "launch", "codex", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -100,7 +100,7 @@ class TestCLIMain:
         """Test CLI qwen command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "qwen", "--config", temp_config],
+            ["code-agent-manager", "launch", "qwen", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -112,7 +112,7 @@ class TestCLIMain:
         """Test CLI codebuddy command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "codebuddy", "--config", temp_config],
+            ["code-agent-manager", "launch", "codebuddy", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -124,7 +124,7 @@ class TestCLIMain:
         """Test CLI iflow command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "iflow", "--config", temp_config],
+            ["code-agent-manager", "launch", "iflow", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -136,7 +136,7 @@ class TestCLIMain:
         """Test CLI droid command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "droid", "--config", temp_config],
+            ["code-agent-manager", "launch", "droid", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -148,7 +148,7 @@ class TestCLIMain:
         """Test CLI copilot command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "copilot", "--config", temp_config],
+            ["code-agent-manager", "launch", "copilot", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -160,7 +160,7 @@ class TestCLIMain:
         """Test CLI gemini command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "gemini", "--config", temp_config],
+            ["code-agent-manager", "launch", "gemini", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -176,7 +176,7 @@ class TestCLIMain:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "claude",
                 "--config",
@@ -195,7 +195,7 @@ class TestCLIMain:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "launch",
                 "claude",
                 "--config",
@@ -212,7 +212,7 @@ class TestCLIMain:
     @patch("code_assistant_manager.mcp.tool.MCPTool.run", return_value=0)
     def test_cli_mcp_command(self, mock_run, temp_config):
         """Test CLI mcp command."""
-        with patch("sys.argv", ["code-assistant-manager", "mcp"]):
+        with patch("sys.argv", ["code-agent-manager", "mcp"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             # MCP command may exit with different code or require subcommands
@@ -221,7 +221,7 @@ class TestCLIMain:
     @patch("code_assistant_manager.cli.upgrade.handle_upgrade_command", return_value=0)
     def test_cli_upgrade_command(self, mock_upgrade, temp_config):
         """Test CLI upgrade command."""
-        with patch("sys.argv", ["code-assistant-manager", "upgrade"]):
+        with patch("sys.argv", ["code-agent-manager", "upgrade"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -232,7 +232,7 @@ class TestCLIMain:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "upgrade",
                 "all",
                 "--config",
@@ -248,7 +248,7 @@ class TestCLIMain:
         """Test CLI install command."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "install", "--config", temp_config],
+            ["code-agent-manager", "install", "--config", temp_config],
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -260,7 +260,7 @@ class TestCLIMain:
         with patch(
             "sys.argv",
             [
-                "code-assistant-manager",
+                "code-agent-manager",
                 "install",
                 "all",
                 "--config",
@@ -275,7 +275,7 @@ class TestCLIMain:
     def test_cli_install_alias_command(self, mock_upgrade, temp_config):
         """Test CLI install alias 'i' command."""
         with patch(
-            "sys.argv", ["code-assistant-manager", "i", "--config", temp_config]
+            "sys.argv", ["code-agent-manager", "i", "--config", temp_config]
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -285,7 +285,7 @@ class TestCLIMain:
     def test_cli_install_alias_all_command(self, mock_upgrade, temp_config):
         """Test CLI install alias 'i' all command."""
         with patch(
-            "sys.argv", ["code-assistant-manager", "i", "all", "--config", temp_config]
+            "sys.argv", ["code-agent-manager", "i", "all", "--config", temp_config]
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -310,7 +310,7 @@ class TestCLIToolMapping:
             for tool in ["claude", "codex", "qwen", "codebuddy", "iflow"]:
                 with patch(
                     "sys.argv",
-                    ["code-assistant-manager", "launch", tool, "--config", config_path],
+                    ["code-agent-manager", "launch", tool, "--config", config_path],
                 ):
                     with patch(
                         "code_assistant_manager.tools.CodexTool.run", return_value=0
@@ -343,7 +343,7 @@ class TestCLIConfigHandling:
         """Test that CLI uses custom config path."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "claude", "--config", temp_config],
+            ["code-agent-manager", "launch", "claude", "--config", temp_config],
         ):
             with patch("code_assistant_manager.config.ConfigManager") as mock_cm_class:
                 mock_config = MagicMock()
@@ -359,7 +359,7 @@ class TestCLIConfigHandling:
 
     def test_cli_default_config_path(self):
         """Test that CLI looks for default config."""
-        with patch("sys.argv", ["code-assistant-manager", "launch", "claude"]):
+        with patch("sys.argv", ["code-agent-manager", "launch", "claude"]):
             with patch("code_assistant_manager.config.ConfigManager") as mock_cm_class:
                 mock_config = MagicMock()
                 mock_config.validate_config.return_value = (True, [])
@@ -380,7 +380,7 @@ class TestCLIErrorHandling:
         """Test CLI handles keyboard interrupt gracefully."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "claude", "--config", temp_config],
+            ["code-agent-manager", "launch", "claude", "--config", temp_config],
         ):
             with patch(
                 "code_assistant_manager.tools.ClaudeTool.run",
@@ -401,7 +401,7 @@ class TestCLIErrorHandling:
         """Test CLI handles exceptions gracefully."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "claude", "--config", temp_config],
+            ["code-agent-manager", "launch", "claude", "--config", temp_config],
         ):
             with patch(
                 "code_assistant_manager.tools.ClaudeTool.run",
@@ -420,7 +420,7 @@ class TestToolInvocation:
 
     def test_claude_invocation_via_main(self):
         """Test invoking claude via main CLI."""
-        with patch("sys.argv", ["code-assistant-manager", "launch", "claude"]):
+        with patch("sys.argv", ["code-agent-manager", "launch", "claude"]):
             with patch(
                 "code_assistant_manager.config.ConfigManager"
             ) as mock_config_class:
@@ -437,7 +437,7 @@ class TestToolInvocation:
 
     def test_codex_invocation_via_main(self):
         """Test invoking codex via main CLI."""
-        with patch("sys.argv", ["code-assistant-manager", "launch", "codex"]):
+        with patch("sys.argv", ["code-agent-manager", "launch", "codex"]):
             with patch(
                 "code_assistant_manager.config.ConfigManager"
             ) as mock_config_class:
@@ -456,7 +456,7 @@ class TestToolInvocation:
         """Test passing arguments to tools."""
         with patch(
             "sys.argv",
-            ["code-assistant-manager", "launch", "claude", "some-arg", "value"],
+            ["code-agent-manager", "launch", "claude", "some-arg", "value"],
         ):
             with patch(
                 "code_assistant_manager.config.ConfigManager"
@@ -478,7 +478,7 @@ class TestToolInvocation:
     )
     def test_backward_compatibility_direct_tool_command(self):
         """Test backward compatibility with direct tool commands."""
-        with patch("sys.argv", ["code-assistant-manager", "claude"]):
+        with patch("sys.argv", ["code-agent-manager", "claude"]):
             with patch(
                 "code_assistant_manager.config.ConfigManager"
             ) as mock_config_class:
@@ -499,7 +499,7 @@ class TestUninstallCommand:
 
     def test_uninstall_help(self):
         """Test that uninstall command shows help."""
-        with patch("sys.argv", ["code-assistant-manager", "uninstall", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "uninstall", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 from code_assistant_manager.cli import main
 
@@ -508,7 +508,7 @@ class TestUninstallCommand:
 
     def test_uninstall_alias_help(self):
         """Test that uninstall alias (un) shows help."""
-        with patch("sys.argv", ["code-assistant-manager", "un", "--help"]):
+        with patch("sys.argv", ["code-agent-manager", "un", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 from code_assistant_manager.cli import main
 

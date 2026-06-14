@@ -142,7 +142,7 @@ class EndpointManager:
         self.config: ConfigManager = config_manager
         self.cache_dir: Path = (
             Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
-            / "code-assistant-manager"
+            / "code-agent-manager"
         )
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._model_cache = ModelCache(self.cache_dir, config_manager)

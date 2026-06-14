@@ -281,18 +281,18 @@ class ConfigManager:
         logger.debug(f"Initializing ConfigManager with config_path: {config_path}")
         if config_path is None:
             # Lookup order for providers.json (installed location first):
-            # 1) ~/.config/code-assistant-manager/providers.json
+            # 1) ~/.config/code-agent-manager/providers.json
             # 2) ./providers.json (current working directory)
             # 3) $HOME/providers.json
             script_dir = Path(__file__).parent
-            home_config = (
-                Path.home() / ".config" / "code-assistant-manager" / "providers.json"
-            )
+            home_config = Path.home() / ".config" / "code-agent-manager" / "providers.json"
             cwd_config = Path.cwd() / "providers.json"
             home_root_config = Path.home() / "providers.json"
 
             logger.debug(
-                f"Checking config locations: home={home_config}, cwd={cwd_config}, home_root={home_root_config}"
+                "Checking config locations: "
+                f"home={home_config}, cwd={cwd_config}, "
+                f"home_root={home_root_config}"
             )
 
             if home_config.exists():
@@ -827,9 +827,9 @@ def get_config_path() -> Optional[Path]:
     """
     # Try standard locations in order of preference
     locations = [
-        Path.home() / ".config" / "code-assistant-manager" / "config.json",
-        Path.home() / ".code-assistant-manager" / "config.json",
-        Path.cwd() / ".code-assistant-manager" / "config.json",
+        Path.home() / ".config" / "code-agent-manager" / "config.json",
+        Path.home() / ".code-agent-manager" / "config.json",
+        Path.cwd() / ".code-agent-manager" / "config.json",
     ]
 
     for config_path in locations:

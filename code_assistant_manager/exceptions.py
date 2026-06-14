@@ -366,7 +366,7 @@ def create_error_handler(tool_name: str):
                 suggestions=[
                     "Check if the configuration file exists",
                     "Verify file permissions",
-                    "Run 'code-assistant-manager doctor' to diagnose issues",
+                    "Run 'code-agent-manager doctor' to diagnose issues",
                 ],
             )
 
@@ -414,7 +414,7 @@ def create_error_handler(tool_name: str):
                 suggestions=[
                     "Check configuration values",
                     "Verify input format",
-                    "Run 'code-assistant-manager doctor' to validate config",
+                    "Run 'code-agent-manager doctor' to validate config",
                 ],
             )
 
@@ -426,7 +426,7 @@ def create_error_handler(tool_name: str):
                 context=context,
                 suggestions=[
                     "Check logs for more details",
-                    "Run 'code-assistant-manager doctor' to diagnose issues",
+                    "Run 'code-agent-manager doctor' to diagnose issues",
                     "Report this error if it persists",
                 ],
             )

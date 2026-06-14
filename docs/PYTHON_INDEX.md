@@ -94,8 +94,8 @@ copilot
 gemini
 
 # Or via main entry point
-code-assistant-manager claude
-code-assistant-manager --help
+code-agent-manager claude
+code-agent-manager --help
 ```
 
 ### Python API
@@ -169,7 +169,7 @@ All components have been tested:
 
 1. **Read**: Start with [PYTHON_CONVERSION_COMPLETE.md](PYTHON_CONVERSION_COMPLETE.md)
 2. **Install**: Run `pip install -e .`
-3. **Test**: Execute `claude` or `code-assistant-manager --help`
+3. **Test**: Execute `claude` or `code-agent-manager --help`
 4. **Migrate**: Update your shell aliases if needed
 5. **Enjoy**: Better organized, more maintainable code!
 

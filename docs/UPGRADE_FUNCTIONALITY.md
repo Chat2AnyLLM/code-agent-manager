@@ -40,7 +40,7 @@ claude-code:
 
 ## Example Workflow
 
-1. User runs `code-assistant-manager claude`
+1. User runs `code-agent-manager claude`
 2. System detects `claude` command is available
 3. System prompts: "Upgrade Claude Code CLI?"
 4. User selects "Yes, upgrade to latest version"

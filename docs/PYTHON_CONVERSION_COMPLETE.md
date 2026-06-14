@@ -77,9 +77,9 @@ gemini          # Gemini setup
 
 **Or use the main entry point:**
 ```bash
-code-assistant-manager claude
-code-assistant-manager codex
-code-assistant-manager --help
+code-agent-manager claude
+code-agent-manager codex
+code-agent-manager --help
 ```
 
 **As Python API:**
@@ -96,7 +96,7 @@ success, idx = display_centered_menu("Select", endpoints)
 
 1. **Install the package:**
    ```bash
-   cd /path/to/code-assistant-manager
+   cd /path/to/code-agent-manager
    pip install -e .
    ```
 

@@ -26,12 +26,12 @@ def completion(shell: str = SHELL_OPTION):
     typer.echo("#")
     typer.echo("# Option 1: Add to ~/.bashrc or ~/.zshrc")
     typer.echo(
-        f"# echo 'source <(code-assistant-manager completion {shell})' >> ~/.{shell}rc"
+        f"# echo 'source <(code-agent-manager completion {shell})' >> ~/.{shell}rc"
     )
     typer.echo("#")
     typer.echo("# Option 2: Save to file and source it")
     typer.echo(
-        f"# code-assistant-manager completion {shell} > ~/.{shell}_completion_code_assistant_manager"
+        f"# code-agent-manager completion {shell} > ~/.{shell}_completion_code_assistant_manager"
     )
     typer.echo(
         f"# echo 'source ~/.{shell}_completion_code_assistant_manager' >> ~/.{shell}rc"
@@ -70,7 +70,7 @@ def generate_completion_script(shell: str) -> str:
 
 def _generate_bash_completion() -> str:
     """Generate bash completion script."""
-    return """# code-assistant-manager bash completion
+    return """# code-agent-manager bash completion
 
 _code_assistant_manager_completions()
 {
@@ -452,15 +452,15 @@ _code_assistant_manager_completions()
     return 0
 }
 
-complete -F _code_assistant_manager_completions code-assistant-manager
+complete -F _code_assistant_manager_completions code-agent-manager
 complete -F _code_assistant_manager_completions cam"""
 
 
 def _generate_zsh_completion() -> str:
     """Generate zsh completion script."""
-    return """# code-assistant-manager zsh completion
+    return """# code-agent-manager zsh completion
 
-#compdef code-assistant-manager cam
+#compdef code-agent-manager cam
 
 _code_assistant_manager() {
     local -a commands tools mcp_server_commands config_commands prompt_commands skill_commands plugin_commands agent_commands extensions_commands global_flags
@@ -619,7 +619,7 @@ _code_assistant_manager() {
 
     case $state in
         command)
-            _describe -t commands 'code-assistant-manager command' commands
+            _describe -t commands 'code-agent-manager command' commands
             ;;
         args)
             case $words[1] in

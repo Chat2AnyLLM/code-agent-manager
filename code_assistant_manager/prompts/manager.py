@@ -65,7 +65,7 @@ class PromptManager:
                               for testing purposes
         """
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "code-assistant-manager"
+            config_dir = Path.home() / ".config" / "code-agent-manager"
         self.config_dir = Path(config_dir)
         self.prompts_file = self.config_dir / "prompts.json"
         self.config_dir.mkdir(parents=True, exist_ok=True)

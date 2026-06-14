@@ -96,7 +96,7 @@ def fetch_raw_file(owner: str, repo: str, branch: str, path: str) -> Optional[st
     for attempt in range(max_retries):
         try:
             request = Request(url)
-            request.add_header("User-Agent", "code-assistant-manager")
+            request.add_header("User-Agent", "code-agent-manager")
             with urlopen(request, timeout=timeout) as response:
                 return response.read().decode("utf-8")
         except HTTPError as e:

@@ -1,6 +1,6 @@
 # Contributing to Code Assistant Manager
 
-Thank you for your interest in contributing to code-assistant-manager! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to code-agent-manager! This document provides guidelines and instructions for contributing to the project.
 
 ## Table of Contents
 
@@ -16,12 +16,12 @@ Thank you for your interest in contributing to code-assistant-manager! This docu
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/your-username/code-assistant-manager.git
-   cd code-assistant-manager
+   git clone https://github.com/your-username/code-agent-manager.git
+   cd code-agent-manager
    ```
 3. Add the upstream repository:
    ```bash
-   git remote add upstream https://github.com/yourorg/code-assistant-manager.git
+   git remote add upstream https://github.com/yourorg/code-agent-manager.git
    ```
 
 ## Development Setup
@@ -54,7 +54,7 @@ Thank you for your interest in contributing to code-assistant-manager! This docu
 
 3. Verify the installation:
    ```bash
-   code-assistant-manager --version
+   code-agent-manager --version
    pytest tests/ -v
    ```
 
@@ -232,7 +232,7 @@ This project welcomes AI-assisted contributions. Please follow these additional 
    rm -rf dist/*
    ./install.sh uninstall
    ./install.sh
-   cp ~/.config/code-assistant-manager/providers.json.bak ~/.config/code-assistant-manager/providers.json
+   cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json
    ```
 
 ### Attribution

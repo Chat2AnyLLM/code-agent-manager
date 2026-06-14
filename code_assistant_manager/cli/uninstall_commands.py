@@ -155,7 +155,7 @@ def backup_configs(ctx: UninstallContext) -> Optional[Path]:
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_dir = (
-        Path.home() / f".config/code-assistant-manager/backup/uninstall_{timestamp}"
+        Path.home() / f".config/code-agent-manager/backup/uninstall_{timestamp}"
     )
     backup_dir.mkdir(parents=True, exist_ok=True)
 

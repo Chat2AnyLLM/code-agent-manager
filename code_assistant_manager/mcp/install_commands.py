@@ -56,9 +56,9 @@ def install(
         force: Whether to force reinstallation if server already exists
 
     Examples:
-        code-assistant-manager mcp install memory claude
-        code-assistant-manager mcp install filesystem codex --method docker
-        code-assistant-manager mcp install memory gemini --force
+        code-agent-manager mcp install memory claude
+        code-agent-manager mcp install filesystem codex --method docker
+        code-agent-manager mcp install memory gemini --force
     """
     # Attempt server installation through the installation manager
     success = installation_manager.install_server(
@@ -90,8 +90,8 @@ def list_methods(server_name: str):
         server_name: Name of the MCP server to check
 
     Examples:
-        code-assistant-manager mcp list-methods memory
-        code-assistant-manager mcp list-methods filesystem
+        code-agent-manager mcp list-methods memory
+        code-agent-manager mcp list-methods filesystem
     """
     # Retrieve server schema from registry
     schema = registry_manager.get_server_schema(server_name)

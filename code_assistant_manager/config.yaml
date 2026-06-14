@@ -7,7 +7,7 @@ repositories:
     sources:
       # Local user file (highest priority)
       - type: local
-        path: ~/.config/code-assistant-manager/skill_repos.json
+        path: ~/.config/code-agent-manager/skill_repos.json
       
       # Remote awesome repository configs
       - type: remote
@@ -18,7 +18,7 @@ repositories:
     sources:
       # Local user file (highest priority)
       - type: local
-        path: ~/.config/code-assistant-manager/agent_repos.json
+        path: ~/.config/code-agent-manager/agent_repos.json
       
       # Remote awesome repository configs
       - type: remote
@@ -29,7 +29,7 @@ repositories:
     sources:
       # Local user file (highest priority)
       - type: local
-        path: ~/.config/code-assistant-manager/plugin_repos.json
+        path: ~/.config/code-agent-manager/plugin_repos.json
       
       # Remote awesome repository configs
       - type: remote
@@ -38,5 +38,5 @@ repositories:
 # Cache settings for remote sources
 cache:
   enabled: true
-  directory: ~/.cache/code-assistant-manager/repos
+  directory: ~/.cache/code-agent-manager/repos
   ttl_seconds: 3600  # Cache remote sources for 1 hour

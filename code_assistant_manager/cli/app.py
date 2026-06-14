@@ -106,7 +106,7 @@ def _generate_bash_completion() -> str:
 
 def _get_bash_completion_content() -> str:
     """Get the bash completion script content."""
-    return """# code-assistant-manager bash completion
+    return """# code-agent-manager bash completion
 
 _code_assistant_manager_completions()
 {
@@ -501,7 +501,7 @@ _code_assistant_manager_completions()
     return 0
 }
 
-complete -F _code_assistant_manager_completions code-assistant-manager
+complete -F _code_assistant_manager_completions code-agent-manager
 complete -F _code_assistant_manager_completions cam"""
 
 
@@ -512,9 +512,9 @@ def _generate_zsh_completion() -> str:
 
 def _get_zsh_completion_content() -> str:
     """Get the zsh completion script content."""
-    return """# code-assistant-manager zsh completion
+    return """# code-agent-manager zsh completion
 
-#compdef code-assistant-manager cam
+#compdef code-agent-manager cam
 
 _code_assistant_manager() {
     local -a commands tools mcp_server_commands config_commands prompt_commands skill_commands plugin_commands agent_commands extensions_commands global_flags
@@ -693,7 +693,7 @@ _code_assistant_manager() {
 
     case $state in
         command)
-            _describe -t commands 'code-assistant-manager command' commands
+            _describe -t commands 'code-agent-manager command' commands
             ;;
         args)
             case $words[1] in
@@ -951,35 +951,35 @@ compdef _code_assistant_manager cam"""
 
 def _generate_fish_completion() -> str:
     """Generate fish completion script."""
-    return """# code-assistant-manager fish completion
+    return """# code-agent-manager fish completion
 
 set -l __cam_commands launch l config cf mcp m prompt p skill s plugin pl agent ag extensions ext upgrade u install i uninstall un doctor d version v completion comp c
 set -l __cam_tools aichat claude codex copilot gemini droid qwen codebuddy iflow qodercli zed neovate crush cursor-agent ampcode
 set -l __cam_completion_shells bash zsh fish powershell pwsh
 
-complete -c code-assistant-manager -f
+complete -c code-agent-manager -f
 complete -c cam -f
 
-complete -c code-assistant-manager -n "__fish_use_subcommand" -a "$__cam_commands"
+complete -c code-agent-manager -n "__fish_use_subcommand" -a "$__cam_commands"
 complete -c cam -n "__fish_use_subcommand" -a "$__cam_commands"
 
-complete -c code-assistant-manager -n "__fish_seen_subcommand_from launch l upgrade u install i uninstall un" -a "$__cam_tools"
+complete -c code-agent-manager -n "__fish_seen_subcommand_from launch l upgrade u install i uninstall un" -a "$__cam_tools"
 complete -c cam -n "__fish_seen_subcommand_from launch l upgrade u install i uninstall un" -a "$__cam_tools"
 
-complete -c code-assistant-manager -n "__fish_seen_subcommand_from completion comp c" -a "$__cam_completion_shells"
+complete -c code-agent-manager -n "__fish_seen_subcommand_from completion comp c" -a "$__cam_completion_shells"
 complete -c cam -n "__fish_seen_subcommand_from completion comp c" -a "$__cam_completion_shells"
 """
 
 
 def _generate_powershell_completion() -> str:
     """Generate PowerShell completion script."""
-    return """# code-assistant-manager powershell completion
+    return """# code-agent-manager powershell completion
 
 $codeAssistantCommands = @('launch','l','config','cf','mcp','m','prompt','p','skill','s','plugin','pl','agent','ag','extensions','ext','upgrade','u','install','i','uninstall','un','doctor','d','version','v','completion','comp','c')
 $codeAssistantTools = @('aichat','claude','codex','copilot','gemini','droid','qwen','codebuddy','iflow','qodercli','zed','neovate','crush','cursor-agent','ampcode')
 $completionShells = @('bash','zsh','fish','powershell','pwsh')
 
-Register-ArgumentCompleter -Native -CommandName code-assistant-manager, cam -ScriptBlock {
+Register-ArgumentCompleter -Native -CommandName code-agent-manager, cam -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
     $elements = $commandAst.CommandElements | ForEach-Object { $_.Value }
@@ -1061,12 +1061,12 @@ def completion(
     if normalized_shell in ["bash", "zsh"]:
         typer.echo("# Option 1: Add to ~/.bashrc or ~/.zshrc")
         typer.echo(
-            f"# echo 'source <(code-assistant-manager completion {normalized_shell})' >> ~/.{normalized_shell}rc"
+            f"# echo 'source <(code-agent-manager completion {normalized_shell})' >> ~/.{normalized_shell}rc"
         )
         typer.echo("#")
         typer.echo("# Option 2: Save to file and source it")
         typer.echo(
-            f"# code-assistant-manager completion {normalized_shell} > ~/.{normalized_shell}_completion_code_assistant_manager"
+            f"# code-agent-manager completion {normalized_shell} > ~/.{normalized_shell}_completion_code_assistant_manager"
         )
         typer.echo(
             f"# echo 'source ~/.{normalized_shell}_completion_code_assistant_manager' >> ~/.{normalized_shell}rc"
@@ -1078,15 +1078,15 @@ def completion(
     elif normalized_shell == "fish":
         typer.echo("# Option 1: Install to fish completions directory")
         typer.echo(
-            "# code-assistant-manager completion fish > ~/.config/fish/completions/code-assistant-manager.fish"
+            "# code-agent-manager completion fish > ~/.config/fish/completions/code-agent-manager.fish"
         )
         typer.echo("#")
         typer.echo("# Option 2: Load for current session only")
-        typer.echo("# source (code-assistant-manager completion fish | psub)")
+        typer.echo("# source (code-agent-manager completion fish | psub)")
     else:
         typer.echo("# Save to your PowerShell profile and reload")
         typer.echo(
-            "# code-assistant-manager completion powershell | Out-File -Encoding utf8 -Append $PROFILE"
+            "# code-agent-manager completion powershell | Out-File -Encoding utf8 -Append $PROFILE"
         )
         typer.echo("# . $PROFILE")
     typer.echo()
@@ -1499,7 +1499,7 @@ def doctor(
         None, "--config", help="Path to config file"
     ),
 ):
-    """Run diagnostic checks on the code-assistant-manager installation (alias: d)"""
+    """Run diagnostic checks on the code-agent-manager installation (alias: d)"""
     # Lazy imports for doctor command
     from code_assistant_manager.config import ConfigManager
     from code_assistant_manager.cli.doctor import run_doctor_checks
@@ -1729,7 +1729,7 @@ def version_command():
     """Show version information."""
     from code_assistant_manager import __version__
 
-    typer.echo(f"code-assistant-manager version {__version__}")
+    typer.echo(f"code-agent-manager version {__version__}")
     raise typer.Exit()
 
 
@@ -1814,7 +1814,7 @@ def list_config():
     typer.echo(f"{Colors.CYAN}Code Assistant Manager (CAM):{Colors.RESET}")
     home = Path.home()
     cam_config_locations = [
-        home / ".config" / "code-assistant-manager" / "providers.json",
+        home / ".config" / "code-agent-manager" / "providers.json",
         Path.cwd() / "providers.json",
         home / "providers.json",
     ]

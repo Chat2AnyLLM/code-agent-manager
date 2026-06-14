@@ -12,5 +12,5 @@ This file documents repository-level expectations and instructions intended to g
 rm -rf dist/*
 ./install.sh uninstall
 ./install.sh
-cp ~/.config/code-assistant-manager/providers.json.bak ~/.config/code-assistant-manager/providers.json
+cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json
 ```

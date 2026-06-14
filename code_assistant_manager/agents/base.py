@@ -307,7 +307,7 @@ class BaseAgentHandler(ABC):
             logger.debug(f"Trying to download: {url}")
 
             try:
-                req = Request(url, headers={"User-Agent": "code-assistant-manager"})
+                req = Request(url, headers={"User-Agent": "code-agent-manager"})
                 with urlopen(req, timeout=60) as response:
                     zip_data = response.read()
 

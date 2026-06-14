@@ -15,7 +15,7 @@ def legacy_main():
     """Legacy entrypoint wrapper that delegates to the Typer app.
 
     This function preserves backward compatibility for direct tool invocation
-    (e.g., `code-assistant-manager claude`) while ensuring primary parsing is
+    (e.g., `code-agent-manager claude`) while ensuring primary parsing is
     handled by Typer commands and options.
     """
     logger.debug("Main function called with args: %s", sys.argv)
@@ -33,7 +33,7 @@ def legacy_main():
                 pass  # app() shows help and exits, we want to continue
             raise SystemExit(0)
 
-        # Direct tool invocation without 'launch' (e.g., `code-assistant-manager claude`)
+        # Direct tool invocation without 'launch' (e.g., `code-agent-manager claude`)
         registered_tools = get_registered_tools()
         command = sys.argv[1]
         logger.debug(f"Checking for direct tool invocation: {command}")

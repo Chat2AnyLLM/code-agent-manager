@@ -91,10 +91,10 @@ pip install -r requirements.txt
 claude
 
 # Via main entry point
-code-assistant-manager claude
+code-agent-manager claude
 
 # With arguments
-code-assistant-manager claude --version
+code-agent-manager claude --version
 ```
 
 ### Python API
@@ -224,7 +224,7 @@ The Code Assistant Manager project has been successfully converted to a modular 
 
 Users can now interact with AI providers through either:
 1. Individual commands: `claude`, `codex`, `droid`, etc.
-2. Main entry point: `code-assistant-manager claude`, `code-assistant-manager codex`, etc.
+2. Main entry point: `code-agent-manager claude`, `code-agent-manager codex`, etc.
 3. Python API: Import and use modules directly
 
 All original functionality is preserved with improved code organization and better error handling.

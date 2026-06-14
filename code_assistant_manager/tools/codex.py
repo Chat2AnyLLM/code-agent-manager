@@ -42,10 +42,10 @@ class CodexTool(CLITool):
         if result.get("changed"):
             provider_action = "Updated" if result.get("provider_existed") else "Added"
             profile_action = "Updated" if result.get("profile_existed") else "Added"
-            print(f"[code-assistant-manager] {provider_action} model provider '{endpoint_name}'")
-            print(f"[code-assistant-manager] {profile_action} profile '{profile_name}'")
+            print(f"[code-agent-manager] {provider_action} model provider '{endpoint_name}'")
+            print(f"[code-agent-manager] {profile_action} profile '{profile_name}'")
         else:
-            print("[code-assistant-manager] Codex config already up to date")
+            print("[code-agent-manager] Codex config already up to date")
 
         return config_path
 
@@ -215,17 +215,17 @@ class CodexTool(CLITool):
                 # Set wire_api to 'responses' for GPT models
                 try:
                     codex_config.set_value(f"model_providers.{profile_provider}.wire_api", "responses", "user")
-                    print(f"[code-assistant-manager] Set codex.model_providers.{profile_provider}.wire_api = 'responses' for GPT model")
+                    print(f"[code-agent-manager] Set codex.model_providers.{profile_provider}.wire_api = 'responses' for GPT model")
                 except Exception as e:
-                    print(f"[code-assistant-manager] Warning: Failed to set wire_api config: {e}")
+                    print(f"[code-agent-manager] Warning: Failed to set wire_api config: {e}")
             elif profile_provider:
                 # Unset wire_api for non-GPT models
                 try:
                     found = codex_config.unset_value(f"model_providers.{profile_provider}.wire_api", "user")
                     if found:
-                        print(f"[code-assistant-manager] Unset codex.model_providers.{profile_provider}.wire_api for non-GPT model")
+                        print(f"[code-agent-manager] Unset codex.model_providers.{profile_provider}.wire_api for non-GPT model")
                 except Exception as e:
-                    print(f"[code-assistant-manager] Warning: Failed to unset wire_api config: {e}")
+                    print(f"[code-agent-manager] Warning: Failed to unset wire_api config: {e}")
 
         env = os.environ.copy()
         if selected_profile in profile_env:

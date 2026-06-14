@@ -12,7 +12,7 @@ tools:
         NODE_TLS_REJECT_UNAUTHORIZED: "0"
     configuration:
       notes:
-        - "No code-assistant-manager endpoint selection; authentication is driven by environment variables."
+        - "No code-agent-manager endpoint selection; authentication is driven by environment variables."
     cli_parameters:
       injected: []
     filesystem:
@@ -62,7 +62,7 @@ tools:
       exported:
         OPENAI_BASE_URL: "Populated from selected endpoint.endpoint."
         OPENAI_API_KEY: "Resolved from endpoint configuration and environment (masked in output)."
-        OPENAI_MODEL: "Model ID selected via code-assistant-manager prompt."
+        OPENAI_MODEL: "Model ID selected via code-agent-manager prompt."
         NODE_TLS_REJECT_UNAUTHORIZED: "0"
     configuration:
       required:
@@ -90,8 +90,8 @@ tools:
       exported:
         ANTHROPIC_BASE_URL: "Populated from selected endpoint.endpoint."
         ANTHROPIC_AUTH_TOKEN: "Resolved API key for the endpoint."
-        ANTHROPIC_MODEL: "Primary model selected via code-assistant-manager prompt."
-        ANTHROPIC_SMALL_FAST_MODEL: "Secondary model selected via code-assistant-manager prompt."
+        ANTHROPIC_MODEL: "Primary model selected via code-agent-manager prompt."
+        ANTHROPIC_SMALL_FAST_MODEL: "Secondary model selected via code-agent-manager prompt."
         CLAUDE_MODEL_2: "Alias for the secondary model."
         CLAUDE_MODELS: "Comma-separated primary and secondary models."
         ANTHROPIC_DEFAULT_SONNET_MODEL: "Defaulted to the primary model."
@@ -225,7 +225,7 @@ tools:
       exported:
         IFLOW_API_KEY: "Resolved from selected endpoint actual_api_key."
         IFLOW_BASE_URL: "Populated from selected endpoint.endpoint."
-        IFLOW_MODEL_NAME: "Model selected via code-assistant-manager prompt."
+        IFLOW_MODEL_NAME: "Model selected via code-agent-manager prompt."
         NODE_TLS_REJECT_UNAUTHORIZED: "0"
     configuration:
       required:
@@ -415,7 +415,7 @@ tools:
       exported:
         AICHAT_BASE_URL: "Populated from selected endpoint.endpoint."
         AICHAT_API_KEY: "Resolved from endpoint configuration and environment (masked in output)."
-        AICHAT_MODEL: "Model ID selected via code-assistant-manager prompt."
+        AICHAT_MODEL: "Model ID selected via code-agent-manager prompt."
         NODE_TLS_REJECT_UNAUTHORIZED: "0"
     configuration:
       required:

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Migration script to migrate MCP server schemas from mcpm.sh to code-assistant-manager.
+Migration script to migrate MCP server schemas from mcpm.sh to code-agent-manager.
 
 This script:
 1. Reads all server manifests from mcpm.sh mcp-registry/servers/
-2. Transforms them to the enhanced code-assistant-manager schema format
-3. Saves them to code-assistant-manager/mcp/registry/servers/
+2. Transforms them to the enhanced code-agent-manager schema format
+3. Saves them to code-agent-manager/mcp/registry/servers/
 4. Provides backward compatibility for existing simple schemas
 """
 
@@ -14,7 +14,7 @@ import difflib
 import json
 import os
 
-# Import from code-assistant-manager
+# Import from code-agent-manager
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -27,7 +27,7 @@ from code_assistant_manager.mcp.schema import ServerSchema
 
 
 class MCPMSchemaMigrator:
-    """Migrator for mcpm.sh MCP server schemas to code-assistant-manager format"""
+    """Migrator for mcpm.sh MCP server schemas to code-agent-manager format"""
 
     def __init__(
         self,
@@ -52,13 +52,13 @@ class MCPMSchemaMigrator:
 
     def migrate_server_schema(self, server_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Transform a mcpm.sh server schema to code-assistant-manager enhanced format.
+        Transform a mcpm.sh server schema to code-agent-manager enhanced format.
 
         Args:
             server_data: Raw server data from mcpm.sh
 
         Returns:
-            Transformed server data compatible with code-assistant-manager
+            Transformed server data compatible with code-agent-manager
         """
         # Start with the original data
         migrated = dict(server_data)
@@ -91,7 +91,7 @@ class MCPMSchemaMigrator:
 
     def validate_migrated_schema(self, server_data: Dict[str, Any]) -> bool:
         """
-        Validate that the migrated schema conforms to the code-assistant-manager format.
+        Validate that the migrated schema conforms to the code-agent-manager format.
 
         Args:
             server_data: Migrated server data
@@ -282,7 +282,7 @@ class MCPMSchemaMigrator:
 
     def migrate_all_servers(self, dry_run: bool = False) -> Dict[str, Any]:
         """
-        Migrate all server schemas from mcpm.sh to code-assistant-manager.
+        Migrate all server schemas from mcpm.sh to code-agent-manager.
 
         Args:
             dry_run: If True, don't write files, just report what would be done
@@ -301,7 +301,7 @@ class MCPMSchemaMigrator:
                     parents=True, exist_ok=True
                 )
             print(
-                f"Created code-assistant-manager servers directory: {self.code_assistant_manager_servers_dir}"
+                f"Created code-agent-manager servers directory: {self.code_assistant_manager_servers_dir}"
             )
 
         # Get all server files from source
@@ -421,7 +421,7 @@ class MCPMSchemaMigrator:
                                 # else proceed to write/overwrite
 
                 if not dry_run:
-                    # Write to code-assistant-manager
+                    # Write to code-agent-manager
                     with open(code_assistant_manager_file, "w", encoding="utf-8") as f:
                         json.dump(migrated_data, f, indent=2, ensure_ascii=False)
                         f.write("\n")  # Add trailing newline
@@ -477,7 +477,7 @@ class MCPMSchemaMigrator:
 
     def backup_existing_schemas(self) -> Path:
         """
-        Create a backup of existing code-assistant-manager server schemas.
+        Create a backup of existing code-agent-manager server schemas.
 
         Returns:
             Path to backup directory
@@ -515,7 +515,7 @@ class MCPMSchemaMigrator:
 import typer
 
 app = typer.Typer(
-    help="Migrate MCP server schemas from mcpm.sh to code-assistant-manager"
+    help="Migrate MCP server schemas from mcpm.sh to code-agent-manager"
 )
 
 
@@ -524,7 +524,7 @@ def main(
     mcpm_path: str = typer.Option(..., help="Path to mcpm.sh repository"),
     code_assistant_manager_path: str = typer.Option(
         ".",
-        help="Path to code-assistant-manager repository (default: current directory)",
+        help="Path to code-agent-manager repository (default: current directory)",
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would be migrated without making changes"
@@ -542,7 +542,7 @@ def main(
         help="Comma-separated list of keys to ignore when comparing schemas (e.g. updated_at,last_modified)",
     ),
 ):
-    """Perform migration of all server schemas from mcpm.sh to code-assistant-manager."""
+    """Perform migration of all server schemas from mcpm.sh to code-agent-manager."""
     # Parse ignore_keys option into list if provided
     parsed_ignore_keys = None
     if ignore_keys:

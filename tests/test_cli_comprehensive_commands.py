@@ -57,13 +57,13 @@ class TestMainCommands:
         """Test version command works."""
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
-        assert "code-assistant-manager version" in result.output
+        assert "code-agent-manager version" in result.output
 
     def test_version_alias(self, runner):
         """Test version alias 'v' works."""
         result = runner.invoke(app, ["v"])
         assert result.exit_code == 0
-        assert "code-assistant-manager version" in result.output
+        assert "code-agent-manager version" in result.output
 
     def test_doctor_command_basic(self, runner):
         """Test doctor command with basic options."""

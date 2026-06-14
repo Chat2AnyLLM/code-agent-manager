@@ -233,7 +233,7 @@ class DroidTool(CLITool):
         """Handle MCP subcommands for Droid."""
         if not args:
             help_text = """
- Usage: code-assistant-manager droid mcp <command> [options]
+ Usage: code-agent-manager droid mcp <command> [options]
 
 ╭─ Commands ───────────────────────────────────────────────────────────────────╮
 │ add [server_name]      Add MCP servers (all or specific server)              │
@@ -243,11 +243,11 @@ class DroidTool(CLITool):
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
  Examples:
-   code-assistant-manager droid mcp add              Add all MCP servers
-   code-assistant-manager droid mcp add memory       Add specific server
-   code-assistant-manager droid mcp list             List configured servers
-   code-assistant-manager droid mcp remove memory    Remove specific server
-   code-assistant-manager droid mcp refresh          Refresh all servers
+   code-agent-manager droid mcp add              Add all MCP servers
+   code-agent-manager droid mcp add memory       Add specific server
+   code-agent-manager droid mcp list             List configured servers
+   code-agent-manager droid mcp remove memory    Remove specific server
+   code-agent-manager droid mcp refresh          Refresh all servers
 """
             print(help_text)
             return 1
@@ -279,11 +279,11 @@ class DroidTool(CLITool):
             else:
                 help_text = """
 ╭─ Error ──────────────────────────────────────────────────────────────────────╮
-│ Usage: code-assistant-manager droid mcp add [server_name]                                │
+│ Usage: code-agent-manager droid mcp add [server_name]                                │
 │                                                                             │
 │ Examples:                                                                   │
-│   code-assistant-manager droid mcp add              Add all MCP servers                │
-│   code-assistant-manager droid mcp add memory       Add specific server                │
+│   code-agent-manager droid mcp add              Add all MCP servers                │
+│   code-agent-manager droid mcp add memory       Add specific server                │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 """
                 print(help_text)
@@ -314,11 +314,11 @@ class DroidTool(CLITool):
             else:
                 help_text = """
 ╭─ Error ──────────────────────────────────────────────────────────────────────╮
-│ Usage: code-assistant-manager droid mcp remove [server_name]                            │
+│ Usage: code-agent-manager droid mcp remove [server_name]                            │
 │                                                                             │
 │ Examples:                                                                   │
-│   code-assistant-manager droid mcp remove           Remove all MCP servers             │
-│   code-assistant-manager droid mcp remove memory    Remove specific server             │
+│   code-agent-manager droid mcp remove           Remove all MCP servers             │
+│   code-agent-manager droid mcp remove memory    Remove specific server             │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 """
                 print(help_text)

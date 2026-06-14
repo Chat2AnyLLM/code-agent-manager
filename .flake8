@@ -1,5 +1,5 @@
 [flake8]
-# Flake8 configuration for code-assistant-manager
+# Flake8 configuration for code-agent-manager
 
 # Compatibility with Black
 max-line-length = 100

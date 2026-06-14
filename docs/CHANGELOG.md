@@ -70,12 +70,12 @@
 
 ### Changed
 - **BREAKING**: Removed individual command entry points (e.g., `codex`, `claude`, `droid`) from setup.py to avoid PATH conflicts with native CLI tools
-- Users should now run tools using `code-assistant-manager <tool>` or `python -m code_assistant_manager <tool>` instead of standalone commands
+- Users should now run tools using `code-agent-manager <tool>` or `python -m code_assistant_manager <tool>` instead of standalone commands
 - Added `__main__.py` to support running as a Python module: `python -m code_assistant_manager`
 
 ### Fixed
 - Fixed issue where `codex` command would repeatedly prompt for upgrade due to PATH conflicts
-  - The Code-Assistant-Manager wrapper was finding itself when checking if the tool was installed
+  - The CAM wrapper was finding itself when checking if the tool was installed
   - Native CLI tools from npm (e.g., `@openai/codex`, `@anthropic-ai/claude-code`) are now properly detected in PATH
 - Removed circular dependency where wrapper scripts would detect themselves
 
@@ -88,8 +88,8 @@ claude "help me code"
 
 You should now use:
 ```bash
-code-assistant-manager codex --help
-code-assistant-manager claude "help me code"
+code-agent-manager codex --help
+code-agent-manager claude "help me code"
 
 # Or via Python module:
 python -m code_assistant_manager codex --help

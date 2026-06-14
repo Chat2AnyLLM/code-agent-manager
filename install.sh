@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Code Assistant Manager Installation Script
+# Code Agent Manager Installation Script
 # This script provides automated installation based on INSTALL.md
 
 set -e
@@ -62,7 +62,7 @@ check_pip() {
 # Install from PyPI
 install_pypi() {
     print_header "Installing from PyPI"
-    print_info "Installing code-assistant-manager..."
+    print_info "Installing code-agent-manager..."
     # Prefer a local wheel if available (useful for development/test environments)
     if ls dist/*.whl >/dev/null 2>&1; then
         WHEEL=$(ls dist/*.whl | head -n1)
@@ -92,7 +92,7 @@ install_pypi() {
         return 0
     fi
 
-    if python3 -m pip install --index-url https://pypi.org/simple code-assistant-manager; then
+    if python3 -m pip install --index-url https://pypi.org/simple code-agent-manager; then
         print_success "Installed from PyPI"
         return 0
     else
@@ -149,7 +149,7 @@ install_source() {
     local temp_dir=$(mktemp -d)
     print_info "Cloning repository..."
 
-    if git clone https://github.com/Chat2AnyLLM/code-assistant-manager.git "$temp_dir" 2>/dev/null; then
+    if git clone https://github.com/Chat2AnyLLM/code-agent-manager.git "$temp_dir" 2>/dev/null; then
         cd "$temp_dir"
         print_info "Installing in development mode..."
         python3 -m pip install -e .
@@ -166,7 +166,7 @@ install_source() {
 setup_config() {
     print_header "Setting up configuration"
 
-    mkdir -p ~/.config/code-assistant-manager
+    mkdir -p ~/.config/code-agent-manager
 
     # Try to find config files from local dir or installed package
     local pkg_dir=""
@@ -179,24 +179,24 @@ setup_config() {
 
     # Copy config.yaml (multi-source repository configuration)
     if [ -n "$pkg_dir" ] && [ -f "$pkg_dir/config.yaml" ]; then
-        if [ ! -f ~/.config/code-assistant-manager/config.yaml ]; then
-            cp "$pkg_dir/config.yaml" ~/.config/code-assistant-manager/config.yaml
+        if [ ! -f ~/.config/code-agent-manager/config.yaml ]; then
+            cp "$pkg_dir/config.yaml" ~/.config/code-agent-manager/config.yaml
             print_success "Created config.yaml (multi-source repo configuration)"
-            print_info "  You can edit ~/.config/code-assistant-manager/config.yaml to customize sources"
+            print_info "  You can edit ~/.config/code-agent-manager/config.yaml to customize sources"
         else
             print_info "config.yaml already exists, skipping"
         fi
     fi
 
     if [ -n "$pkg_dir" ] && [ -f "$pkg_dir/providers.json" ]; then
-        cp "$pkg_dir/providers.json" ~/.config/code-assistant-manager/providers.json
+        cp "$pkg_dir/providers.json" ~/.config/code-agent-manager/providers.json
         print_success "Created providers.json"
     fi
 
     # Initialize skill_repos.json with built-in repos
     if [ -n "$pkg_dir" ] && [ -f "$pkg_dir/skill_repos.json" ]; then
-        if [ ! -f ~/.config/code-assistant-manager/skill_repos.json ]; then
-            cp "$pkg_dir/skill_repos.json" ~/.config/code-assistant-manager/skill_repos.json
+        if [ ! -f ~/.config/code-agent-manager/skill_repos.json ]; then
+            cp "$pkg_dir/skill_repos.json" ~/.config/code-agent-manager/skill_repos.json
             print_success "Created skill_repos.json with default repositories"
         else
             print_info "skill_repos.json already exists, skipping"
@@ -220,12 +220,12 @@ EOL
 verify_install() {
     print_header "Verifying installation"
 
-    if command -v code-assistant-manager >/dev/null 2>&1; then
-        print_success "code-assistant-manager command found"
-        VERSION=$(code-assistant-manager --version 2>/dev/null || echo "unknown")
+    if command -v code-agent-manager >/dev/null 2>&1; then
+        print_success "code-agent-manager command found"
+        VERSION=$(code-agent-manager --version 2>/dev/null || echo "unknown")
         print_info "Version: $VERSION"
     else
-        print_warning "code-assistant-manager not found in PATH"
+        print_warning "code-agent-manager not found in PATH"
         print_info "You may need to restart your shell or add Python bin to PATH"
     fi
 
@@ -238,21 +238,26 @@ verify_install() {
 
 # Uninstall the package from the active Python environment
 uninstall_package() {
-    print_header "Uninstalling code-assistant-manager"
-    if python3 -m pip show code-assistant-manager >/dev/null 2>&1; then
-        python3 -m pip uninstall -y code-assistant-manager
-        print_success "Uninstalled code-assistant-manager"
-    else
-        print_warning "code-assistant-manager is not installed in this environment"
+    print_header "Uninstalling code-agent-manager"
+    local removed=0
+
+    if python3 -m pip show code-agent-manager >/dev/null 2>&1; then
+        python3 -m pip uninstall -y code-agent-manager
+        print_success "Uninstalled code-agent-manager"
+        removed=1
+    fi
+
+    if [ "$removed" -eq 0 ]; then
+        print_warning "code-agent-manager is not installed in this environment"
     fi
 }
 
 # Purge user configuration
 purge_config() {
     print_header "Purging user configuration"
-    if [ -d "$HOME/.config/code-assistant-manager" ]; then
-        rm -rf "$HOME/.config/code-assistant-manager"
-        print_success "Removed ~/.config/code-assistant-manager"
+    if [ -d "$HOME/.config/code-agent-manager" ]; then
+        rm -rf "$HOME/.config/code-agent-manager"
+        print_success "Removed ~/.config/code-agent-manager"
     else
         print_warning "No user config directory found"
     fi
@@ -268,7 +273,7 @@ purge_config() {
 # Show usage
 show_usage() {
     cat << EOF
-Code Assistant Manager Installer
+Code Agent Manager Installer
 
 Usage: $0 [METHOD]
 
@@ -289,7 +294,7 @@ EOF
 
 # Main logic
 main() {
-    print_header "Code Assistant Manager Installer"
+    print_header "Code Agent Manager Installer"
 
     METHOD=${1:-pypi}
 
@@ -340,8 +345,8 @@ main() {
         echo ""
         print_info "Next steps:"
         echo "1. Add API keys to ~/.env"
-        echo "2. Run 'code-assistant-manager doctor' to verify setup"
-        echo "3. Try 'code-assistant-manager --help' to see commands"
+        echo "2. Run 'code-agent-manager doctor' to verify setup"
+        echo "3. Try 'code-agent-manager --help' to see commands"
         echo ""
         print_info "For detailed documentation, see:"
         echo "  INSTALL.md - Installation guide"

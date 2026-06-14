@@ -14,7 +14,7 @@ def find_project_root(start_path: Path = None) -> Path:
     """
     Find the project root directory by looking for a .git directory or setup.py file.
 
-    For the code-assistant-manager project, this will look for the project root relative to
+    For the code-agent-manager project, this will look for the project root relative to
     the package location, not the current working directory.
 
     Args:

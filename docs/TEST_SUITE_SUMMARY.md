@@ -97,7 +97,7 @@ $ pytest tests/test_skill_name_consistency.py \
 
 ================================================== test session starts ==================================================
 platform linux -- Python 3.14.0, pytest-8.4.2, pluggy-1.6.0
-rootdir: /home/jzhu/code-assistant-manager
+rootdir: /home/jzhu/code-agent-manager
 plugins: cov-7.0.0, asyncio-1.2.0, anyio-4.12.0, mock-3.15.1
 collected 38 items
 
