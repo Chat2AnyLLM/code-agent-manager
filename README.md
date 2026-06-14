@@ -7,7 +7,7 @@
 
 **One CLI to Rule Them All.**
 <br>
-Tired of juggling multiple AI coding assistants? **CAM** is a unified Python CLI to manage configurations, prompts, skills, and plugins for **17 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, Blackbox, Goose, Continue, and more from a single, polished terminal interface.
+Tired of juggling multiple AI coding assistants? **CAM** is a unified Go CLI to manage configurations, prompts, skills, plugins, MCP servers, and launch settings for **17 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, Blackbox, Goose, Continue, and more from a single terminal interface.
 
 </div>
 
@@ -17,7 +17,7 @@ Tired of juggling multiple AI coding assistants? **CAM** is a unified Python CLI
 
 ### Quick Install (Recommended)
 
-Since CAM is not yet published to PyPI, install it locally:
+Since CAM is distributed from source, build and install the Go binaries locally:
 
 ```bash
 # Clone the repository
@@ -40,7 +40,8 @@ curl -fsSL https://raw.githubusercontent.com/Chat2AnyLLM/code-agent-manager/main
 # Install from source directly
 git clone https://github.com/Chat2AnyLLM/code-agent-manager.git
 cd code-agent-manager
-pip install -e ".[dev]"
+go test ./...
+go build -o dist/cam ./cmd/cam
 ```
 
 ---
@@ -50,7 +51,7 @@ pip install -e ".[dev]"
 1. **Create your base config files**:
    ```bash
    mkdir -p ~/.config/code-agent-manager
-   cp code_assistant_manager/providers.json ~/.config/code-agent-manager/providers.json
+   cp providers.json.example ~/.config/code-agent-manager/providers.json
    touch ~/.env
    chmod 600 ~/.env
    ```
