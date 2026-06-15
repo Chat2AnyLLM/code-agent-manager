@@ -56,14 +56,11 @@ func (m multiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.cursor < len(vis)-1 {
 			m.cursor++
 		}
-	case " ": // toggle
+	case " ": // toggle — cursor stays on the selected row
 		if len(vis) > 0 {
 			idx := m.realIndex(vis[m.cursor].label)
 			if idx >= 0 {
 				m.items[idx].selected = !m.items[idx].selected
-			}
-			if m.cursor < len(vis)-1 {
-				m.cursor++
 			}
 		}
 	case "right": // select all visible
@@ -114,9 +111,10 @@ func (m multiSelectModel) View() string {
 			if item.selected {
 				check = "[x]"
 			}
-			fmt.Fprintf(&b, "%s %s %s\n", cursor, check, item.label)
+			fmt.Fprintf(&b, "%s %s  %s\n", cursor, check, item.label)
 			if item.description != "" {
-				fmt.Fprintf(&b, "       %s\n", item.description)
+				// Indent description to align under the label text.
+				fmt.Fprintf(&b, "        %s\n", item.description)
 			}
 		}
 	}

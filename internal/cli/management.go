@@ -149,12 +149,12 @@ Set GITHUB_TOKEN or GH_TOKEN for higher API rate limits.`,
 					return promptSearchInstall(ghResults, kind, out)
 				}
 
-				// Non-interactive: print table.
+				// Non-interactive: print table matching `gh skill search` format.
 				fmt.Fprintf(out, "Showing %d %s(s) matching %q\n\n", len(ghResults), kind, query)
-				fmt.Fprintf(out, "  %-40s %-30s %-8s %s\n", "REPOSITORY", "SKILL", "STARS", "DESCRIPTION")
-				fmt.Fprintf(out, "  %-40s %-30s %-8s %s\n",
-					strings.Repeat("─", 40), strings.Repeat("─", 30),
-					strings.Repeat("─", 8), strings.Repeat("─", 40))
+				fmt.Fprintf(out, "  %-45s %-40s %-10s\n", strings.ToUpper(string(kind)), "REPOSITORY", "STARS")
+				fmt.Fprintf(out, "  %-45s %-40s %-10s\n",
+					strings.Repeat("─", 45), strings.Repeat("─", 40),
+					strings.Repeat("─", 10))
 				for _, r := range ghResults {
 					id := r.ID
 					if id == "" {
@@ -162,10 +162,13 @@ Set GITHUB_TOKEN or GH_TOKEN for higher API rate limits.`,
 					}
 					stars := formatStars(r.Stars)
 					desc := r.Description
-					if len(desc) > 80 {
-						desc = desc[:77] + "..."
+					if len(desc) > 120 {
+						desc = desc[:117] + "..."
 					}
-					fmt.Fprintf(out, "  %-40s %-30s %-8s %s\n", r.Repo, id, stars, desc)
+					fmt.Fprintf(out, "  %-45s %-40s %s\n", id, r.Repo, stars)
+					if desc != "" {
+						fmt.Fprintf(out, "  %s\n", desc)
+					}
 				}
 				fmt.Fprintf(out, "\nInstall with: cam %s install <repo> --from-github --app <agent>\n", kind)
 			}
@@ -1354,9 +1357,9 @@ func interactiveSelectItems(items []discoveredItem, kind entities.Kind, source s
 // search results, then asks for a target app, and installs the selected
 // skills — matching the `gh skill search` interactive flow.
 func promptSearchInstall(results []ghSearchResult, kind entities.Kind, out io.Writer) error {
-	// Build multi-select items matching gh skill search format:
-	//   scope/name  repo  ★ stars
-	//   Full description text (not truncated)
+	// Build multi-select items matching gh skill search / cli/cli format:
+	//   > [ ]  scope/name  owner/repo  ★ stars
+	//          Full description text
 	msItems := make([]multiSelectItem, len(results))
 	for i, r := range results {
 		id := r.ID
@@ -1364,7 +1367,7 @@ func promptSearchInstall(results []ghSearchResult, kind entities.Kind, out io.Wr
 			id = r.Name
 		}
 		stars := formatStars(r.Stars)
-		label := fmt.Sprintf("%-25s %s", id, r.Repo)
+		label := fmt.Sprintf("%-40s %-35s", id, r.Repo)
 		if stars != "" {
 			label += "  " + stars
 		}
