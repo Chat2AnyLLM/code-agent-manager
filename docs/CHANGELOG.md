@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Changed
+- **Tool launch now writes config files instead of exporting env vars.** `cam launch <tool>` writes each tool's native config file (e.g. `~/.codex/config.toml`, `~/.claude/settings.json`, `~/.factory/settings.json`) before launching the binary, instead of injecting endpoint-derived environment variables into the child process. Affected tools: `claude-code`, `openai-codex`, `qwen-code`, `codebuddy`, `iflow`, `aichat`, `kimi`, `droid`, `neovate`.
+- The launched child process no longer receives `ANTHROPIC_BASE_URL`, `OPENAI_API_KEY`, `BASE_URL`, `CODEBUDDY_*`, `IFLOW_*`, `OPENAI_MODEL`, etc. from CAM. These values now live in the tool's on-disk config. Wrapper scripts that previously read those vars from the env should read the tool's config file instead.
+
+### Added
+- `config_target` block in `internal/tools/embed/tools.yaml` declaring per-tool config-file paths, formats, and key paths to upsert. Tools without a `config_target` continue to launch with their pre-existing behavior unchanged.
+- YAML backend in `internal/editorconfig` (used by aichat).
+- `[+]` (append) and `[key=value]` (upsert-by-match) array operators in editorconfig key paths (used by Droid's `customModels` array).
+- Codex `wire_api` post-write hook: sets `model_providers.<provider>.wire_api = "responses"` for GPT models and unsets it otherwise.
+
 ## [1.4.0] - 2026-02-26
 
 ### Added
