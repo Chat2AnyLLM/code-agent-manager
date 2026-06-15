@@ -1,8 +1,12 @@
 package tools
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/chat2anyllm/code-agent-manager/internal/providers"
@@ -143,5 +147,160 @@ func TestPlan_OrderingDeterministic(t *testing.T) {
 		if p.KeyPath != wantOrder[i] {
 			t.Errorf("plan[%d].KeyPath = %q, want %q", i, p.KeyPath, wantOrder[i])
 		}
+	}
+}
+
+func TestApply_JSON_PreservesUnrelatedKeys(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "settings.json")
+	if err := os.WriteFile(path, []byte(`{"theme":"dark","env":{"FOO":"bar"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tool := Tool{ConfigTarget: &ConfigTarget{
+		Path: path, Format: "json",
+		Upsert: map[string]string{
+			"env.ANTHROPIC_BASE_URL": "https://x",
+			"env.ANTHROPIC_MODEL":    "claude-sonnet-4",
+		},
+	}}
+	plan, _ := Plan(tool, providers.Endpoint{Endpoint: "https://x"}, "ep", "claude-sonnet-4", "sk")
+	if _, err := Apply(tool, plan); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	raw, _ := os.ReadFile(path)
+	var got map[string]any
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got["theme"] != "dark" {
+		t.Errorf("theme lost: %v", got["theme"])
+	}
+	env := got["env"].(map[string]any)
+	if env["FOO"] != "bar" {
+		t.Errorf("env.FOO lost: %v", env["FOO"])
+	}
+	if env["ANTHROPIC_BASE_URL"] != "https://x" {
+		t.Errorf("ANTHROPIC_BASE_URL = %v, want https://x", env["ANTHROPIC_BASE_URL"])
+	}
+	if env["ANTHROPIC_MODEL"] != "claude-sonnet-4" {
+		t.Errorf("ANTHROPIC_MODEL = %v", env["ANTHROPIC_MODEL"])
+	}
+}
+
+func TestApply_CreatesParentDir(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "nested", "deep", "x.json")
+	tool := Tool{ConfigTarget: &ConfigTarget{
+		Path: path, Format: "json",
+		Upsert: map[string]string{"k": "v"},
+	}}
+	plan, _ := Plan(tool, providers.Endpoint{}, "", "", "")
+	if _, err := Apply(tool, plan); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("file missing: %v", err)
+	}
+}
+
+func TestApply_FilePermissions(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "p.json")
+	tool := Tool{ConfigTarget: &ConfigTarget{
+		Path: path, Format: "json",
+		Upsert: map[string]string{"k": "v"},
+	}}
+	plan, _ := Plan(tool, providers.Endpoint{}, "", "", "")
+	if _, err := Apply(tool, plan); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	info, _ := os.Stat(path)
+	if info.Mode().Perm() != 0o600 {
+		t.Errorf("mode = %o, want 0600", info.Mode().Perm())
+	}
+}
+
+func TestApply_NoConfigTarget_Noop(t *testing.T) {
+	tool := Tool{Name: "gemini-cli"}
+	plan, err := Plan(tool, providers.Endpoint{}, "", "", "")
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	path, err := Apply(tool, plan)
+	if err != nil {
+		t.Errorf("Apply: %v", err)
+	}
+	if path != "" {
+		t.Errorf("path = %q, want empty", path)
+	}
+}
+
+func TestApply_RemoveAbsentKey_NotError(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "x.json")
+	os.WriteFile(path, []byte(`{"a":1}`), 0o600)
+	tool := Tool{ConfigTarget: &ConfigTarget{
+		Path: path, Format: "json",
+		Remove: []string{"nonexistent.key"},
+	}}
+	plan, _ := Plan(tool, providers.Endpoint{}, "", "", "")
+	if _, err := Apply(tool, plan); err != nil {
+		t.Errorf("Apply on absent remove: %v", err)
+	}
+}
+
+func TestApply_TOML_PreservesUnrelatedTables(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.toml")
+	os.WriteFile(path, []byte("[history]\nlimit = 100\n"), 0o600)
+	tool := Tool{ConfigTarget: &ConfigTarget{
+		Path: path, Format: "toml",
+		Upsert: map[string]string{
+			"model_providers.{endpoint_name}.base_url": "{endpoint}",
+		},
+	}}
+	plan, _ := Plan(tool, providers.Endpoint{Endpoint: "https://x"}, "myprov", "", "")
+	if _, err := Apply(tool, plan); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	raw, _ := os.ReadFile(path)
+	s := string(raw)
+	if !strings.Contains(s, "history") {
+		t.Errorf("history table lost:\n%s", s)
+	}
+	if !strings.Contains(s, "https://x") {
+		t.Errorf("base_url not set:\n%s", s)
+	}
+}
+
+func TestApply_ArrayUpsertByMatch(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "settings.json")
+	tool := Tool{ConfigTarget: &ConfigTarget{
+		Path: path, Format: "json",
+		Upsert: map[string]string{
+			"customModels[displayName=ep/m1].displayName": "ep/m1",
+			"customModels[displayName=ep/m1].baseUrl":     "https://x",
+		},
+	}}
+	plan, _ := Plan(tool, providers.Endpoint{}, "", "", "")
+	if _, err := Apply(tool, plan); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	// Second Apply with same match must update in place, not duplicate.
+	tool.ConfigTarget.Upsert["customModels[displayName=ep/m1].baseUrl"] = "https://y"
+	plan2, _ := Plan(tool, providers.Endpoint{}, "", "", "")
+	if _, err := Apply(tool, plan2); err != nil {
+		t.Fatalf("Apply 2: %v", err)
+	}
+	raw, _ := os.ReadFile(path)
+	var got map[string]any
+	json.Unmarshal(raw, &got)
+	arr := got["customModels"].([]any)
+	if len(arr) != 1 {
+		t.Fatalf("len = %d, want 1 (in-place upsert)", len(arr))
+	}
+	if arr[0].(map[string]any)["baseUrl"] != "https://y" {
+		t.Errorf("baseUrl = %v, want https://y", arr[0].(map[string]any)["baseUrl"])
 	}
 }
