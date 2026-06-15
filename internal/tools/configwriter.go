@@ -119,7 +119,14 @@ func WriteConfig(tool Tool, endpoint providers.Endpoint, endpointName, model, ap
 	if err != nil {
 		return "", err
 	}
-	return Apply(tool, plan)
+	path, err := Apply(tool, plan)
+	if err != nil {
+		return "", err
+	}
+	if err := codexPostWrite(tool, endpointName, model, path); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func containsArraySegment(parts []string) bool {
