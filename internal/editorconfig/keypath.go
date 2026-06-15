@@ -18,12 +18,19 @@ func Parse(raw string) ([]string, error) {
 	var parts []string
 	var buf strings.Builder
 	var inQuote bool
+	var inBracket bool
 	for i := 0; i < len(raw); i++ {
 		ch := raw[i]
 		switch {
 		case ch == '"' && (i == 0 || raw[i-1] != '\\'):
 			inQuote = !inQuote
-		case ch == '.' && !inQuote:
+		case ch == '[' && !inQuote:
+			inBracket = true
+			buf.WriteByte(ch)
+		case ch == ']' && !inQuote:
+			inBracket = false
+			buf.WriteByte(ch)
+		case ch == '.' && !inQuote && !inBracket:
 			if buf.Len() == 0 {
 				return nil, fmt.Errorf("editorconfig: empty segment in %q", raw)
 			}
