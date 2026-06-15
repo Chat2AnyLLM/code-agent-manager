@@ -61,11 +61,22 @@ func (a *App) launchCommand(state *globalState) *cobra.Command {
 				model = endpoint.Models[0]
 			}
 
-			launch := tools.ResolveLaunchEnv(tool, endpoint, epName, model)
+			apiKey := providers.ResolveAPIKey(endpoint, os.Getenv)
+
 			if dryRun {
-				printDryRun(cmd.OutOrStdout(), launch, toolArgs)
+				plan, perr := tools.Plan(tool, endpoint, epName, model, apiKey)
+				if perr != nil {
+					return perr
+				}
+				printDryRun(cmd.OutOrStdout(), tool, endpoint, model, plan, toolArgs)
 				return nil
 			}
+
+			if _, werr := tools.WriteConfig(tool, endpoint, epName, model, apiKey); werr != nil {
+				return fmt.Errorf("launch: write %s config: %w", tool.Name, werr)
+			}
+
+			launch := tools.ResolveLaunchEnv(tool, endpoint, epName, model)
 			code, err := tools.Run(launch, toolArgs)
 			if err != nil {
 				return err
@@ -106,16 +117,24 @@ func resolveEndpoint(providersPath, client, requested string) (providers.Endpoin
 	return providers.Endpoint{}, "", fmt.Errorf("no provider supports tool: %s", client)
 }
 
-func printDryRun(out io.Writer, launch tools.LaunchEnv, args []string) {
-	fmt.Fprintf(out, "Tool: %s\n", launch.Tool.LaunchCommand())
-	if launch.Endpoint.Endpoint != "" {
-		fmt.Fprintf(out, "Endpoint: %s\n", launch.Endpoint.Endpoint)
+func printDryRun(out io.Writer, tool tools.Tool, ep providers.Endpoint, model string, plan []tools.PlannedWrite, args []string) {
+	fmt.Fprintf(out, "Tool: %s\n", tool.LaunchCommand())
+	if ep.Endpoint != "" {
+		fmt.Fprintf(out, "Endpoint: %s\n", ep.Endpoint)
 	}
-	if launch.Model != "" {
-		fmt.Fprintf(out, "Model: %s\n", launch.Model)
+	if model != "" {
+		fmt.Fprintf(out, "Model: %s\n", model)
 	}
-	if len(launch.Inject) > 0 {
-		fmt.Fprintf(out, "Injected: %s\n", strings.Join(launch.Inject, " "))
+	if tool.ConfigTarget != nil && len(plan) > 0 {
+		fmt.Fprintf(out, "Config writes (%s):\n", tool.ConfigTarget.Path)
+		for _, p := range plan {
+			v := p.Value
+			keyU := strings.ToUpper(p.KeyPath)
+			if s, ok := v.(string); ok && (strings.Contains(keyU, "AUTH") || strings.Contains(keyU, "KEY") || strings.Contains(keyU, "TOKEN")) {
+				v = providers.MaskedAPIKey(s)
+			}
+			fmt.Fprintf(out, "  %s %s = %q\n", p.Op, p.KeyPath, fmt.Sprintf("%v", v))
+		}
 	}
 	if len(args) > 0 {
 		fmt.Fprintf(out, "Args: %s\n", strings.Join(args, " "))
