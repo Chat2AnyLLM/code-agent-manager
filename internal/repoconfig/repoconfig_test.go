@@ -56,10 +56,14 @@ func TestBundledPromptReposReturnsEmpty(t *testing.T) {
 		t.Fatalf("loadBundled(prompt): %v", err)
 	}
 	if repos == nil {
-		t.Fatal("expected non-nil empty map for prompt kind, got nil")
+		t.Fatal("expected non-nil map for prompt kind, got nil")
 	}
-	if len(repos) != 0 {
-		t.Fatalf("expected 0 bundled prompt repos, got %d", len(repos))
+	if len(repos) == 0 {
+		t.Fatal("expected at least one bundled prompt repo")
+	}
+	// Check a known entry.
+	if _, ok := repos["anthropics/claude-code"]; !ok {
+		t.Error("expected anthropics/claude-code in bundled prompt repos")
 	}
 }
 
@@ -176,7 +180,7 @@ func TestLoadLocalSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repos, err := loadLocalSource(path)
+	repos, err := LoadLocalSource(path)
 	if err != nil {
 		t.Fatalf("loadLocalSource: %v", err)
 	}
@@ -189,7 +193,7 @@ func TestLoadLocalSource(t *testing.T) {
 }
 
 func TestLoadLocalSourceMissing(t *testing.T) {
-	repos, err := loadLocalSource("/nonexistent/path/repos.json")
+	repos, err := LoadLocalSource("/nonexistent/path/repos.json")
 	if err != nil {
 		t.Fatalf("loadLocalSource: %v", err)
 	}
@@ -211,7 +215,7 @@ func TestLoadLocalSourceExpandsTilde(t *testing.T) {
 	}
 
 	// loadLocalSource should handle absolute paths fine.
-	repos, err := loadLocalSource(path)
+	repos, err := LoadLocalSource(path)
 	if err != nil {
 		t.Fatalf("loadLocalSource: %v", err)
 	}

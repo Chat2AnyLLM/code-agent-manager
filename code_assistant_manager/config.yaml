@@ -30,10 +30,17 @@ repositories:
       # Local user file (highest priority)
       - type: local
         path: ~/.config/code-agent-manager/plugin_repos.json
-      
+
       # Remote awesome repository configs
       - type: remote
         url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/plugin_repos.json
+
+  # Prompt repositories
+  prompts:
+    sources:
+      # Local user file (highest priority)
+      - type: local
+        path: ~/.config/code-agent-manager/prompt_repos.json
 
 # Cache settings for remote sources
 cache:

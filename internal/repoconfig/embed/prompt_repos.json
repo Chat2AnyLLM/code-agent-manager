@@ -1,0 +1,20 @@
+{
+  "anthropics/claude-code": {
+    "owner": "anthropics",
+    "name": "claude-code",
+    "branch": "main",
+    "enabled": true
+  },
+  "openai/codex-plugin-cc": {
+    "owner": "openai",
+    "name": "codex-plugin-cc",
+    "branch": "main",
+    "enabled": true
+  },
+  "anthropics/skills": {
+    "owner": "anthropics",
+    "name": "skills",
+    "branch": "main",
+    "enabled": true
+  }
+}

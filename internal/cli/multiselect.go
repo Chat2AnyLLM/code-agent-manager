@@ -7,6 +7,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+const defaultPageSize = 15
+
 // multiSelectItem is one option in the multi-select list.
 type multiSelectItem struct {
 	label       string // display text
@@ -15,12 +17,16 @@ type multiSelectItem struct {
 }
 
 // multiSelectModel is a bubbletea model for picking one or more items
-// from a filterable list.  It supports space to toggle, enter to confirm,
-// arrow keys / j/k to move, type-to-filter, and 'a' to select all.
+// from a filterable, scrollable list.  Supports space to toggle, enter
+// to confirm, arrow keys / j/k to move, type-to-filter, and ←/→ for
+// select-all / deselect-all.  Only a window of pageSize items is shown;
+// the view scrolls as the cursor moves.
 type multiSelectModel struct {
 	title    string
 	items    []multiSelectItem
 	cursor   int
+	offset   int // first visible row index (scroll offset)
+	pageSize int
 	filter   string
 	done     bool
 	aborted  bool
@@ -28,8 +34,9 @@ type multiSelectModel struct {
 
 func newMultiSelectModel(title string, items []multiSelectItem) multiSelectModel {
 	return multiSelectModel{
-		title: title,
-		items: items,
+		title:    title,
+		items:    items,
+		pageSize: defaultPageSize,
 	}
 }
 
@@ -51,10 +58,12 @@ func (m multiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "up", "k":
 		if m.cursor > 0 {
 			m.cursor--
+			m.scrollToCursor(vis)
 		}
 	case "down", "j":
 		if m.cursor < len(vis)-1 {
 			m.cursor++
+			m.scrollToCursor(vis)
 		}
 	case " ": // toggle — cursor stays on the selected row
 		if len(vis) > 0 {
@@ -102,7 +111,19 @@ func (m multiSelectModel) View() string {
 	if len(vis) == 0 {
 		b.WriteString("No items match your filter.\n")
 	} else {
-		for i, item := range vis {
+		// Compute the visible window.
+		end := m.offset + m.pageSize
+		if end > len(vis) {
+			end = len(vis)
+		}
+
+		// Show scroll-up indicator.
+		if m.offset > 0 {
+			fmt.Fprintf(&b, "  ↑ %d more above\n", m.offset)
+		}
+
+		for i := m.offset; i < end; i++ {
+			item := vis[i]
 			cursor := " "
 			if i == m.cursor {
 				cursor = ">"
@@ -113,9 +134,14 @@ func (m multiSelectModel) View() string {
 			}
 			fmt.Fprintf(&b, "%s %s  %s\n", cursor, check, item.label)
 			if item.description != "" {
-				// Indent description to align under the label text.
 				fmt.Fprintf(&b, "        %s\n", item.description)
 			}
+		}
+
+		// Show scroll-down indicator.
+		remaining := len(vis) - end
+		if remaining > 0 {
+			fmt.Fprintf(&b, "  ↓ %d more below\n", remaining)
 		}
 	}
 
@@ -123,6 +149,22 @@ func (m multiSelectModel) View() string {
 	b.WriteString("\n")
 	fmt.Fprintf(&b, "%d selected · space=toggle · ←all off · →all on · enter=confirm · type to filter · q=quit\n", count)
 	return b.String()
+}
+
+// scrollToCursor adjusts the scroll offset so the cursor is visible.
+func (m *multiSelectModel) scrollToCursor(vis []multiSelectItem) {
+	if len(vis) <= m.pageSize {
+		m.offset = 0
+		return
+	}
+	// Scroll up if cursor is above the window.
+	if m.cursor < m.offset {
+		m.offset = m.cursor
+	}
+	// Scroll down if cursor is below the window.
+	if m.cursor >= m.offset+m.pageSize {
+		m.offset = m.cursor - m.pageSize + 1
+	}
 }
 
 func (m multiSelectModel) visible() []multiSelectItem {
@@ -144,11 +186,13 @@ func (m *multiSelectModel) clampCursor() {
 	vis := m.visible()
 	if len(vis) == 0 {
 		m.cursor = 0
+		m.offset = 0
 		return
 	}
 	if m.cursor >= len(vis) {
 		m.cursor = len(vis) - 1
 	}
+	m.scrollToCursor(vis)
 }
 
 func (m multiSelectModel) realIndex(label string) int {

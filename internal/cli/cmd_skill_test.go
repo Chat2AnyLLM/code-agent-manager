@@ -357,7 +357,7 @@ func TestSkillInstallFromLocalMultipleSkills(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
-	if !strings.Contains(stdout, "Installed 2 skill(s)") {
+	if !strings.Contains(stdout, "2 skill(s) installed to claude") {
 		t.Fatalf("missing count:\n%s", stdout)
 	}
 	for _, name := range []string{"skill-a", "skill-b"} {
@@ -411,7 +411,7 @@ func TestSkillInstallFromLocalForceOverwrites(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
-	if !strings.Contains(stdout, "Installed 1 skill(s)") {
+	if !strings.Contains(stdout, "1 skill(s) installed to claude") {
 		t.Fatalf("missing count:\n%s", stdout)
 	}
 	data, _ := os.ReadFile(filepath.Join(home, ".claude", "skills", "existing-skill", "SKILL.md"))
@@ -544,5 +544,71 @@ func TestSkillAliasS(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "No skills installed across agents") {
 		t.Fatalf("alias output: %s", stdout)
+	}
+}
+
+// ============================================================================
+// uninstall
+// ============================================================================
+
+func TestSkillUninstallRemovesInstalled(t *testing.T) {
+	home := isolatedHome(t)
+	installEntityToApp(t, home, entities.KindSkill, "my-skill", "body", "claude")
+	// Verify it's there.
+	skillDir := filepath.Join(home, ".claude", "skills", "my-skill")
+	if _, err := os.Stat(skillDir); err != nil {
+		t.Fatalf("skill not installed: %v", err)
+	}
+	stdout, _, code := execute(t, "skill", "uninstall", "my-skill", "--app", "claude")
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(stdout, "Removed my-skill") {
+		t.Fatalf("missing removal message:\n%s", stdout)
+	}
+	// Verify it's gone.
+	if _, err := os.Stat(skillDir); !os.IsNotExist(err) {
+		t.Fatal("skill directory should have been removed")
+	}
+}
+
+func TestSkillUninstallNotFoundReports(t *testing.T) {
+	isolatedHome(t)
+	stdout, _, code := execute(t, "skill", "uninstall", "no-such-skill", "--app", "claude")
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(stdout, "not found") {
+		t.Fatalf("expected not-found message:\n%s", stdout)
+	}
+}
+
+func TestSkillUninstallWithoutAppErrors(t *testing.T) {
+	isolatedHome(t)
+	_, stderr, code := execute(t, "skill", "uninstall", "demo")
+	if code == 0 {
+		t.Fatal("expected non-zero exit without --app in non-interactive mode")
+	}
+	if !strings.Contains(stderr, "--app is required") {
+		t.Fatalf("stderr missing --app guidance: %s", stderr)
+	}
+}
+
+func TestPluginUninstallRemovesInstalled(t *testing.T) {
+	home := isolatedHome(t)
+	installEntityToApp(t, home, entities.KindPlugin, "my-plugin", `{"name":"test"}`, "claude")
+	pluginDir := filepath.Join(home, ".claude", "plugins", "my-plugin")
+	if _, err := os.Stat(pluginDir); err != nil {
+		t.Fatalf("plugin not installed: %v", err)
+	}
+	stdout, _, code := execute(t, "plugin", "uninstall", "my-plugin", "--app", "claude")
+	if code != 0 {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(stdout, "Removed my-plugin") {
+		t.Fatalf("missing removal message:\n%s", stdout)
+	}
+	if _, err := os.Stat(pluginDir); !os.IsNotExist(err) {
+		t.Fatal("plugin directory should have been removed")
 	}
 }

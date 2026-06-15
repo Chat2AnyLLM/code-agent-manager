@@ -3,7 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -21,6 +24,7 @@ func (a *App) mcpCommand(state *globalState) *cobra.Command {
 	cmd.AddCommand(a.mcpListCommand(state))
 	cmd.AddCommand(a.mcpAddCommand(state))
 	cmd.AddCommand(a.mcpRemoveCommand(state))
+	cmd.AddCommand(a.mcpSearchCommand())
 	cmd.AddCommand(a.mcpServerCommand())
 	return cmd
 }
@@ -59,6 +63,80 @@ func (a *App) mcpListCommand(state *globalState) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&clientName, "client", "c", "", "Limit to a single client")
+	return cmd
+}
+
+// `cam mcp search QUERY` searches the bundled registry AND GitHub for MCP
+// servers matching a keyword — combining local and online sources.
+func (a *App) mcpSearchCommand() *cobra.Command {
+	var (
+		limit int
+		local bool
+	)
+	cmd := &cobra.Command{
+		Use:   "search QUERY",
+		Short: "Search for MCP servers across registry and GitHub",
+		Long: `Search for MCP servers matching a keyword.
+
+Searches the bundled MCP registry first, then optionally searches
+GitHub for MCP server repositories.
+
+Use --local to skip the GitHub search and only search the bundled registry.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			out := cmd.OutOrStdout()
+			query := args[0]
+
+			// 1. Bundled registry search.
+			registry, err := mcp.LoadBundledRegistry()
+			if err != nil {
+				return err
+			}
+			matches := registry.Search(query)
+			if len(matches) > 0 {
+				fmt.Fprintf(out, "Bundled registry (%d):\n\n", len(matches))
+				for _, s := range matches {
+					fmt.Fprintf(out, "  %-40s %s\n", s.Name, s.Description)
+				}
+			}
+
+			// 2. GitHub search (unless --local).
+			if !local {
+				ghResults, err := searchGitHubMCP(query, limit)
+				if err != nil {
+					fmt.Fprintf(out, "\nGitHub search: %v\n", err)
+				} else if len(ghResults) > 0 {
+					if len(matches) > 0 {
+						fmt.Fprintln(out)
+					}
+					fmt.Fprintf(out, "GitHub (%d):\n\n", len(ghResults))
+					for _, r := range ghResults {
+						id := r.ID
+						if id == "" {
+							id = r.Name
+						}
+						stars := formatStars(r.Stars)
+						fmt.Fprintf(out, "  %-40s %-35s %s\n", id, r.Repo, stars)
+						if r.Description != "" {
+							desc := r.Description
+							if len(desc) > 120 {
+								desc = desc[:117] + "..."
+							}
+							fmt.Fprintf(out, "  %s\n", desc)
+						}
+					}
+				}
+			}
+
+			if len(matches) == 0 && local {
+				fmt.Fprintf(out, "No MCP servers matching %q\n", query)
+			}
+
+			return nil
+		},
+	}
+	cmd.Flags().IntVarP(&limit, "limit", "L", 10, "Maximum number of GitHub results")
+	cmd.Flags().BoolVar(&local, "local", false, "Only search bundled registry (skip GitHub)")
 	return cmd
 }
 
@@ -254,4 +332,66 @@ func parseEnv(entries []string) map[string]string {
 		}
 	}
 	return out
+}
+
+// searchGitHubMCP searches GitHub for MCP server repositories matching a query.
+func searchGitHubMCP(query string, limit int) ([]ghSearchResult, error) {
+	q := fmt.Sprintf("mcp-server %s in:name,description,readme", query)
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	authHeader := resolveGitHubAuth()
+
+	apiURL := fmt.Sprintf("https://api.github.com/search/repositories?q=%s&per_page=%d&sort=stars&order=desc",
+		url.QueryEscape(q), limit)
+
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "code-agent-manager")
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GitHub API request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 403 || resp.StatusCode == 429 {
+		return nil, fmt.Errorf("GitHub API rate limit exceeded, set GITHUB_TOKEN for higher limits")
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("GitHub API returned HTTP %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Items []struct {
+			FullName        string `json:"full_name"`
+			Description     string `json:"description"`
+			StargazersCount int    `json:"stargazers_count"`
+		} `json:"items"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to parse GitHub response: %w", err)
+	}
+
+	var out []ghSearchResult
+	for _, item := range result.Items {
+		parts := strings.SplitN(item.FullName, "/", 2)
+		name := item.FullName
+		if len(parts) == 2 {
+			name = parts[1]
+		}
+		out = append(out, ghSearchResult{
+			Repo:        item.FullName,
+			Name:        name,
+			ID:          name,
+			Description: item.Description,
+			Stars:       item.StargazersCount,
+		})
+	}
+	return out, nil
 }

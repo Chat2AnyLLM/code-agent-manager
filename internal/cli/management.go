@@ -4,18 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
+	"github.com/chat2anyllm/code-agent-manager/internal/camconfig"
 	"github.com/chat2anyllm/code-agent-manager/internal/entities"
 	"github.com/chat2anyllm/code-agent-manager/internal/fetching"
 	"github.com/chat2anyllm/code-agent-manager/internal/repoconfig"
@@ -34,6 +38,7 @@ func (a *App) managementCommand(group, alias string, state *globalState) *cobra.
 	cmd.AddCommand(entityListCommand(kind))
 	cmd.AddCommand(entityUpdateCommand(kind))
 	cmd.AddCommand(entityInstallCommand(kind))
+	cmd.AddCommand(entityUninstallCommand(kind))
 	return cmd
 }
 
@@ -52,7 +57,7 @@ func groupKind(group string) entities.Kind {
 }
 
 // ============================================================================
-// search — search GitHub + local store + configured repos
+// search — 3-tier search: GitHub → skill_repos.json → config.yaml remotes
 // ============================================================================
 
 func entitySearchCommand(kind entities.Kind) *cobra.Command {
@@ -68,6 +73,15 @@ func entitySearchCommand(kind entities.Kind) *cobra.Command {
 
 Uses the GitHub Code Search API to find ` + defaultManifestName(kind) + ` files whose
 name or description matches the query term.
+
+Search results are validated to ensure they follow the skill standard
+(valid directory conventions, proper SKILL.md frontmatter with name and
+description).
+
+Results are presented in three tiers:
+  1. GitHub Code Search (primary discovery)
+  2. Configured skill repositories (skill_repos.json)
+  3. Remote sources (config.yaml)
 
 Also searches the local store and configured repositories for matches.
 
@@ -85,7 +99,9 @@ Set GITHUB_TOKEN or GH_TOKEN for higher API rate limits.`,
 			query := strings.ToLower(strings.Join(args, " "))
 			out := cmd.OutOrStdout()
 
-			// 1. GitHub Code Search (default, skip with --local).
+			// -----------------------------------------------------------
+			// Tier 1: GitHub Code Search (skip with --local).
+			// -----------------------------------------------------------
 			var ghResults []ghSearchResult
 			if !local {
 				var err error
@@ -93,9 +109,19 @@ Set GITHUB_TOKEN or GH_TOKEN for higher API rate limits.`,
 				if err != nil {
 					fmt.Fprintf(out, "GitHub search: %v\n\n", err)
 				}
+
+				// Validate: filter to only valid skills.
+				if kind == entities.KindSkill {
+					ghResults = filterValidSkillResults(ghResults)
+				}
+
+				// Rank by relevance.
+				rankGHResults(ghResults, strings.Join(args, " "))
 			}
 
-			// 2. Search local store.
+			// -----------------------------------------------------------
+			// Tier 2: Local store search.
+			// -----------------------------------------------------------
 			store := entities.NewStore(kind)
 			storeItems, _ := store.All()
 			var storeMatches []entities.Entity
@@ -105,51 +131,28 @@ Set GITHUB_TOKEN or GH_TOKEN for higher API rate limits.`,
 				}
 			}
 
-			// 3. Search configured repos.
-			repos, err := repoconfig.LoadEnabled(kind)
-			if err != nil {
-				repos = nil
-			}
-			var repoMatches []repoSearchResult
-			for key, r := range repos {
-				rOwner := r.EffectiveOwner()
-				name := r.EffectiveName()
-				if rOwner == "" || name == "" {
-					continue
-				}
-				keyLower := strings.ToLower(key)
-				ownerLower := strings.ToLower(rOwner)
-				nameLower := strings.ToLower(name)
-				descLower := strings.ToLower(r.Description)
-				if strings.Contains(keyLower, query) ||
-					strings.Contains(ownerLower, query) ||
-					strings.Contains(nameLower, query) ||
-					strings.Contains(descLower, query) {
-					repoMatches = append(repoMatches, repoSearchResult{
-						Key:         key,
-						Owner:       rOwner,
-						Name:        name,
-						Branch:      r.EffectiveBranch(),
-						Description: r.Description,
-					})
-				}
-			}
+			// -----------------------------------------------------------
+			// Tier 3: Configured repos — split into local (skill_repos.json)
+			// and remote (config.yaml) sources.
+			// -----------------------------------------------------------
+			localRepoMatches, remoteRepoMatches := searchConfiguredReposTiered(kind, query)
 
-			totalMatches := len(ghResults) + len(storeMatches) + len(repoMatches)
+			// -----------------------------------------------------------
+			// Render: show tiers in order.
+			// -----------------------------------------------------------
+			totalMatches := len(ghResults) + len(storeMatches) + len(localRepoMatches) + len(remoteRepoMatches)
 			if totalMatches == 0 {
 				fmt.Fprintf(out, "No %ss found matching %q\n", kind, query)
 				return nil
 			}
 
-			// Show GitHub results first (primary output, like gh skill search).
+			// Tier 1: GitHub results.
 			if len(ghResults) > 0 {
-				// Interactive: go straight to multi-select picker (skip table to avoid duplicate display).
 				if isInteractive() {
 					fmt.Fprintf(out, "Showing %d %s(s) matching %q\n", len(ghResults), kind, query)
 					return promptSearchInstall(ghResults, kind, out)
 				}
 
-				// Non-interactive: print table matching `gh skill search` format.
 				fmt.Fprintf(out, "Showing %d %s(s) matching %q\n\n", len(ghResults), kind, query)
 				fmt.Fprintf(out, "  %-45s %-40s %-10s\n", strings.ToUpper(string(kind)), "REPOSITORY", "STARS")
 				fmt.Fprintf(out, "  %-45s %-40s %-10s\n",
@@ -173,6 +176,7 @@ Set GITHUB_TOKEN or GH_TOKEN for higher API rate limits.`,
 				fmt.Fprintf(out, "\nInstall with: cam %s install <repo> --from-github --app <agent>\n", kind)
 			}
 
+			// Tier 2: Local store matches.
 			if len(storeMatches) > 0 {
 				if len(ghResults) > 0 {
 					fmt.Fprintln(out)
@@ -191,15 +195,34 @@ Set GITHUB_TOKEN or GH_TOKEN for higher API rate limits.`,
 				}
 			}
 
-			if len(repoMatches) > 0 {
+			// Tier 3a: Configured repos from skill_repos.json.
+			if len(localRepoMatches) > 0 {
 				if len(ghResults) > 0 || len(storeMatches) > 0 {
 					fmt.Fprintln(out)
 				}
-				sort.Slice(repoMatches, func(i, j int) bool {
-					return repoMatches[i].Key < repoMatches[j].Key
+				sort.Slice(localRepoMatches, func(i, j int) bool {
+					return localRepoMatches[i].Key < localRepoMatches[j].Key
 				})
-				fmt.Fprintf(out, "Configured repos matching %q (%d):\n\n", query, len(repoMatches))
-				for _, r := range repoMatches {
+				fmt.Fprintf(out, "Configured repos (skill_repos.json) matching %q (%d):\n\n", query, len(localRepoMatches))
+				for _, r := range localRepoMatches {
+					desc := r.Description
+					if desc == "" {
+						desc = "(no description)"
+					}
+					fmt.Fprintf(out, "  %-40s %s/%s@%s  %s\n", r.Key, r.Owner, r.Name, r.Branch, desc)
+				}
+			}
+
+			// Tier 3b: Remote repos from config.yaml.
+			if len(remoteRepoMatches) > 0 {
+				if len(ghResults) > 0 || len(storeMatches) > 0 || len(localRepoMatches) > 0 {
+					fmt.Fprintln(out)
+				}
+				sort.Slice(remoteRepoMatches, func(i, j int) bool {
+					return remoteRepoMatches[i].Key < remoteRepoMatches[j].Key
+				})
+				fmt.Fprintf(out, "Remote repos (config.yaml) matching %q (%d):\n\n", query, len(remoteRepoMatches))
+				for _, r := range remoteRepoMatches {
 					desc := r.Description
 					if desc == "" {
 						desc = "(no description)"
@@ -284,32 +307,84 @@ func formatStars(n int) string {
 }
 
 // searchGitHub queries the GitHub Code Search API for manifest files matching
-// the query, similar to how `gh skill search` works.
+// the query, using parallel search strategies mirroring gh skill search:
+//
+//   - content match: filename:<manifest> <query>
+//   - path match: filename:<manifest> path:<hyphenated-query>
+//   - owner match: filename:<manifest> user:<query> (when query looks like a GitHub user)
+//   - hyphen match: filename:<manifest> <hyphenated-query> (when query has spaces)
 func searchGitHub(kind entities.Kind, query, owner string, limit int) ([]ghSearchResult, error) {
 	manifest := defaultManifestName(kind)
 
-	// Build search queries: content match + path match (like gh skill search).
-	contentQ := fmt.Sprintf("filename:%s %s", manifest, query)
-	pathTerm := strings.ReplaceAll(query, " ", "-")
-	pathQ := fmt.Sprintf("filename:%s path:%s", manifest, pathTerm)
+	ownerScope := ""
 	if owner != "" {
-		contentQ += " user:" + owner
-		pathQ += " user:" + owner
+		ownerScope = " user:" + owner
 	}
+
+	contentQ := fmt.Sprintf("filename:%s %s%s", manifest, query, ownerScope)
+	pathTerm := strings.ReplaceAll(query, " ", "-")
+	pathQ := fmt.Sprintf("filename:%s path:%s%s", manifest, pathTerm, ownerScope)
 
 	client := &http.Client{Timeout: 15 * time.Second}
 	authHeader := resolveGitHubAuth()
 
-	// Run content and path searches.
-	contentItems, err := executeGHSearch(client, contentQ, limit, authHeader)
-	if err != nil {
-		return nil, err
-	}
-	pathItems, _ := executeGHSearch(client, pathQ, limit, authHeader)
+	var (
+		contentItems []ghCodeSearchItem
+		contentErr   error
+		pathItems    []ghCodeSearchItem
+		pathErr      error
+		ownerItems   []ghCodeSearchItem
+		hyphenItems  []ghCodeSearchItem
+	)
 
-	// Merge: path results first, then content results.
+	hasSpaces := strings.Contains(query, " ")
+
+	var wg sync.WaitGroup
+
+	// Path search (parallel).
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		pathItems, pathErr = executeGHSearch(client, pathQ, limit, authHeader)
+	}()
+
+	// Owner search: when no --owner flag and query looks like a GitHub user.
+	if owner == "" && couldBeGHOwner(query) {
+		ownerQ := fmt.Sprintf("filename:%s user:%s", manifest, query)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ownerItems, _ = executeGHSearch(client, ownerQ, limit, authHeader)
+		}()
+	}
+
+	// Hyphen search: when query has spaces (e.g. "mcp apps" → "mcp-apps").
+	if hasSpaces {
+		hyphenQ := fmt.Sprintf("filename:%s %s%s", manifest, pathTerm, ownerScope)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			hyphenItems, _ = executeGHSearch(client, hyphenQ, limit, authHeader)
+		}()
+	}
+
+	// Content search runs on the main goroutine.
+	contentItems, contentErr = executeGHSearch(client, contentQ, limit, authHeader)
+	wg.Wait()
+
+	if contentErr != nil {
+		return nil, contentErr
+	}
+
+	// Merge: path > hyphen > owner > content (priority order).
 	var allItems []ghCodeSearchItem
-	allItems = append(allItems, pathItems...)
+	if pathErr == nil {
+		allItems = append(allItems, pathItems...)
+	}
+	if hasSpaces {
+		allItems = append(allItems, hyphenItems...)
+	}
+	allItems = append(allItems, ownerItems...)
 	allItems = append(allItems, contentItems...)
 
 	// Deduplicate by (repo, skill-name).
@@ -317,10 +392,6 @@ func searchGitHub(kind entities.Kind, query, owner string, limit int) ([]ghSearc
 	seen := make(map[key]bool)
 	var results []ghSearchResult
 	for _, item := range allItems {
-		// Compute scope/name identifier from path, matching gh skill search format.
-		// e.g. "skills/hybrid-cloud-architect/SKILL.md" → "hybrid-cloud-architect"
-		// e.g. "antigravity-awesome-skills/hybrid-cloud-architect/SKILL.md"
-		//   → "antigravity-awesome-skills/hybrid-cloud-architect"
 		skillID := computeSkillID(item.Path)
 		skillName := filepath.Base(filepath.Dir(item.Path))
 		if skillName == "." || skillName == "" {
@@ -341,7 +412,7 @@ func searchGitHub(kind entities.Kind, query, owner string, limit int) ([]ghSearc
 			Path:  item.Path,
 			Stars: item.Repository.StargazersCount,
 		})
-		if len(results) >= limit {
+		if len(results) >= limit*3 { // over-fetch for filtering
 			break
 		}
 	}
@@ -354,6 +425,26 @@ func searchGitHub(kind entities.Kind, query, owner string, limit int) ([]ghSearc
 	return results, nil
 }
 
+// couldBeGHOwner returns true if s looks like a valid GitHub username/org.
+func couldBeGHOwner(s string) bool {
+	if len(s) == 0 || len(s) > 39 {
+		return false
+	}
+	for i, c := range s {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
+			continue
+		case c == '-':
+			if i == 0 || i == len(s)-1 {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 type ghCodeSearchItem struct {
 	Name       string `json:"name"`
 	Path       string `json:"path"`
@@ -364,9 +455,21 @@ type ghCodeSearchItem struct {
 	} `json:"repository"`
 }
 
+const (
+	// searchPageSize is the number of raw results to request from the
+	// GitHub Search API per call (max allowed by the API).
+	searchPageSize = 100
+)
+
 func executeGHSearch(client *http.Client, query string, limit int, authHeader string) ([]ghCodeSearchItem, error) {
+	// Always request a full page of results from the API, regardless of
+	// the display limit.  More raw results → better filtering/ranking.
+	perPage := searchPageSize
+	if limit > perPage {
+		perPage = limit
+	}
 	apiURL := fmt.Sprintf("https://api.github.com/search/code?q=%s&per_page=%d",
-		url.QueryEscape(query), limit)
+		url.QueryEscape(query), perPage)
 
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
@@ -384,8 +487,17 @@ func executeGHSearch(client *http.Client, query string, limit int, authHeader st
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 403 || resp.StatusCode == 429 {
+	// Distinguish true rate limits from other 403s.
+	if resp.StatusCode == 429 {
 		return nil, fmt.Errorf("GitHub API rate limit exceeded, set GITHUB_TOKEN for higher limits")
+	}
+	if resp.StatusCode == 403 {
+		// Check rate-limit headers: x-ratelimit-remaining: 0 or retry-after.
+		if resp.Header.Get("X-Ratelimit-Remaining") == "0" || resp.Header.Get("Retry-After") != "" {
+			return nil, fmt.Errorf("GitHub API rate limit exceeded, set GITHUB_TOKEN for higher limits")
+		}
+		// Secondary rate limit or other 403 — return empty, not fatal.
+		return nil, nil
 	}
 	if resp.StatusCode == 401 {
 		return nil, fmt.Errorf("GitHub API auth failed, set GITHUB_TOKEN or GH_TOKEN")
@@ -404,40 +516,112 @@ func executeGHSearch(client *http.Client, query string, limit int, authHeader st
 }
 
 // enrichGHDescriptions fetches SKILL.md blob content to extract the frontmatter
-// description field, similar to how gh skill search enriches results.
+// description field concurrently with bounded parallelism, and also fetches
+// star counts for unique repos (mirroring gh skill search enrichment).
 func enrichGHDescriptions(client *http.Client, authHeader string, results []ghSearchResult) {
+	const maxWorkers = 10
+	sem := make(chan struct{}, maxWorkers)
+
+	// Fetch descriptions concurrently.
+	var descWG sync.WaitGroup
 	for i := range results {
 		parts := strings.SplitN(results[i].Repo, "/", 2)
 		if len(parts) != 2 {
 			continue
 		}
-		// Fetch the raw file content.
-		rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/main/%s",
-			parts[0], parts[1], results[i].Path)
-		req, err := http.NewRequest("GET", rawURL, nil)
-		if err != nil {
-			continue
-		}
-		req.Header.Set("User-Agent", "code-agent-manager")
-		if authHeader != "" {
-			req.Header.Set("Authorization", authHeader)
-		}
-		resp, err := client.Do(req)
-		if err != nil || resp.StatusCode != 200 {
-			if resp != nil {
-				resp.Body.Close()
+		descWG.Add(1)
+		go func(idx int, owner, repo, path string) {
+			defer descWG.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/main/%s",
+				owner, repo, path)
+			req, err := http.NewRequest("GET", rawURL, nil)
+			if err != nil {
+				return
 			}
+			req.Header.Set("User-Agent", "code-agent-manager")
+			if authHeader != "" {
+				req.Header.Set("Authorization", authHeader)
+			}
+			resp, err := client.Do(req)
+			if err != nil || resp.StatusCode != 200 {
+				if resp != nil {
+					resp.Body.Close()
+				}
+				return
+			}
+			body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+			resp.Body.Close()
+			if err != nil {
+				return
+			}
+			desc := extractFrontmatterDescription(string(body))
+			if desc != "" {
+				results[idx].Description = desc
+			}
+		}(i, parts[0], parts[1], results[i].Path)
+	}
+
+	// Fetch star counts for unique repos concurrently.
+	type repoKey struct{ owner, name string }
+	repoStars := make(map[string]int)
+	var starsMu sync.Mutex
+	seen := make(map[string]bool)
+
+	var starsWG sync.WaitGroup
+	for _, r := range results {
+		if seen[r.Repo] {
 			continue
 		}
-		body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		resp.Body.Close()
-		if err != nil {
+		seen[r.Repo] = true
+		parts := strings.SplitN(r.Repo, "/", 2)
+		if len(parts) != 2 {
 			continue
 		}
-		// Extract description from frontmatter: look for "description:" line.
-		desc := extractFrontmatterDescription(string(body))
-		if desc != "" {
-			results[i].Description = desc
+		starsWG.Add(1)
+		go func(fullName, owner, repo string) {
+			defer starsWG.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s", owner, repo)
+			req, err := http.NewRequest("GET", apiURL, nil)
+			if err != nil {
+				return
+			}
+			req.Header.Set("Accept", "application/vnd.github.v3+json")
+			req.Header.Set("User-Agent", "code-agent-manager")
+			if authHeader != "" {
+				req.Header.Set("Authorization", authHeader)
+			}
+			resp, err := client.Do(req)
+			if err != nil || resp.StatusCode != 200 {
+				if resp != nil {
+					resp.Body.Close()
+				}
+				return
+			}
+			var info struct {
+				StargazersCount int `json:"stargazers_count"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&info); err == nil {
+				starsMu.Lock()
+				repoStars[fullName] = info.StargazersCount
+				starsMu.Unlock()
+			}
+			resp.Body.Close()
+		}(r.Repo, parts[0], parts[1])
+	}
+
+	descWG.Wait()
+	starsWG.Wait()
+
+	// Apply star counts to results.
+	for i := range results {
+		if stars, ok := repoStars[results[i].Repo]; ok && stars > 0 {
+			results[i].Stars = stars
 		}
 	}
 }
@@ -513,6 +697,268 @@ func matchesQuery(e entities.Entity, query string) bool {
 		}
 	}
 	return false
+}
+
+// filterValidSkillResults filters GitHub search results to only those that
+// follow the skill standard: valid path convention + valid skill name.
+func filterValidSkillResults(results []ghSearchResult) []ghSearchResult {
+	var valid []ghSearchResult
+	for _, r := range results {
+		if isValidSkillResult(r.Path, r.Name) {
+			valid = append(valid, r)
+		}
+	}
+	return valid
+}
+
+// rankGHResults sorts GitHub search results by relevance score (highest first).
+func rankGHResults(results []ghSearchResult, query string) {
+	sort.SliceStable(results, func(i, j int) bool {
+		si := relevanceScore(results[i].Name, results[i].Description, results[i].Repo, results[i].Stars, query)
+		sj := relevanceScore(results[j].Name, results[j].Description, results[j].Repo, results[j].Stars, query)
+		return si > sj
+	})
+}
+
+// searchConfiguredReposTiered searches configured repos and returns results
+// split into two tiers: local (from skill_repos.json) and remote (from config.yaml).
+func searchConfiguredReposTiered(kind entities.Kind, query string) (localMatches, remoteMatches []repoSearchResult) {
+	// Identify which keys come from local sources vs remote sources.
+	localKeys := identifyLocalRepoKeys(kind)
+
+	repos, err := repoconfig.LoadEnabled(kind)
+	if err != nil {
+		return nil, nil
+	}
+
+	for key, r := range repos {
+		rOwner := r.EffectiveOwner()
+		name := r.EffectiveName()
+		if rOwner == "" || name == "" {
+			continue
+		}
+		keyLower := strings.ToLower(key)
+		ownerLower := strings.ToLower(rOwner)
+		nameLower := strings.ToLower(name)
+		descLower := strings.ToLower(r.Description)
+		if strings.Contains(keyLower, query) ||
+			strings.Contains(ownerLower, query) ||
+			strings.Contains(nameLower, query) ||
+			strings.Contains(descLower, query) {
+			match := repoSearchResult{
+				Key:         key,
+				Owner:       rOwner,
+				Name:        name,
+				Branch:      r.EffectiveBranch(),
+				Description: r.Description,
+			}
+			if localKeys[key] {
+				localMatches = append(localMatches, match)
+			} else {
+				remoteMatches = append(remoteMatches, match)
+			}
+		}
+	}
+	return localMatches, remoteMatches
+}
+
+// identifyLocalRepoKeys returns the set of repo keys that come from local
+// sources (skill_repos.json files), as opposed to remote/bundled sources.
+func identifyLocalRepoKeys(kind entities.Kind) map[string]bool {
+	keys := make(map[string]bool)
+
+	cfg, err := camconfig.Load("")
+	if err != nil {
+		return keys
+	}
+	repoKey := string(kind) + "s"
+	src, ok := cfg.Repositories[repoKey]
+	if !ok {
+		return keys
+	}
+	for _, s := range src.Sources {
+		if s.Type != "local" || s.Path == "" {
+			continue
+		}
+		local, err := repoconfig.LoadLocalSource(s.Path)
+		if err != nil || local == nil {
+			continue
+		}
+		for k := range local {
+			keys[k] = true
+		}
+	}
+	return keys
+}
+
+// ============================================================================
+// Skill validation — verify results follow the skill standard
+// ============================================================================
+
+// skillNamePattern matches the agentskills.io name spec:
+// 1-64 chars, lowercase alphanumeric + hyphens, no leading/trailing/consecutive hyphens.
+var skillNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+// safeSkillNamePattern matches names safe for filesystem use.
+// Allows letters (any case), numbers, hyphens, underscores, dots.
+var safeSkillNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._\- ]*$`)
+
+// isValidSkillName checks whether a skill name matches the filesystem-safe pattern
+// (1-64 chars, no slashes, no path traversal).
+func isValidSkillName(name string) bool {
+	if len(name) == 0 || len(name) > 64 {
+		return false
+	}
+	if strings.Contains(name, "/") || strings.Contains(name, "..") {
+		return false
+	}
+	return safeSkillNamePattern.MatchString(name)
+}
+
+// isSpecCompliantName checks if a skill name matches the strict agentskills.io spec:
+// lowercase alphanumeric + hyphens, no consecutive hyphens.
+func isSpecCompliantName(name string) bool {
+	if len(name) == 0 || len(name) > 64 {
+		return false
+	}
+	if strings.Contains(name, "--") {
+		return false
+	}
+	return skillNamePattern.MatchString(name)
+}
+
+// isValidSkillPath checks whether a SKILL.md path matches a known skill convention.
+// Recognized patterns (mirroring gh skill search / agentskills.io):
+//
+//	skills/<name>/SKILL.md               → standard flat
+//	skills/<scope>/<name>/SKILL.md        → namespaced
+//	<prefix>/skills/<name>/SKILL.md       → deeply nested
+//	<prefix>/skills/<scope>/<name>/SKILL.md → deeply nested namespaced
+//	<name>/SKILL.md                       → root-level
+//
+// Paths with hidden (dot-prefixed) segments are rejected unless under a known
+// agent config directory pattern.
+func isValidSkillPath(relPath string) bool {
+	relPath = filepath.ToSlash(relPath)
+	parts := strings.Split(relPath, "/")
+	if len(parts) < 2 {
+		return false
+	}
+	// Must end with SKILL.md.
+	if parts[len(parts)-1] != "SKILL.md" {
+		return false
+	}
+	// Reject hidden segments (dot-prefixed).
+	for _, p := range parts {
+		if strings.HasPrefix(p, ".") {
+			return false
+		}
+	}
+	skillName := parts[len(parts)-2]
+	if !isValidSkillName(skillName) {
+		return false
+	}
+	// skills/name/SKILL.md (3 parts)
+	if len(parts) == 3 && parts[0] == "skills" {
+		return true
+	}
+	// skills/scope/name/SKILL.md (4 parts)
+	if len(parts) == 4 && parts[0] == "skills" {
+		return true
+	}
+	// Deeply nested: any/prefix/skills/name/SKILL.md
+	for i, part := range parts {
+		if part == "skills" && i < len(parts)-2 {
+			return true
+		}
+	}
+	// root-level: name/SKILL.md (2 parts, name is not "skills" or "plugins")
+	if len(parts) == 2 && skillName != "skills" && skillName != "plugins" {
+		return true
+	}
+	return false
+}
+
+// isValidSkillFrontmatter checks that SKILL.md content has valid YAML
+// frontmatter with the required "name" and "description" fields.
+func isValidSkillFrontmatter(content string) bool {
+	lines := strings.Split(content, "\n")
+	inFrontmatter := false
+	hasName := false
+	hasDesc := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "---" {
+			if !inFrontmatter {
+				inFrontmatter = true
+				continue
+			}
+			break
+		}
+		if !inFrontmatter {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "name:") {
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "name:"))
+			val = strings.Trim(val, `"'`)
+			if val != "" {
+				hasName = true
+			}
+		}
+		if strings.HasPrefix(trimmed, "description:") {
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "description:"))
+			val = strings.Trim(val, `"'`)
+			if val != "" {
+				hasDesc = true
+			}
+		}
+	}
+	return hasName && hasDesc
+}
+
+// isValidSkillResult checks whether a GitHub search result is a valid skill:
+// valid path convention + valid skill name.
+func isValidSkillResult(path, skillName string) bool {
+	if !isValidSkillName(skillName) {
+		return false
+	}
+	if path != "" && !isValidSkillPath(path) {
+		return false
+	}
+	return true
+}
+
+// ============================================================================
+// Relevance scoring — rank results by multi-signal score (mirroring gh skill search)
+// ============================================================================
+
+// relevanceScore computes a numeric ranking score for a search result.
+// Higher scores rank first. Signals (in priority order):
+//   - Exact skill name match (3000 points)
+//   - Partial skill name match (1000 points)
+//   - Description contains query (100 points)
+//   - Repository stars (sqrt bonus, ~2400 for 6k stars)
+func relevanceScore(name, description, repo string, stars int, query string) int {
+	term := strings.ToLower(query)
+	termHyphen := strings.ReplaceAll(term, " ", "-")
+	score := 0
+
+	nameLower := strings.ToLower(name)
+	if nameLower == term || nameLower == termHyphen {
+		score += 3_000
+	} else if strings.Contains(nameLower, term) || strings.Contains(nameLower, termHyphen) {
+		score += 1_000
+	}
+
+	if strings.Contains(strings.ToLower(description), term) {
+		score += 100
+	}
+
+	if stars > 0 {
+		score += int(math.Sqrt(float64(stars)) * 30)
+	}
+
+	return score
 }
 
 // ============================================================================
@@ -909,11 +1355,14 @@ Three install modes:
 
   2. From a GitHub repository (--from-github):
      Download and install directly from a GitHub repo.
-       cam ` + string(kind) + ` install owner/repo --app claude --from-github
+       cam ` + string(kind) + ` install owner/repo --from-github
 
   3. From a local directory (--from-local):
      Discover and install items from a local directory.
-       cam ` + string(kind) + ` install ./my-skills --app claude --from-local
+       cam ` + string(kind) + ` install ./my-skills --from-local
+
+When --app is omitted in an interactive terminal, you will be prompted
+to select a target agent.
 
 Supported agents: ` + strings.Join(entities.SupportedApps(kind), ", ") + `.
 
@@ -923,21 +1372,30 @@ Use --force to overwrite existing installations.`,
 			"  cam " + string(kind) + " install my-skill --app claude\n" +
 			"  cam " + string(kind) + " install --all --app claude\n\n" +
 			"  # Install from GitHub repository\n" +
-			"  cam " + string(kind) + " install anthropics/skills --app claude --from-github\n\n" +
-			"  # Install from local directory\n" +
-			"  cam " + string(kind) + " install ./my-skills-dir --app claude --from-local\n" +
-			"  cam " + string(kind) + " install ~/repos/skills my-skill --app claude --from-local\n" +
-			"  cam " + string(kind) + " install ~/repos/skills --app claude --from-local --all",
+			"  cam " + string(kind) + " install anthropics/skills --from-github\n\n" +
+			"  # Install from local directory (prompts for target agent)\n" +
+			"  cam " + string(kind) + " install ./my-skills-dir --from-local\n" +
+			"  cam " + string(kind) + " install ~/repos/skills my-skill --from-local\n" +
+			"  cam " + string(kind) + " install ~/repos/skills --from-local --all",
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out := cmd.OutOrStdout()
 
-			if app == "" {
-				return fmt.Errorf("--app is required (one of: %s)", strings.Join(entities.SupportedApps(kind), ", "))
-			}
-
 			if fromLocal && fromGH {
 				return fmt.Errorf("--from-local and --from-github cannot be used together")
+			}
+
+			// resolveApps returns the target agent(s). When --app is given,
+			// returns that single app. Otherwise prompts interactively
+			// with multi-select so the user can install to several agents.
+			resolveApps := func() ([]string, error) {
+				if app != "" {
+					return []string{app}, nil
+				}
+				if !isInteractive() {
+					return nil, fmt.Errorf("--app is required (one of: %s)", strings.Join(entities.SupportedApps(kind), ", "))
+				}
+				return promptSelectApp(kind)
 			}
 
 			if fromLocal {
@@ -948,7 +1406,7 @@ Use --force to overwrite existing installations.`,
 				if len(args) >= 2 {
 					skillName = args[1]
 				}
-				return installFromLocal(kind, args[0], skillName, app, all, force, out)
+				return installFromLocal(kind, args[0], skillName, all, force, out, resolveApps)
 			}
 
 			if fromGH {
@@ -959,7 +1417,7 @@ Use --force to overwrite existing installations.`,
 				if len(args) >= 2 {
 					skillName = args[1]
 				}
-				return installFromGitHub(kind, args[0], skillName, app, all, force, out)
+				return installFromGitHub(kind, args[0], skillName, all, force, out, resolveApps)
 			}
 
 			// Default: install from local store.
@@ -969,14 +1427,32 @@ Use --force to overwrite existing installations.`,
 				if len(args) > 0 {
 					return fmt.Errorf("cannot use --all with a name argument")
 				}
-				return installAllFromStore(store, kind, app, force, out)
+				apps, err := resolveApps()
+				if err != nil {
+					return err
+				}
+				for _, a := range apps {
+					if err := installAllFromStore(store, kind, a, force, out); err != nil {
+						return err
+					}
+				}
+				return nil
 			}
 
 			if len(args) == 0 {
 				return fmt.Errorf("NAME is required (or use --all, --from-local, or --from-github)")
 			}
 
-			return installOneFromStore(store, kind, app, args[0], force, out)
+			apps, err := resolveApps()
+			if err != nil {
+				return err
+			}
+			for _, a := range apps {
+				if err := installOneFromStore(store, kind, a, args[0], force, out); err != nil {
+					return err
+				}
+			}
+			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&app, "app", "a", "", "Target agent (e.g. claude, codex, gemini)")
@@ -1040,7 +1516,7 @@ func installAllFromStore(store *entities.Store, kind entities.Kind, app string, 
 
 // --- install from local directory ------------------------------------------
 
-func installFromLocal(kind entities.Kind, dirPath, skillName, app string, all, force bool, out io.Writer) error {
+func installFromLocal(kind entities.Kind, dirPath, skillName string, all, force bool, out io.Writer, resolveApps func() ([]string, error)) error {
 	// Resolve ~ and relative paths.
 	if strings.HasPrefix(dirPath, "~/") {
 		if home, err := os.UserHomeDir(); err == nil {
@@ -1066,38 +1542,51 @@ func installFromLocal(kind entities.Kind, dirPath, skillName, app string, all, f
 		return nil
 	}
 
-	// Filter to a specific skill if requested.
+	// Let user pick skills first.
 	items, err = selectItems(items, skillName, all, kind, absPath)
 	if err != nil {
 		return err
 	}
 
-	installed := 0
-	for _, item := range items {
-		if !force && isAlreadyInstalled(item.name, kind, app) {
-			fmt.Fprintf(out, "  Skipping %s (already installed, use --force)\n", item.name)
-			continue
-		}
-		e := entities.Entity{
-			Name:    item.name,
-			Content: item.content,
-			Path:    item.path,
-		}
-		dest, err := entities.InstallToApp(e, kind, app)
-		if err != nil {
-			fmt.Fprintf(out, "  Error installing %s: %v\n", item.name, err)
-			continue
-		}
-		fmt.Fprintf(out, "  Installed %s to %s (from %s)\n", item.name, dest, app)
-		installed++
+	// Now resolve the target agent(s) (prompt if needed).
+	apps, err := resolveApps()
+	if err != nil {
+		return err
 	}
-	fmt.Fprintf(out, "\nInstalled %d %s(s) from %s to %s\n", installed, kind, absPath, app)
+
+	for _, app := range apps {
+		fmt.Fprintf(out, "\n%s:\n", app)
+		installed := 0
+		for _, item := range items {
+			if !force && isAlreadyInstalled(item.name, kind, app) {
+				if isInteractive() && confirmOverwrite(item.name, kind, app) {
+					// user said yes — fall through to install
+				} else {
+					fmt.Fprintf(out, "  Skipping %s (already installed)\n", item.name)
+					continue
+				}
+			}
+			e := entities.Entity{
+				Name:    item.name,
+				Content: item.content,
+				Path:    item.path,
+			}
+			dest, err := entities.InstallToApp(e, kind, app)
+			if err != nil {
+				fmt.Fprintf(out, "  Error installing %s: %v\n", item.name, err)
+				continue
+			}
+			fmt.Fprintf(out, "  Installed %s to %s\n", item.name, dest)
+			installed++
+		}
+		fmt.Fprintf(out, "  %d %s(s) installed to %s\n", installed, kind, app)
+	}
 	return nil
 }
 
 // --- install from GitHub ---------------------------------------------------
 
-func installFromGitHub(kind entities.Kind, repoArg, skillName, app string, all, force bool, out io.Writer) error {
+func installFromGitHub(kind entities.Kind, repoArg, skillName string, all, force bool, out io.Writer, resolveApps func() ([]string, error)) error {
 	// Parse owner/repo, optional @branch.
 	ghOwner, ghRepo, ghBranch := parseRepoArg(repoArg)
 	if ghOwner == "" || ghRepo == "" {
@@ -1120,36 +1609,50 @@ func installFromGitHub(kind entities.Kind, repoArg, skillName, app string, all, 
 		return nil
 	}
 
+	// Let user pick skills first.
 	source := fmt.Sprintf("%s/%s", ghOwner, ghRepo)
 	items, err = selectItems(items, skillName, all, kind, source)
 	if err != nil {
 		return err
 	}
 
-	installed := 0
-	for _, item := range items {
-		if !force && isAlreadyInstalled(item.name, kind, app) {
-			fmt.Fprintf(out, "  Skipping %s (already installed, use --force)\n", item.name)
-			continue
-		}
-		e := entities.Entity{
-			Name:    item.name,
-			Content: item.content,
-			Path:    item.path,
-			Repo:    &entities.RepoRef{Owner: ghOwner, Name: ghRepo, Branch: ghBranch},
-		}
-		destPath, err := entities.InstallToApp(e, kind, app)
-		if err != nil {
-			fmt.Fprintf(out, "  Error installing %s: %v\n", item.name, err)
-			continue
-		}
-		// Also save to local store for future reference.
-		store := entities.NewStore(kind)
-		_ = store.Put(e)
-		fmt.Fprintf(out, "  Installed %s to %s (from %s/%s)\n", item.name, destPath, ghOwner, ghRepo)
-		installed++
+	// Now resolve the target agent(s) (prompt if needed).
+	apps, err := resolveApps()
+	if err != nil {
+		return err
 	}
-	fmt.Fprintf(out, "\nInstalled %d %s(s) from %s/%s to %s\n", installed, kind, ghOwner, ghRepo, app)
+
+	for _, app := range apps {
+		fmt.Fprintf(out, "\n%s:\n", app)
+		installed := 0
+		for _, item := range items {
+			if !force && isAlreadyInstalled(item.name, kind, app) {
+				if isInteractive() && confirmOverwrite(item.name, kind, app) {
+					// user said yes — fall through to install
+				} else {
+					fmt.Fprintf(out, "  Skipping %s (already installed)\n", item.name)
+					continue
+				}
+			}
+			e := entities.Entity{
+				Name:    item.name,
+				Content: item.content,
+				Path:    item.path,
+				Repo:    &entities.RepoRef{Owner: ghOwner, Name: ghRepo, Branch: ghBranch},
+			}
+			destPath, err := entities.InstallToApp(e, kind, app)
+			if err != nil {
+				fmt.Fprintf(out, "  Error installing %s: %v\n", item.name, err)
+				continue
+			}
+			// Also save to local store for future reference.
+			store := entities.NewStore(kind)
+			_ = store.Put(e)
+			fmt.Fprintf(out, "  Installed %s to %s\n", item.name, destPath)
+			installed++
+		}
+		fmt.Fprintf(out, "  %d %s(s) installed to %s\n", installed, kind, app)
+	}
 	return nil
 }
 
@@ -1314,15 +1817,11 @@ func interactiveSelectItems(items []discoveredItem, kind entities.Kind, source s
 	msItems := make([]multiSelectItem, len(items))
 	for i, item := range items {
 		desc := extractFrontmatterDescription(item.content)
-		label := item.name
-		if desc != "" {
-			if len(desc) > 80 {
-				desc = desc[:77] + "..."
-			}
-			label = fmt.Sprintf("%-30s %s", item.name, desc)
+		if len(desc) > 120 {
+			desc = desc[:117] + "..."
 		}
 		msItems[i] = multiSelectItem{
-			label:       label,
+			label:       item.name,
 			description: desc,
 		}
 	}
@@ -1404,28 +1903,20 @@ func promptSearchInstall(results []ghSearchResult, kind entities.Kind, out io.Wr
 		return nil
 	}
 
-	// Pick target app.
-	supportedApps := entities.SupportedApps(kind)
-	appItems := make([]multiSelectItem, len(supportedApps))
-	for i, app := range supportedApps {
-		appItems[i] = multiSelectItem{label: app}
-	}
-	appModel := newSingleSelectModel("Select target agent:", supportedApps)
-	p := tea.NewProgram(appModel)
-	final, err := p.Run()
+	// Pick target agent(s) — multi-select.
+	apps, err := promptSelectApp(kind)
 	if err != nil {
 		return err
 	}
-	appResult := final.(singleSelectModel)
-	if appResult.aborted || appResult.selected == "" {
+	if len(apps) == 0 {
 		return nil
 	}
-	app := appResult.selected
+	appsFn := func() ([]string, error) { return apps, nil }
 
 	// Install each selected skill from GitHub.
 	for _, r := range toInstall {
 		fmt.Fprintf(out, "\nInstalling %s from %s...\n", r.Name, r.Repo)
-		err := installFromGitHub(kind, r.Repo, r.Name, app, true, false, out)
+		err := installFromGitHub(kind, r.Repo, r.Name, true, false, out, appsFn)
 		if err != nil {
 			fmt.Fprintf(out, "  Error: %v\n", err)
 		}
@@ -1496,6 +1987,67 @@ func isInteractive() bool {
 	return fi.Mode()&os.ModeCharDevice != 0
 }
 
+// confirmOverwrite asks the user whether to overwrite an already-installed
+// entity.  Returns true if the user confirms.  Only called in interactive mode.
+func confirmOverwrite(name string, kind entities.Kind, app string) bool {
+	items := []string{"Yes — overwrite", "No — skip"}
+	title := fmt.Sprintf("%s %q is already installed in %s. Overwrite?", kind, name, app)
+	model := newSingleSelectModel(title, items)
+	p := tea.NewProgram(model)
+	final, err := p.Run()
+	if err != nil {
+		return false
+	}
+	result := final.(singleSelectModel)
+	return !result.aborted && strings.HasPrefix(result.selected, "Yes")
+}
+
+// promptSelectApp runs a multi-select picker for target code agents.
+// Shows only installed agents (binary found on PATH), matching
+// the gh skill interactive picker format with display names.
+func promptSelectApp(kind entities.Kind) ([]string, error) {
+	apps := entities.AppPathsFor(kind)
+	allAgents := entities.AllAgents()
+
+	var items []multiSelectItem
+	for _, info := range allAgents {
+		if _, ok := apps[info.ID]; !ok {
+			continue // agent doesn't support this kind
+		}
+		if !entities.IsAgentInstalled(info) {
+			continue // not installed on this system
+		}
+		items = append(items, multiSelectItem{
+			label: info.DisplayName,
+		})
+	}
+
+	if len(items) == 0 {
+		return nil, fmt.Errorf("no code agents found on PATH (install one or use --app)")
+	}
+
+	selected, err := runMultiSelect("Select target agent(s):", items)
+	if err != nil {
+		supported := entities.SupportedApps(kind)
+		return nil, fmt.Errorf("--app is required (one of: %s)", strings.Join(supported, ", "))
+	}
+	if len(selected) == 0 {
+		return nil, fmt.Errorf("no agent selected")
+	}
+
+	// Map display names back to IDs.
+	var ids []string
+	for _, displayName := range selected {
+		for _, info := range allAgents {
+			if info.DisplayName == displayName {
+				ids = append(ids, info.ID)
+				break
+			}
+		}
+	}
+	return ids, nil
+}
+
 // parseRepoArg splits "owner/repo" or "owner/repo@branch" into components.
 func parseRepoArg(arg string) (owner, repo, branch string) {
 	branch = "main"
@@ -1527,6 +2079,166 @@ func isAlreadyInstalled(name string, kind entities.Kind, app string) bool {
 		_, err := os.Stat(filepath.Join(resolved, name))
 		return err == nil
 	}
+}
+
+// ============================================================================
+// uninstall — remove from code agent(s)
+// ============================================================================
+
+func entityUninstallCommand(kind entities.Kind) *cobra.Command {
+	var (
+		app string
+		all bool
+	)
+	cmd := &cobra.Command{
+		Use:     "uninstall [NAME...]",
+		Aliases: []string{"rm", "remove"},
+		Short:   "Uninstall " + string(kind) + "(s) from a code agent",
+		Long: "Remove installed " + string(kind) + `(s) from a target code agent.
+
+When --app is omitted in an interactive terminal, you will be prompted
+to select target agent(s).
+
+Supported agents: ` + strings.Join(entities.SupportedApps(kind), ", ") + `.
+
+Use --all to uninstall every installed item from the selected agent(s).`,
+		Example: "  cam " + string(kind) + " uninstall my-skill --app claude\n" +
+			"  cam " + string(kind) + " uninstall --all --app claude\n" +
+			"  cam " + string(kind) + " uninstall skill-a skill-b",
+		Args: cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			out := cmd.OutOrStdout()
+
+			// Resolve target app(s).
+			var apps []string
+			if app != "" {
+				apps = []string{app}
+			} else if isInteractive() {
+				picked, err := promptSelectApp(kind)
+				if err != nil {
+					return err
+				}
+				apps = picked
+			} else {
+				return fmt.Errorf("--app is required (one of: %s)", strings.Join(entities.SupportedApps(kind), ", "))
+			}
+
+			if !all && len(args) == 0 {
+				// Interactive: list what's installed and let user pick.
+				if isInteractive() {
+					return interactiveUninstall(kind, apps, out)
+				}
+				return fmt.Errorf("NAME is required (or use --all)")
+			}
+
+			for _, a := range apps {
+				if all {
+					uninstallAllFromApp(kind, a, out)
+				} else {
+					for _, name := range args {
+						uninstallOneFromApp(kind, a, name, out)
+					}
+				}
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&app, "app", "a", "", "Target agent (e.g. claude, codex, gemini)")
+	cmd.Flags().BoolVar(&all, "all", false, "Uninstall all installed items")
+	return cmd
+}
+
+func uninstallOneFromApp(kind entities.Kind, app, name string, out io.Writer) {
+	path, removed, err := entities.UninstallFromApp(name, kind, app)
+	if err != nil {
+		fmt.Fprintf(out, "  Error removing %s from %s: %v\n", name, app, err)
+		return
+	}
+	if !removed {
+		fmt.Fprintf(out, "  %s not found in %s (%s)\n", name, app, path)
+		return
+	}
+	fmt.Fprintf(out, "  Removed %s from %s\n", name, app)
+}
+
+func uninstallAllFromApp(kind entities.Kind, app string, out io.Writer) {
+	appPaths := entities.AppPathsFor(kind)
+	dest, ok := appPaths[app]
+	if !ok {
+		fmt.Fprintf(out, "  %s does not support %ss\n", app, kind)
+		return
+	}
+	resolved := expandPath(dest)
+
+	if kind == entities.KindPrompt {
+		// Prompts are single files — don't remove the user's CLAUDE.md etc.
+		fmt.Fprintf(out, "  Skipping %s — prompt files are not bulk-removable\n", app)
+		return
+	}
+
+	entries, err := os.ReadDir(resolved)
+	if err != nil {
+		fmt.Fprintf(out, "  No %ss installed in %s\n", kind, app)
+		return
+	}
+
+	removed := 0
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		target := filepath.Join(resolved, e.Name())
+		if err := os.RemoveAll(target); err != nil {
+			fmt.Fprintf(out, "  Error removing %s: %v\n", e.Name(), err)
+			continue
+		}
+		fmt.Fprintf(out, "  Removed %s from %s\n", e.Name(), app)
+		removed++
+	}
+	fmt.Fprintf(out, "\nRemoved %d %s(s) from %s\n", removed, kind, app)
+}
+
+// interactiveUninstall lists installed items and lets the user pick which to remove.
+func interactiveUninstall(kind entities.Kind, apps []string, out io.Writer) error {
+	for _, app := range apps {
+		appPaths := entities.AppPathsFor(kind)
+		dest, ok := appPaths[app]
+		if !ok {
+			continue
+		}
+		resolved := expandPath(dest)
+
+		if kind == entities.KindPrompt {
+			fmt.Fprintf(out, "  %s — prompt uninstall not supported interactively\n", app)
+			continue
+		}
+
+		entries, err := os.ReadDir(resolved)
+		if err != nil {
+			continue
+		}
+		var items []multiSelectItem
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			items = append(items, multiSelectItem{label: e.Name()})
+		}
+		if len(items) == 0 {
+			fmt.Fprintf(out, "No %ss installed in %s\n", kind, app)
+			continue
+		}
+
+		title := fmt.Sprintf("Select %s(s) to uninstall from %s:", kind, app)
+		selected, err := runMultiSelect(title, items)
+		if err != nil {
+			return err
+		}
+		for _, name := range selected {
+			uninstallOneFromApp(kind, app, name, out)
+		}
+	}
+	return nil
 }
 
 func readStdinIfPiped(in io.Reader) (string, error) {

@@ -38,6 +38,9 @@ var bundledAgentRepos []byte
 //go:embed embed/plugin_repos.json
 var bundledPluginRepos []byte
 
+//go:embed embed/prompt_repos.json
+var bundledPromptRepos []byte
+
 // RepoEntry is a single repository definition.  Field names match the JSON
 // keys used in the Python version so the same files work for both.
 type RepoEntry struct {
@@ -147,7 +150,7 @@ func LoadAll(kind entities.Kind) (map[string]RepoEntry, error) {
 					if s.Path == "" {
 						continue
 					}
-					local, err := loadLocalSource(s.Path)
+					local, err := LoadLocalSource(s.Path)
 					if err != nil || local == nil {
 						continue
 					}
@@ -207,17 +210,19 @@ func loadBundled(kind entities.Kind) (map[string]RepoEntry, error) {
 		raw = bundledAgentRepos
 	case entities.KindPlugin:
 		raw = bundledPluginRepos
+	case entities.KindPrompt:
+		raw = bundledPromptRepos
 	default:
-		// Kinds without bundled repos (e.g. prompt) return an empty map
-		// so config.yaml sources can still be loaded.
+		// Unknown kinds return an empty map so config.yaml sources
+		// can still be loaded.
 		return make(map[string]RepoEntry), nil
 	}
 	return parseRepoJSON(raw)
 }
 
-// loadLocalSource reads a JSON repo file from the given path, expanding ~.
+// LoadLocalSource reads a JSON repo file from the given path, expanding ~.
 // Used for both config.yaml local sources and direct path lookups.
-func loadLocalSource(path string) (map[string]RepoEntry, error) {
+func LoadLocalSource(path string) (map[string]RepoEntry, error) {
 	resolved := pathutil.Expand(path)
 	data, err := os.ReadFile(resolved)
 	if err != nil {
