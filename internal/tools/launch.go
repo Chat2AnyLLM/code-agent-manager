@@ -47,33 +47,6 @@ func ResolveLaunchEnv(tool Tool, endpoint providers.Endpoint, endpointName, mode
 		delete(env, removed)
 	}
 
-	// Tool-specific defaults that the Python wrappers hard-code.
-	switch tool.Name {
-	case "claude-code":
-		env["ANTHROPIC_BASE_URL"] = endpoint.Endpoint
-		env["ANTHROPIC_AUTH_TOKEN"] = apiKey
-		if model != "" {
-			env["ANTHROPIC_MODEL"] = model
-			env["ANTHROPIC_DEFAULT_SONNET_MODEL"] = model
-		}
-		env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
-	case "openai-codex":
-		env["BASE_URL"] = endpoint.Endpoint
-		env["OPENAI_API_KEY"] = apiKey
-		env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
-	case "qwen-code":
-		env["OPENAI_BASE_URL"] = endpoint.Endpoint
-		env["OPENAI_API_KEY"] = apiKey
-		if model != "" {
-			env["OPENAI_MODEL"] = model
-		}
-		env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
-	case "codebuddy":
-		env["CODEBUDDY_BASE_URL"] = endpoint.Endpoint
-		env["CODEBUDDY_API_KEY"] = apiKey
-		env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
-	}
-
 	inject := make([]string, 0, len(tool.CLIParameters.Injected))
 	for _, raw := range tool.CLIParameters.Injected {
 		inject = append(inject, expandPlaceholders(raw, endpoint, model, apiKey))

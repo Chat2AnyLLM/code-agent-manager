@@ -173,19 +173,3 @@ func TestResolveLaunchEnvRemovedVarsAreCleared(t *testing.T) {
 		t.Fatalf("HTTPS_PROXY should be removed: %v", launch.Env)
 	}
 }
-
-func TestResolveLaunchEnvAppliesToolDefaults(t *testing.T) {
-	t.Setenv("ANTHROPIC_KEY", "ak-test")
-	ep := providers.Endpoint{Endpoint: "https://anthropic.example.com", APIKeyEnv: "ANTHROPIC_KEY"}
-	tool := Tool{Name: "claude-code", CLICommand: "claude"}
-	launch := ResolveLaunchEnv(tool, ep, "anthropic", "claude-3-opus")
-	if launch.Env["ANTHROPIC_BASE_URL"] != ep.Endpoint {
-		t.Fatalf("ANTHROPIC_BASE_URL = %q", launch.Env["ANTHROPIC_BASE_URL"])
-	}
-	if launch.Env["ANTHROPIC_AUTH_TOKEN"] != "ak-test" {
-		t.Fatalf("ANTHROPIC_AUTH_TOKEN = %q", launch.Env["ANTHROPIC_AUTH_TOKEN"])
-	}
-	if launch.Env["ANTHROPIC_MODEL"] != "claude-3-opus" {
-		t.Fatalf("ANTHROPIC_MODEL = %q", launch.Env["ANTHROPIC_MODEL"])
-	}
-}
