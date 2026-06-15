@@ -29,6 +29,7 @@ type Format string
 const (
 	FormatJSON Format = "json"
 	FormatTOML Format = "toml"
+	FormatYAML Format = "yaml"
 )
 
 // ScopedConfig represents the contents of a config file at a particular scope.
