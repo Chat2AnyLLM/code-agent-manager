@@ -10,11 +10,12 @@ import (
 )
 
 // Options configures App.  Empty Stdout/Stderr default to os.Stdout/os.Stderr;
-// an empty Version defaults to "dev".
+// an empty Stdin defaults to os.Stdin; an empty Version defaults to "dev".
 type Options struct {
 	Version string
 	Stdout  io.Writer
 	Stderr  io.Writer
+	Stdin   io.Reader
 }
 
 // App is the top-level CLI entrypoint.  Construct one with New, then call
@@ -23,6 +24,7 @@ type App struct {
 	version string
 	stdout  io.Writer
 	stderr  io.Writer
+	stdin   io.Reader
 }
 
 // New constructs an App from Options.
@@ -36,7 +38,10 @@ func New(opts Options) *App {
 	if opts.Stderr == nil {
 		opts.Stderr = os.Stderr
 	}
-	return &App{version: opts.Version, stdout: opts.Stdout, stderr: opts.Stderr}
+	if opts.Stdin == nil {
+		opts.Stdin = os.Stdin
+	}
+	return &App{version: opts.Version, stdout: opts.Stdout, stderr: opts.Stderr, stdin: opts.Stdin}
 }
 
 // Run executes the CLI and returns the process exit code.  errEndpointsHandled
@@ -47,6 +52,7 @@ func (a *App) Run(args []string) int {
 	cmd.SetArgs(args)
 	cmd.SetOut(a.stdout)
 	cmd.SetErr(a.stderr)
+	cmd.SetIn(a.stdin)
 	cmd.SilenceUsage = true
 	cmd.SilenceErrors = true
 
@@ -68,7 +74,7 @@ func (a *App) rootCommand() *cobra.Command {
 		Long: "Code Assistant Manager (CAM) manages AI coding assistant configuration, prompts, " +
 			"skills, plugins, MCP servers, and launch commands.\n\n" +
 			"Aliases: launch/l, doctor/d, agent/ag, prompt/p, skill/s, plugin/pl, mcp/m, " +
-			"upgrade/u, install/i, uninstall/un, config/cf, completion/comp/c, version/v.",
+			"provider/pr, upgrade/u, install/i, uninstall/un, config/cf, completion/comp/c, version/v.",
 		Version: a.version,
 	}
 	root.SetVersionTemplate("{{.Version}}\n")
@@ -90,6 +96,7 @@ func (a *App) rootCommand() *cobra.Command {
 	root.AddCommand(a.launchCommand(state))
 	root.AddCommand(a.doctorCommand(state))
 	root.AddCommand(a.configCommand(state))
+	root.AddCommand(a.providerCommand(state))
 	root.AddCommand(a.managementCommand("agent", "ag", state))
 	root.AddCommand(a.managementCommand("prompt", "p", state))
 	root.AddCommand(a.managementCommand("skill", "s", state))

@@ -9,6 +9,6 @@ import (
 var version = "dev"
 
 func main() {
-	app := cli.New(cli.Options{Version: version, Stdout: os.Stdout, Stderr: os.Stderr})
+	app := cli.New(cli.Options{Version: version, Stdout: os.Stdout, Stderr: os.Stderr, Stdin: os.Stdin})
 	os.Exit(app.Run(os.Args[1:]))
 }

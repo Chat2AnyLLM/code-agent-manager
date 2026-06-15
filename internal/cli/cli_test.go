@@ -22,6 +22,7 @@ func execute(t *testing.T, args ...string) (stdout string, stderr string, code i
 		Version: "test-version",
 		Stdout:  &out,
 		Stderr:  &err,
+		Stdin:   &bytes.Buffer{},
 	})
 	code = app.Run(args)
 	return out.String(), err.String(), code
