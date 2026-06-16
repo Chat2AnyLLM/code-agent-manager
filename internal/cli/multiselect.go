@@ -147,7 +147,8 @@ func (m multiSelectModel) View() string {
 
 	count := m.selectedCount()
 	b.WriteString("\n")
-	fmt.Fprintf(&b, "%d selected · space=toggle · ←all off · →all on · enter=confirm · type to filter · q=quit\n", count)
+	fmt.Fprintf(&b, "%d selected · %s\n", count,
+		"Use arrows to move, space to select, <right> to all, <left> to none, type to filter, enter to confirm, q to quit")
 	return b.String()
 }
 

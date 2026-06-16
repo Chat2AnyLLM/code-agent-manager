@@ -31,6 +31,16 @@ var proxyVars = []string{
 	"all_proxy", "ALL_PROXY",
 }
 
+var defaultClaudeModels = []string{
+	"claude-opus-4.8",
+	"claude-opus-4.7",
+	"claude-opus-4.6",
+	"claude-sonnet-4.6",
+	"claude-sonnet-4.5",
+	"claude-opus-4.5",
+	"claude-haiku-4.5",
+}
+
 // ErrEmptyModelList signals that the discovery command succeeded but
 // returned no models. Wizard treats this the same as a non-zero exit:
 // offer manual entry or step back to provider selection.
@@ -69,18 +79,18 @@ func ResolveModels(
 	cachePath := filepath.Join(cacheDir, epName+".json")
 
 	if cached, ok := readModelsCache(cachePath, cacheTTL); ok {
-		return mergeModels(cached, ep.Models), nil
+		return mergeModels(cached, ep.Models, defaultModelsForEndpoint(ep)), nil
 	}
 
 	models, err := fetchAPIModels(ep, getenv)
 	if err == nil && len(models) > 0 {
-		merged := mergeModels(models, ep.Models)
+		merged := mergeModels(models, ep.Models, defaultModelsForEndpoint(ep))
 		_ = writeModelsCache(cachePath, models)
 		return merged, nil
 	}
 
 	if len(ep.Models) > 0 {
-		return append([]string(nil), ep.Models...), nil
+		return mergeModels(ep.Models, defaultModelsForEndpoint(ep)), nil
 	}
 	if ep.ListModelsCmd == "" {
 		return nil, nil
@@ -225,6 +235,13 @@ func isPrivateEndpoint(endpoint string) bool {
 		return false
 	}
 	return ip.IsPrivate() || ip.IsLoopback()
+}
+
+func defaultModelsForEndpoint(ep Endpoint) []string {
+	if !ep.SupportsClient("claude") {
+		return nil
+	}
+	return defaultClaudeModels
 }
 
 func mergeModels(groups ...[]string) []string {

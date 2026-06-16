@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -18,7 +19,7 @@ func testRegistry(t *testing.T) *tools.Registry {
 	t.Helper()
 	enabled := true
 	reg := &tools.Registry{Tools: map[string]tools.Tool{
-		"claude-code": {Name: "claude-code", CLICommand: "claude", Enabled: &enabled},
+		"claude-code":  {Name: "claude-code", CLICommand: "claude", Enabled: &enabled},
 		"openai-codex": {Name: "openai-codex", CLICommand: "codex", Enabled: &enabled},
 		"qwen-code":    {Name: "qwen-code", CLICommand: "qwen", Enabled: &enabled},
 	}}
@@ -43,6 +44,14 @@ func resolveModelsErr(err error) func(providers.Endpoint, string) ([]string, err
 	return func(providers.Endpoint, string) ([]string, error) {
 		return nil, err
 	}
+}
+
+func numberedModels(prefix string, count int) []string {
+	models := make([]string, 0, count)
+	for i := 1; i <= count; i++ {
+		models = append(models, fmt.Sprintf("%s-%02d", prefix, i))
+	}
+	return models
 }
 
 func TestValidatePinned_AllPinnedHappyPath(t *testing.T) {
@@ -155,6 +164,48 @@ func drive(t *testing.T, m launchWizardModel, keys ...string) launchWizardModel 
 	return m
 }
 
+func TestPickerStep_DefaultPickerShowsAllItems(t *testing.T) {
+	items := numberedModels("model", 20)
+	step := newPickerStep("Select a model", items, "type to filter")
+
+	visible := step.visible()
+	if len(visible) != 20 {
+		t.Fatalf("visible count = %d, want 20", len(visible))
+	}
+	if visible[19] != "model-20" {
+		t.Fatalf("last visible item = %q, want model-20", visible[19])
+	}
+}
+
+func TestPickerStep_LimitedPickerCapsVisibleItems(t *testing.T) {
+	items := numberedModels("model", 20)
+	step := newLimitedPickerStep("Select a model", items, "type to filter", 15)
+
+	visible := step.visible()
+	if len(visible) != 15 {
+		t.Fatalf("visible count = %d, want 15", len(visible))
+	}
+	if visible[14] != "model-15" {
+		t.Fatalf("last visible item = %q, want model-15", visible[14])
+	}
+}
+
+func TestPickerStep_LimitedPickerFiltersAcrossAllItems(t *testing.T) {
+	items := numberedModels("model", 20)
+	step := newLimitedPickerStep("Select a model", items, "type to filter", 15)
+
+	step.update(keyEvent("2"))
+	step.update(keyEvent("0"))
+
+	visible := step.visible()
+	if len(visible) != 1 {
+		t.Fatalf("visible count = %d, want 1; visible=%v", len(visible), visible)
+	}
+	if visible[0] != "model-20" {
+		t.Fatalf("visible item = %q, want model-20", visible[0])
+	}
+}
+
 func TestWizard_AllUnpinned_HappyPath(t *testing.T) {
 	reg := testRegistry(t)
 	in := wizardInput{
@@ -239,6 +290,99 @@ func TestWizard_EndpointFiltersByClient(t *testing.T) {
 		if v != want[i] {
 			t.Fatalf("expected %v got %v", want, visible)
 		}
+	}
+}
+
+func TestWizard_ModelPickerShowsCappedPreviewAndFiltersAllModels(t *testing.T) {
+	reg := testRegistry(t)
+	tool, _ := reg.ByCLICommand("claude")
+	providerFile := testProviders()
+	providerFile.Endpoints["alpha"] = providers.Endpoint{
+		Endpoint:        "https://alpha",
+		SupportedClient: "claude,codex",
+		Models:          numberedModels("model", 20),
+	}
+	in := wizardInput{
+		Pinned: launchSelection{
+			Tool: tool, EndpointName: "alpha",
+		},
+		Providers:     providerFile,
+		Registry:      reg,
+		ResolveModels: resolveModelsFromEndpoint,
+	}
+
+	sel, _, _, needM, err := validatePinned(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := newLaunchWizardModel(sel, in, false, false, needM)
+
+	visible := m.modelStep.visible()
+	if len(visible) != 15 {
+		t.Fatalf("initial model count = %d, want 15", len(visible))
+	}
+	if visible[14] != "model-15" {
+		t.Fatalf("last initial model = %q, want model-15", visible[14])
+	}
+
+	m = drive(t, m, "2", "0")
+	visible = m.modelStep.visible()
+	if len(visible) != 1 {
+		t.Fatalf("filtered model count = %d, want 1; visible=%v", len(visible), visible)
+	}
+	if visible[0] != "model-20" {
+		t.Fatalf("filtered model = %q, want model-20", visible[0])
+	}
+}
+
+func TestPickerStep_LimitedPickerViewFollowsCursorPastInitialPreview(t *testing.T) {
+	items := numberedModels("model", 20)
+	step := newLimitedPickerStep("Select a model", items, "type to filter", 15)
+
+	for i := 0; i < 19; i++ {
+		step.update(keyEvent("down"))
+	}
+
+	view := step.view()
+	if strings.Contains(view, "model-01") {
+		t.Fatalf("view should slide past the initial preview after moving down:\n%s", view)
+	}
+	if !strings.Contains(view, "> model-20") {
+		t.Fatalf("view should show cursor on model-20 after moving down:\n%s", view)
+	}
+}
+
+func TestWizard_ModelPickerCanMovePastCappedPreview(t *testing.T) {
+	reg := testRegistry(t)
+	tool, _ := reg.ByCLICommand("claude")
+	providerFile := testProviders()
+	providerFile.Endpoints["alpha"] = providers.Endpoint{
+		Endpoint:        "https://alpha",
+		SupportedClient: "claude,codex",
+		Models:          numberedModels("model", 20),
+	}
+	in := wizardInput{
+		Pinned: launchSelection{
+			Tool: tool, EndpointName: "alpha",
+		},
+		Providers:     providerFile,
+		Registry:      reg,
+		ResolveModels: resolveModelsFromEndpoint,
+	}
+
+	sel, _, _, needM, err := validatePinned(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := newLaunchWizardModel(sel, in, false, false, needM)
+
+	for i := 0; i < 19; i++ {
+		m = drive(t, m, "down")
+	}
+	m = drive(t, m, "enter")
+
+	if m.sel.Model != "model-20" {
+		t.Fatalf("selected model = %q, want model-20", m.sel.Model)
 	}
 }
 

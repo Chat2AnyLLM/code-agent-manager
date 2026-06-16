@@ -129,6 +129,8 @@ const (
 	phaseDone
 )
 
+const launchModelPickerVisibleLimit = 15
+
 // launchWizardModel is the bubbletea model for the three-phase picker.
 // At any time, exactly one of {toolStep, endpointStep, modelStep, modelEntry}
 // is visible. Phase pinned by CLI flag is skipped on entry.
@@ -283,8 +285,9 @@ func (m *launchWizardModel) buildModelStep() {
 	}
 	m.manualEntry = false
 	m.modelErr = nil
-	hint := fmt.Sprintf("Models for %s. Esc back, q to quit.", m.sel.EndpointName)
-	m.modelStep = newPickerStep("Select a model", models, hint)
+	hint := fmt.Sprintf("Models for %s. Showing up to %d matches; type to filter, Esc back, q to quit.",
+		m.sel.EndpointName, launchModelPickerVisibleLimit)
+	m.modelStep = newLimitedPickerStep("Select a model", models, hint, launchModelPickerVisibleLimit)
 }
 
 // advanceFromStep records the picker's selection in m.sel and moves

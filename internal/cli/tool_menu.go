@@ -13,19 +13,25 @@ import (
 // reacts to key events via Update. It is NOT a tea.Model by itself;
 // the wrapping model decides when to quit / advance / step back.
 type pickerStep struct {
-	title  string
-	items  []string
-	cursor int
-	filter string
+	title        string
+	items        []string
+	cursor       int
+	filter       string
+	visibleLimit int
 	// hint is the footer line shown beneath the list.
 	hint string
 }
 
 func newPickerStep(title string, items []string, hint string) pickerStep {
+	return newLimitedPickerStep(title, items, hint, 0)
+}
+
+func newLimitedPickerStep(title string, items []string, hint string, limit int) pickerStep {
 	return pickerStep{
-		title: title,
-		items: append([]string(nil), items...),
-		hint:  hint,
+		title:        title,
+		items:        append([]string(nil), items...),
+		visibleLimit: limit,
+		hint:         hint,
 	}
 }
 
@@ -34,10 +40,10 @@ func newPickerStep(title string, items []string, hint string) pickerStep {
 type pickerAction int
 
 const (
-	pickerActionNone pickerAction = iota
-	pickerActionAdvance // Enter pressed on a non-empty filtered list
-	pickerActionBack    // Esc pressed
-	pickerActionAbort   // q or Ctrl+C pressed
+	pickerActionNone    pickerAction = iota
+	pickerActionAdvance              // Enter pressed on a non-empty filtered list
+	pickerActionBack                 // Esc pressed
+	pickerActionAbort                // q or Ctrl+C pressed
 )
 
 // update mutates the step in place and reports the high-level action.
@@ -53,11 +59,11 @@ func (s *pickerStep) update(msg tea.KeyMsg) pickerAction {
 			s.cursor--
 		}
 	case "down", "j":
-		if s.cursor < len(s.visible())-1 {
+		if s.cursor < len(s.filtered())-1 {
 			s.cursor++
 		}
 	case "enter":
-		if len(s.visible()) > 0 {
+		if len(s.filtered()) > 0 {
 			return pickerActionAdvance
 		}
 	case "backspace":
@@ -78,7 +84,7 @@ func (s *pickerStep) update(msg tea.KeyMsg) pickerAction {
 // selected returns the currently highlighted item, or "" when the
 // filtered list is empty.
 func (s pickerStep) selected() string {
-	v := s.visible()
+	v := s.filtered()
 	if len(v) == 0 {
 		return ""
 	}
@@ -92,13 +98,13 @@ func (s pickerStep) view() string {
 	if s.filter != "" {
 		fmt.Fprintf(&b, "Filter: %s\n\n", s.filter)
 	}
-	v := s.visible()
+	v, offset := s.visibleWindow()
 	if len(v) == 0 {
 		b.WriteString("No items match your filter.\n")
 	} else {
 		for i, item := range v {
 			cursor := " "
-			if i == s.cursor {
+			if i+offset == s.cursor {
 				cursor = ">"
 			}
 			fmt.Fprintf(&b, "%s %s\n", cursor, item)
@@ -113,6 +119,27 @@ func (s pickerStep) view() string {
 }
 
 func (s pickerStep) visible() []string {
+	v, _ := s.visibleWindow()
+	return v
+}
+
+func (s pickerStep) visibleWindow() ([]string, int) {
+	out := s.filtered()
+	if s.visibleLimit <= 0 || len(out) <= s.visibleLimit {
+		return out, 0
+	}
+	start := s.cursor - s.visibleLimit + 1
+	if start < 0 {
+		start = 0
+	}
+	end := start + s.visibleLimit
+	if end > len(out) {
+		end = len(out)
+	}
+	return out[start:end], start
+}
+
+func (s pickerStep) filtered() []string {
 	if s.filter == "" {
 		return s.items
 	}
@@ -127,7 +154,7 @@ func (s pickerStep) visible() []string {
 }
 
 func (s *pickerStep) clampCursor() {
-	v := s.visible()
+	v := s.filtered()
 	if len(v) == 0 {
 		s.cursor = 0
 		return

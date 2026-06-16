@@ -381,6 +381,43 @@ func TestResolveModels_ExposesEndpointAndApiKey(t *testing.T) {
 	}
 }
 
+func TestResolveModels_AddsClaudeDefaultsForClaudeCompatibleEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"id":"gpt-5.5"},{"id":"gemini-3.1-pro-preview"}]}`))
+	}))
+	defer server.Close()
+
+	got, err := ResolveModels(
+		Endpoint{
+			Endpoint:        server.URL,
+			SupportedClient: "claude,codex",
+		},
+		"omnillm",
+		time.Hour,
+		t.TempDir(),
+		os.Getenv,
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, want := range []string{"claude-opus-4.8", "claude-opus-4.7", "claude-opus-4.6", "claude-sonnet-4.6", "claude-haiku-4.5"} {
+		if !containsString(got, want) {
+			t.Fatalf("models = %v, want to include %q", got, want)
+		}
+	}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
 func equalSlices(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
