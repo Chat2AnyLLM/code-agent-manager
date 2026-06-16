@@ -131,11 +131,11 @@ func newProviderWizardModel(
 	)
 
 	m.listModelsCmdStep = newTextInputStep(
-		"List Models Command",
+		"List Models Command (Deprecated)",
 		"Command:",
 		ep.ListModelsCmd,
 		false,
-		"Shell command for dynamic model discovery (optional). Enter to continue, Esc back.",
+		"Deprecated fallback. CAM fetches /v1/models directly; leave empty unless required. Enter to continue, Esc back.",
 	)
 
 	m.descriptionStep = newTextInputStep(

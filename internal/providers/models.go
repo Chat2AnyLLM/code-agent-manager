@@ -2,9 +2,13 @@ package providers
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,18 +45,17 @@ type cacheEntry struct {
 // ResolveModels returns the model list to present for endpoint ep,
 // identified by epName. Priority:
 //
-//  1. ep.Models when non-empty → returned verbatim, no cache I/O.
-//  2. ep.ListModelsCmd when non-empty → run with env vars
-//     endpoint=ep.Endpoint and api_key=ResolveAPIKey(ep, getenv),
-//     proxies stripped unless ep.KeepProxyConfig. Hard timeout.
-//     stdout split on \n; empty/whitespace lines dropped; result
-//     cached for cacheTTL.
-//  3. neither set → empty slice, nil error.
+//  1. Built-in /v1/models discovery → combined with ep.Models.
+//  2. ep.Models when API discovery fails or returns no models.
+//  3. Deprecated ep.ListModelsCmd fallback when no static models exist.
+//  4. No source configured → empty slice, nil error.
 //
-// On step-2 timeout, non-zero exit, or empty output, returns
+// API and command discovery results are cached for cacheTTL under
+// cacheDir/<epName>.json. cacheDir defaults to pathutil.CacheDir()/models
+// when empty.
+//
+// On list_models_cmd timeout, non-zero exit, or empty output, returns
 // ([], err). Callers treat err as a recoverable signal.
-//
-// cacheDir defaults to pathutil.CacheDir()/models when empty.
 func ResolveModels(
 	ep Endpoint,
 	epName string,
@@ -60,6 +63,22 @@ func ResolveModels(
 	cacheDir string,
 	getenv func(string) string,
 ) ([]string, error) {
+	if cacheDir == "" {
+		cacheDir = filepath.Join(pathutil.CacheDir(), "models")
+	}
+	cachePath := filepath.Join(cacheDir, epName+".json")
+
+	if cached, ok := readModelsCache(cachePath, cacheTTL); ok {
+		return mergeModels(cached, ep.Models), nil
+	}
+
+	models, err := fetchAPIModels(ep, getenv)
+	if err == nil && len(models) > 0 {
+		merged := mergeModels(models, ep.Models)
+		_ = writeModelsCache(cachePath, models)
+		return merged, nil
+	}
+
 	if len(ep.Models) > 0 {
 		return append([]string(nil), ep.Models...), nil
 	}
@@ -67,27 +86,164 @@ func ResolveModels(
 		return nil, nil
 	}
 
-	if cacheDir == "" {
-		cacheDir = filepath.Join(pathutil.CacheDir(), "models")
-	}
-	cachePath := filepath.Join(cacheDir, epName+".json")
-
-	if cached, ok := readModelsCache(cachePath, cacheTTL); ok {
-		return cached, nil
+	models, err = runListModelsCmd(ep, epName, getenv)
+	if err != nil {
+		return nil, nil
 	}
 
-	models, err := runListModelsCmd(ep, epName, getenv)
+	_ = writeModelsCache(cachePath, models)
+	return models, nil
+}
+
+type modelsResponse struct {
+	Data []struct {
+		ID string `json:"id"`
+	} `json:"data"`
+}
+
+func fetchAPIModels(ep Endpoint, getenv func(string) string) ([]string, error) {
+	if ep.Endpoint == "" {
+		return nil, nil
+	}
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+
+	for _, endpoint := range modelDiscoveryURLs(ep.Endpoint) {
+		models, err := fetchModelsURL(ep, endpoint, getenv)
+		if err == nil && len(models) > 0 {
+			return models, nil
+		}
+	}
+	return nil, nil
+}
+
+func fetchModelsURL(ep Endpoint, endpoint string, getenv func(string) string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), modelDiscoveryTimeout)
+	defer cancel()
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
+	apiKey := ResolveAPIKey(ep, getenv)
+	if apiKey != "" {
+		request.Header.Set("Authorization", "Bearer "+apiKey)
+		request.Header.Set("x-litellm-api-key", apiKey)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("accept", "application/json")
 
-	if werr := writeModelsCache(cachePath, models); werr != nil {
-		// Cache write failure must not break a successful discovery.
-		// Surface a warning by wrapping; callers can ignore via the
-		// models return value being valid.
-		return models, fmt.Errorf("providers: cache write %s: %w", cachePath, werr)
+	client := &http.Client{
+		Timeout:   modelDiscoveryTimeout,
+		Transport: discoveryTransport(ep),
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("providers: fetch models from %s returned %s", request.URL, response.Status)
+	}
+
+	var payload modelsResponse
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	models := make([]string, 0, len(payload.Data))
+	for _, model := range payload.Data {
+		id := strings.TrimSpace(model.ID)
+		if id != "" {
+			models = append(models, id)
+		}
 	}
 	return models, nil
+}
+
+func modelDiscoveryURLs(endpoint string) []string {
+	primary := modelsURL(endpoint)
+	root := rootModelsURL(endpoint)
+	if root == primary {
+		return []string{primary}
+	}
+	return []string{primary, root}
+}
+
+func modelsURL(endpoint string) string {
+	trimmed := strings.TrimRight(endpoint, "/")
+	modelsEndpoint := trimmed + "/v1/models"
+	if strings.HasSuffix(trimmed, "/v1/models") {
+		modelsEndpoint = trimmed
+	} else if strings.HasSuffix(trimmed, "/v1") {
+		modelsEndpoint = trimmed + "/models"
+	}
+	return withModelQuery(modelsEndpoint)
+}
+
+func rootModelsURL(endpoint string) string {
+	trimmed := strings.TrimRight(endpoint, "/")
+	if strings.HasSuffix(trimmed, "/models") {
+		return withModelQuery(trimmed)
+	}
+	return withModelQuery(trimmed + "/models")
+}
+
+func withModelQuery(endpoint string) string {
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return endpoint
+	}
+	query := parsed.Query()
+	query.Set("return_wildcard_routes", "false")
+	query.Set("include_model_access_groups", "false")
+	query.Set("only_model_access_groups", "false")
+	query.Set("include_metadata", "false")
+	parsed.RawQuery = query.Encode()
+	return parsed.String()
+}
+
+func discoveryTransport(ep Endpoint) http.RoundTripper {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if !ep.KeepProxyConfig {
+		transport.Proxy = nil
+	}
+	if isPrivateEndpoint(ep.Endpoint) {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // Match existing private/loopback provider behavior.
+	}
+	return transport
+}
+
+func isPrivateEndpoint(endpoint string) bool {
+	parsed, err := url.Parse(endpoint)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	ip := net.ParseIP(parsed.Hostname())
+	if ip == nil {
+		return false
+	}
+	return ip.IsPrivate() || ip.IsLoopback()
+}
+
+func mergeModels(groups ...[]string) []string {
+	seen := map[string]struct{}{}
+	merged := []string{}
+	for _, group := range groups {
+		for _, raw := range group {
+			model := strings.TrimSpace(raw)
+			if model == "" {
+				continue
+			}
+			if _, ok := seen[model]; ok {
+				continue
+			}
+			seen[model] = struct{}{}
+			merged = append(merged, model)
+		}
+	}
+	return merged
 }
 
 func readModelsCache(path string, ttl time.Duration) ([]string, bool) {

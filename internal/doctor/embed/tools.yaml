@@ -32,7 +32,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for OpenAI-compatible API."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include codex."
@@ -40,8 +40,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
     cli_parameters:
       injected:
@@ -67,7 +67,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for OpenAI-compatible API."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include qwen."
@@ -75,8 +75,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
     cli_parameters:
       injected: []
@@ -102,7 +102,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for the Anthropic-compatible API."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include claude."
@@ -110,8 +110,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
   ampcode:
     enabled: true
@@ -164,7 +164,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for Tencent CodeBuddy API."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include codebuddy."
@@ -172,8 +172,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
     cli_parameters:
       injected:
@@ -199,7 +199,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for each supported endpoint (multiple selections allowed)."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include droid."
@@ -207,8 +207,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
     cli_parameters:
       injected: []
@@ -230,7 +230,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for iFlow-compatible API."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include iflow."
@@ -238,8 +238,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
     cli_parameters:
       injected: []
@@ -267,7 +267,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for Neovate-compatible API."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include neovate."
@@ -275,8 +275,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
     cli_parameters:
       injected: []
@@ -389,7 +389,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for Moonshot AI Kimi API."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include kimi."
@@ -397,8 +397,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
     cli_parameters:
       injected: []
@@ -420,7 +420,7 @@ tools:
     configuration:
       required:
         endpoint: "Base URL for OpenAI-compatible API."
-        list_models_cmd: "Shell command returning available models for the endpoint."
+        list_models_cmd: "Deprecated fallback shell command for providers that cannot expose /v1/models."
       optional:
         api_key_env: "Environment variable name containing the API key."
         supported_client: "Comma-separated list used to filter endpoints; must include aichat."
@@ -428,8 +428,8 @@ tools:
         use_proxy: "When true, apply proxies from common config to runtime requests."
         description: "Display label shown during endpoint selection."
       model_listing_env:
-        endpoint: "Provided to list_models_cmd as env var endpoint."
-        api_key: "Provided to list_models_cmd as env var api_key (resolved API key)."
+        endpoint: "Provided to deprecated list_models_cmd as env var endpoint."
+        api_key: "Provided to deprecated list_models_cmd as env var api_key (resolved API key)."
         proxies: "Proxy variables removed unless keep_proxy_config is true."
     cli_parameters:
       injected: []

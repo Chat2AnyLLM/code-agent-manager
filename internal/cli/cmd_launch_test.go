@@ -1,6 +1,8 @@
 package cli_test
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -215,8 +217,29 @@ func TestLaunchAutoSelectInvokesListModelsCmd(t *testing.T) {
 	}
 }
 
-// When an endpoint pinned by --endpoint does not support the requested
-// tool, launch refuses with a clear error.
+func TestLaunchAutoSelectUsesFetchedModelsBeforeStaticFallback(t *testing.T) {
+	isolatedHome(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"id":"fetched-a"}]}`))
+	}))
+	defer server.Close()
+
+	providersFile := filepath.Join(t.TempDir(), "providers.json")
+	payload := `{"endpoints":{"only":{"endpoint":"` + server.URL + `","supported_client":"claude","list_of_models":["static-a"]}}}`
+	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, code := execute(t, "--providers", providersFile, "launch", "claude", "--dry-run")
+	if code != 0 {
+		t.Fatalf("exit = %d; stderr=%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "Model: fetched-a") {
+		t.Fatalf("expected first fetched model in dry-run, got:\n%s", stdout)
+	}
+}
+
 func TestLaunchPinnedEndpointUnsupportedForTool(t *testing.T) {
 	isolatedHome(t)
 	providersFile := filepath.Join(t.TempDir(), "providers.json")

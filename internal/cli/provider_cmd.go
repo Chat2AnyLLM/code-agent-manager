@@ -214,7 +214,7 @@ func bindAddOrUpdateFlags(cmd *cobra.Command, f *addOrUpdateFlags) {
 	cmd.Flags().StringVar(&f.apiKeyEnv, "api-key-env", "", "Name of the env var holding the API key")
 	cmd.Flags().StringVar(&f.clients, "client", "", "Supported clients (comma-separated; '+x' adds, '-x' removes, '=x,y' replaces on update)")
 	cmd.Flags().StringVar(&f.models, "model", "", "Models (comma-separated; '+x' adds, '-x' removes, '=x,y' replaces on update)")
-	cmd.Flags().StringVar(&f.listModelsCmd, "list-models-cmd", "", "Shell command for dynamic model discovery")
+	cmd.Flags().StringVar(&f.listModelsCmd, "list-models-cmd", "", "Deprecated: shell command fallback for dynamic model discovery")
 	cmd.Flags().StringVar(&f.description, "description", "", "Human-readable description")
 	cmd.Flags().BoolVar(&f.useProxy, "use-proxy", false, "Set use_proxy=true")
 	cmd.Flags().BoolVar(&f.noUseProxy, "no-use-proxy", false, "Set use_proxy=false")

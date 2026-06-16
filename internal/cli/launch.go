@@ -235,29 +235,18 @@ func autoResolve(in wizardInput, stderr io.Writer) (launchSelection, error) {
 	}
 
 	if sel.Model == "" {
-		if len(sel.Endpoint.Models) > 0 {
-			sel.Model = sel.Endpoint.Models[0]
-		} else if sel.Endpoint.ListModelsCmd != "" {
-			// Auto mode honours list_models_cmd too — the same
-			// timeout-bounded discovery the wizard uses, picking the
-			// first model returned.
-			models, mErr := in.ResolveModels(sel.Endpoint, sel.EndpointName)
-			if mErr != nil {
-				return launchSelection{}, fmt.Errorf(
-					"launch: discover models for endpoint %s: %w (pass --model to skip discovery)",
-					sel.EndpointName, mErr)
-			}
-			if len(models) == 0 {
-				return launchSelection{}, fmt.Errorf(
-					"launch: endpoint %s returned no models from list_models_cmd; pass --model",
-					sel.EndpointName)
-			}
-			sel.Model = models[0]
-		} else {
+		models, mErr := in.ResolveModels(sel.Endpoint, sel.EndpointName)
+		if mErr != nil {
 			return launchSelection{}, fmt.Errorf(
-				"launch: endpoint %s has no list_of_models and no list_models_cmd; pass --model",
+				"launch: discover models for endpoint %s: %w (pass --model to skip discovery)",
+				sel.EndpointName, mErr)
+		}
+		if len(models) == 0 {
+			return launchSelection{}, fmt.Errorf(
+				"launch: endpoint %s has no discovered models; pass --model",
 				sel.EndpointName)
 		}
+		sel.Model = models[0]
 		if stderr != nil {
 			fmt.Fprintf(stderr, "[cam] auto-selected model: %s\n", sel.Model)
 		}
