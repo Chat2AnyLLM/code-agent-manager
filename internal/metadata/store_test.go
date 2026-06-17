@@ -70,6 +70,28 @@ func TestSearchByKindFilter(t *testing.T) {
 	}
 }
 
+func TestSearchNoMatchesReturnsEmptySlice(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore(filepath.Join(t.TempDir(), "cam.db"))
+	if err := s.Init(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.UpsertItem(ctx, Item{Kind: "skill", Name: "present", InstallKey: "a/b:present"}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+
+	results, err := s.Search(ctx, SearchQuery{Query: "missing", Kind: "skill"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if results == nil {
+		t.Fatal("expected non-nil empty slice for no matches")
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected 0 results, got %d", len(results))
+	}
+}
+
 func TestSearchPagination(t *testing.T) {
 	ctx := context.Background()
 	s := NewStore(filepath.Join(t.TempDir(), "cam.db"))

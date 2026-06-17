@@ -38,6 +38,21 @@ describe('Library page', () => {
     await waitFor(() => expect(screen.getByText(/golang-testing/i)).toBeInTheDocument())
   })
 
+  it('keeps rendering when search returns a null items payload', async () => {
+    vi.spyOn(api, 'searchMetadata')
+      .mockResolvedValueOnce({ items: [metadataItem({ name: 'initial-skill', kind: 'skill', install_key: 'o/r:initial-skill' })], total: 1, limit: 20, offset: 0 })
+      .mockResolvedValueOnce({ items: null as unknown as MetadataItem[], total: 0, limit: 20, offset: 0 })
+    render(<Library kind="skill" />)
+
+    expect(await screen.findByText(/initial-skill/i)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/skills search/i), { target: { value: 'zzzz-no-match' } })
+    fireEvent.click(screen.getByRole('button', { name: /search/i }))
+
+    await waitFor(() => expect(screen.getByText(/no skills found/i)).toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: /skills/i })).toBeInTheDocument()
+    vi.restoreAllMocks()
+  })
+
   it('renders subagents page', async () => {
     render(<Library kind="agent" />)
     expect(await screen.findByRole('heading', { name: /subagents/i })).toBeInTheDocument()

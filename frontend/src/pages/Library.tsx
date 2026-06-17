@@ -49,8 +49,8 @@ export function Library({ kind }: LibraryProps) {
     setLoading(true)
     try {
       const resp = await api.searchMetadata(kind, q, PAGE_SIZE, off)
-      setItems(resp.items)
-      setTotal(resp.total)
+      setItems(resp.items ?? [])
+      setTotal(resp.total ?? 0)
       return resp
     } catch (err) {
       setStatus(`Search failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -69,8 +69,9 @@ export function Library({ kind }: LibraryProps) {
   //      self-heal under a purely empty check, because the kind isn't empty.
   const loadOrAutoRefresh = useCallback(async (q: string, off: number) => {
     const resp = await load(q, off)
+    const respItems = resp?.items ?? []
     const isEmpty = !resp || resp.total === 0
-    const isStale = !!resp && resp.items.length > 0 && resp.items.some((item) => !item.install_key.includes(':'))
+    const isStale = respItems.length > 0 && respItems.some((item) => !item.install_key.includes(':'))
     if ((isEmpty || isStale) && q === '' && off === 0 && !autoRefreshed.current) {
       autoRefreshed.current = true
       setRefreshing(true)

@@ -271,7 +271,7 @@ func (s *Store) MarkInstalled(ctx context.Context, kind, installKey, targetApp s
 }
 
 func scanItems(rows *sql.Rows) ([]Item, error) {
-	var items []Item
+	items := []Item{}
 	for rows.Next() {
 		var it Item
 		var installed int
