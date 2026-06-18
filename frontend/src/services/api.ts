@@ -1,5 +1,5 @@
 import { mockConfigFiles, mockDoctorChecks, mockEntities, mockMCPClients, mockMCPServers, mockMetadataItems, mockProviders, mockTargets, mockTools } from './mockData'
-import type { ConfigFile, DoctorCheck, Entity, LaunchPlan, MCPClient, MCPServer, MetadataDetail, MetadataRefreshSummary, MetadataSearchResponse, Provider, Tool } from './types'
+import type { ApplyResult, ConfigFile, DoctorCheck, Entity, LaunchPlan, MCPClient, MCPServer, MetadataDetail, MetadataRefreshSummary, MetadataSearchResponse, Provider, Tool } from './types'
 
 type SidecarConfig = {
   baseUrl: string
@@ -55,8 +55,23 @@ export const api = {
   async listProviders(): Promise<Provider[]> {
     return (await request<Provider[]>('/api/providers')) ?? mockProviders
   },
+  // resolveModels returns the full model list for a provider: models discovered
+  // from the provider's /v1/models API, merged with any statically configured
+  // models and built-in defaults. Falls back to the provider's static models
+  // when no sidecar is available (browser-only/mock mode).
+  async resolveModels(name: string): Promise<string[]> {
+    const resolved = await request<string[]>(`/api/providers/${encodeURIComponent(name)}/models`)
+    if (resolved) return resolved
+    const provider = mockProviders.find((p) => p.name === name)
+    return provider?.models ?? []
+  },
   async addProvider(input: Partial<Provider> & { name: string }): Promise<Provider> {
     return (await request<Provider>('/api/providers', { method: 'POST', body: JSON.stringify(input) })) ?? { ...mockProviders[0], ...input, clients: input.clients ?? [], models: input.models ?? [], enabled: input.enabled ?? true, endpoint: input.endpoint ?? '', apiKeyEnv: input.apiKeyEnv ?? '', supportedClient: input.supportedClient ?? '', keepProxyConfig: input.keepProxyConfig ?? false, useProxy: input.useProxy ?? false, description: input.description ?? '' }
+  },
+  // updateProvider applies a sparse patch (e.g. just the apiKey) to an existing
+  // provider. Only non-empty fields in the patch are changed server-side.
+  async updateProvider(name: string, patch: Partial<Provider>): Promise<Provider> {
+    return (await request<Provider>(`/api/providers/${encodeURIComponent(name)}`, { method: 'PATCH', body: JSON.stringify(patch) })) ?? { ...mockProviders[0], ...patch, name }
   },
   async toggleProvider(name: string, enabled: boolean): Promise<Provider> {
     return (await request<Provider>(`/api/providers/${encodeURIComponent(name)}/${enabled ? 'enable' : 'disable'}`, { method: 'POST' })) ?? { ...mockProviders[0], name, enabled }
@@ -84,6 +99,11 @@ export const api = {
   },
   async dryRun(tool: string, provider: string, model: string): Promise<LaunchPlan> {
     return (await request<LaunchPlan>('/api/launch/dry-run', { method: 'POST', body: JSON.stringify({ tool, provider, model, args: [] }) })) ?? { tool: mockTools[0], provider: mockProviders[0], model, command: tool, args: ['--model', model], environment: { CAM_PROVIDER: provider } }
+  },
+  // applyConfig writes a provider's config into the agent's config file without
+  // launching it — the cc-switch "switch" operation.
+  async applyConfig(tool: string, provider: string, model: string): Promise<ApplyResult> {
+    return (await request<ApplyResult>('/api/launch/apply', { method: 'POST', body: JSON.stringify({ tool, provider, model }) })) ?? { tool: mockTools[0], provider: mockProviders[0], model, configPath: '', writes: [] }
   },
   async searchMetadata(kind: Entity['kind'], query: string, limit = 50, offset = 0): Promise<MetadataSearchResponse> {
     const params = new URLSearchParams({ type: kind, q: query, limit: String(limit), offset: String(offset) })

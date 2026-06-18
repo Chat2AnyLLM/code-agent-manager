@@ -73,6 +73,56 @@ func TestDiscoverAgents(t *testing.T) {
 	}
 }
 
+func TestDiscoverAgentsRequiresAgentsFolder(t *testing.T) {
+	// A loose .md anywhere in the tree is NOT a subagent: only files beneath an
+	// `agents/` folder count. This is what stops README/CLAUDE.md/docs/*.md from
+	// leaking in as fake agents.
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "CLAUDE.md"), "# project notes")
+	writeFile(t, filepath.Join(root, "docs", "best-practices.md"), "# best practices")
+	writeFile(t, filepath.Join(root, "agents", "planner.md"), "---\nname: planner\n---\nbody")
+	writeFile(t, filepath.Join(root, ".claude", "agents", "reviewer.md"), "---\nname: reviewer\n---\nbody")
+
+	res := DiscoverResources(root, "", entities.KindAgent)
+	names := map[string]bool{}
+	for _, r := range res {
+		names[r.Name] = true
+	}
+	if len(res) != 2 {
+		t.Fatalf("expected 2 agents (only those under agents/), got %d: %+v", len(res), res)
+	}
+	if !names["planner"] || !names["reviewer"] {
+		t.Fatalf("expected planner + reviewer, got %v", names)
+	}
+	if names["CLAUDE"] || names["best-practices"] {
+		t.Fatalf("loose docs must not be agents, got %v", names)
+	}
+}
+
+func TestDiscoverAgentsNestedUnderAgents(t *testing.T) {
+	// Agents organized into category subfolders beneath an `agents/` dir count.
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "agents", "design", "brand-guardian.md"), "---\nname: brand-guardian\n---\n")
+	writeFile(t, filepath.Join(root, "agents", "engineering", "backend-architect.md"), "---\nname: backend-architect\n---\n")
+
+	res := DiscoverResources(root, "", entities.KindAgent)
+	if len(res) != 2 {
+		t.Fatalf("expected 2 nested agents, got %d: %+v", len(res), res)
+	}
+}
+
+func TestDiscoverAgentDirectlySpecifiedFile(t *testing.T) {
+	// A single .md pointed at by subPath is an agent even when it is not under an
+	// agents/ folder — the "directly specified" case.
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "docs", "guide.md"), "---\nname: guide\n---\nbody")
+
+	res := DiscoverResources(root, filepath.ToSlash(filepath.Join("docs", "guide.md")), entities.KindAgent)
+	if len(res) != 1 || res[0].Name != "guide" {
+		t.Fatalf("directly-specified agent not discovered: %+v", res)
+	}
+}
+
 func TestDiscoverPrompts(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "prompts", "summarize.md"), "---\nname: summarize\ndescription: Summarize text\n---\n")

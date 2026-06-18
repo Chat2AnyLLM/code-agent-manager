@@ -34,6 +34,13 @@ func Plan(tool Tool, endpoint providers.Endpoint, endpointName, model, apiKey st
 
 	// Upserts.
 	for rawKey, rawValue := range ct.Upsert {
+		// Never clobber an existing credential with a blank value: when a value
+		// template is the API-key placeholder but no key is configured, skip the
+		// write entirely so the agent's config keeps whatever token it already
+		// has (writing "" would wipe a working key/token).
+		if strings.Contains(rawValue, "{api_key}") && strings.TrimSpace(apiKey) == "" {
+			continue
+		}
 		key := expandConfigPlaceholders(rawKey, endpoint, endpointName, model, apiKey)
 		value := expandConfigPlaceholders(rawValue, endpoint, endpointName, model, apiKey)
 		out = append(out, PlannedWrite{KeyPath: key, Value: coerceScalar(value), Op: "upsert"})

@@ -10,16 +10,36 @@ export function Providers() {
   const [providers, setProviders] = useState<Provider[]>([])
   const [name, setName] = useState('')
   const [endpoint, setEndpoint] = useState('')
+  const [apiKey, setApiKey] = useState('')
   const [apiKeyEnv, setApiKeyEnv] = useState('')
+  // Per-provider draft API key, used by the inline editor in the expanded row so
+  // users can set/replace the key on providers that predate the field.
+  const [keyDraft, setKeyDraft] = useState<Record<string, string>>({})
+  const [keyStatus, setKeyStatus] = useState<Record<string, string>>({})
 
   async function reload() { setProviders(await api.listProviders()) }
   useEffect(() => { void reload() }, [])
 
   async function addProvider() {
     if (!name || !endpoint) return
-    const created = await api.addProvider({ name, endpoint, apiKeyEnv, clients: ['claude'], models: ['default'], enabled: true })
+    const created = await api.addProvider({ name, endpoint, apiKey, apiKeyEnv, clients: ['claude'], models: [], enabled: true })
     setProviders((items) => [...items.filter((item) => item.name !== created.name), created])
-    setName(''); setEndpoint(''); setApiKeyEnv('')
+    setName(''); setEndpoint(''); setApiKey(''); setApiKeyEnv('')
+  }
+
+  async function saveApiKey(provider: Provider) {
+    const value = keyDraft[provider.name] ?? ''
+    if (!value) return
+    setKeyStatus((s) => ({ ...s, [provider.name]: t('providers.apiKeySaving') }))
+    try {
+      const updated = await api.updateProvider(provider.name, { apiKey: value })
+      setProviders((items) => items.map((item) => item.name === provider.name ? updated : item))
+      setKeyDraft((d) => ({ ...d, [provider.name]: '' }))
+      setKeyStatus((s) => ({ ...s, [provider.name]: t('providers.apiKeySaved') }))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setKeyStatus((s) => ({ ...s, [provider.name]: message }))
+    }
   }
 
   async function toggle(provider: Provider) {
@@ -50,6 +70,7 @@ export function Providers() {
       <div className="inline-form">
         <input aria-label="Provider name" placeholder="name" value={name} onChange={(event) => setName(event.target.value)} />
         <input aria-label="Provider endpoint" placeholder="https://host/v1" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} />
+        <input aria-label={t('providers.apiKey')} type="password" placeholder={t('providers.apiKeyPlaceholder')} value={apiKey} onChange={(event) => setApiKey(event.target.value)} title={t('providers.apiKeyHint')} />
         <input aria-label={t('providers.apiKeyEnv')} placeholder="OPENAI_API_KEY" value={apiKeyEnv} onChange={(event) => setApiKeyEnv(event.target.value)} title={t('providers.apiKeyEnvHint')} />
         <button onClick={addProvider}>Add provider</button>
       </div>
@@ -64,6 +85,22 @@ export function Providers() {
           <div><dt>{t('providers.description')}</dt><dd>{p.description || '—'}</dd></div>
           <div><dt>{t('providers.apiKeyEnv')}</dt><dd>{p.apiKeyEnv ? <code>{p.apiKeyEnv}</code> : '—'}</dd></div>
           <div><dt>{t('providers.maskedKey')}</dt><dd>{p.maskedApiKey ? <code>{p.maskedApiKey}</code> : '—'}</dd></div>
+          <div>
+            <dt>{t('providers.setApiKey')}</dt>
+            <dd>
+              <div className="inline-form">
+                <input
+                  aria-label={`${t('providers.setApiKey')} ${p.name}`}
+                  type="password"
+                  placeholder={t('providers.apiKeyPlaceholder')}
+                  value={keyDraft[p.name] ?? ''}
+                  onChange={(event) => setKeyDraft((d) => ({ ...d, [p.name]: event.target.value }))}
+                />
+                <button onClick={() => saveApiKey(p)} disabled={!(keyDraft[p.name] ?? '').length}>{t('providers.apiKeySave')}</button>
+                {keyStatus[p.name] && <span style={{ fontSize: '0.85em' }}>{keyStatus[p.name]}</span>}
+              </div>
+            </dd>
+          </div>
           <div><dt>{t('providers.clients')}</dt><dd>{p.clients.join(', ') || '—'}</dd></div>
         </dl>
       )}

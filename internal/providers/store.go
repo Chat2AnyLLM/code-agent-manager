@@ -42,6 +42,7 @@ type ListPatch struct {
 // so callers can distinguish "set to empty" from "do not touch".
 type Patch struct {
 	Endpoint        *string
+	APIKey          *string
 	APIKeyEnv       *string
 	Description     *string
 	ListModelsCmd   *string
@@ -164,6 +165,9 @@ func Update(file *File, name string, patch Patch) error {
 	}
 	if patch.Endpoint != nil {
 		ep.Endpoint = *patch.Endpoint
+	}
+	if patch.APIKey != nil {
+		ep.APIKey = *patch.APIKey
 	}
 	if patch.APIKeyEnv != nil {
 		ep.APIKeyEnv = *patch.APIKeyEnv

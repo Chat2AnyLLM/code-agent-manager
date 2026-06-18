@@ -10,6 +10,9 @@ export type Provider = {
   enabled: boolean
   description: string
   maskedApiKey?: string
+  // apiKey is write-only input: the literal key is sent when creating/updating a
+  // provider but never returned by the API (maskedApiKey is shown instead).
+  apiKey?: string
 }
 
 export type Tool = {
@@ -74,6 +77,23 @@ export type LaunchPlan = {
   command: string
   args: string[]
   environment: Record<string, string>
+}
+
+export type PlannedWrite = {
+  keyPath: string
+  value?: string | number | boolean
+  op: 'upsert' | 'remove'
+}
+
+// ApplyResult is the outcome of writing a provider's config into an agent's
+// config file without launching it (the cc-switch "switch" operation).
+// configPath is empty when the agent has no config file to write.
+export type ApplyResult = {
+  tool: Tool
+  provider: Provider
+  model: string
+  configPath: string
+  writes: PlannedWrite[]
 }
 
 export type MetadataItem = {

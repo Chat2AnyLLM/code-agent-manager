@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/chat2anyllm/code-agent-manager/internal/pathutil"
@@ -52,10 +53,38 @@ func (s Store) Init(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("appstate: init schema: %w", err)
 	}
+	if err := migrate(ctx, db); err != nil {
+		return fmt.Errorf("appstate: migrate schema: %w", err)
+	}
 	return nil
 }
 
-// ImportProvidersJSON imports providers from JSON when the providers table is empty.
+// migrate applies idempotent, additive schema changes to databases created by
+// older versions. ADD COLUMN on an existing column returns a "duplicate column"
+// error which we treat as already-applied.
+func migrate(ctx context.Context, db *sql.DB) error {
+	for _, stmt := range []string{
+		`ALTER TABLE providers ADD COLUMN api_key TEXT NOT NULL DEFAULT ''`,
+	} {
+		if _, err := db.ExecContext(ctx, stmt); err != nil {
+			if strings.Contains(err.Error(), "duplicate column name") {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+// ImportProvidersJSON performs a one-time migration of providers from a legacy
+// providers.json file into the SQLite store, and only when the providers table
+// is still empty.
+//
+// Deprecated: providers.json is no longer the source of truth — the SQLite
+// database is. This import remains solely to migrate existing users off the
+// legacy file; new providers are created and persisted directly in SQLite via
+// the provider CLI/desktop commands. Once a provider exists in the database the
+// JSON file is ignored entirely.
 func (s Store) ImportProvidersJSON(ctx context.Context, path string) error {
 	if path == "" || !pathutil.Exists(path) {
 		return nil
@@ -92,7 +121,7 @@ func (s Store) ListProviders(ctx context.Context) (providers.File, error) {
 		return providers.File{}, err
 	}
 	defer db.Close()
-	rows, err := db.QueryContext(ctx, `SELECT name, endpoint, api_key_env, supported_client, list_models_cmd, models_json, keep_proxy_config, use_proxy, enabled, description FROM providers ORDER BY name`)
+	rows, err := db.QueryContext(ctx, `SELECT name, endpoint, api_key, api_key_env, supported_client, list_models_cmd, models_json, keep_proxy_config, use_proxy, enabled, description FROM providers ORDER BY name`)
 	if err != nil {
 		return providers.File{}, fmt.Errorf("appstate: list providers: %w", err)
 	}
@@ -103,7 +132,7 @@ func (s Store) ListProviders(ctx context.Context) (providers.File, error) {
 		var endpoint providers.Endpoint
 		var keepProxy, useProxy bool
 		var enabled sql.NullInt64
-		if err := rows.Scan(&name, &endpoint.Endpoint, &endpoint.APIKeyEnv, &endpoint.SupportedClient, &endpoint.ListModelsCmd, &modelsJSON, &keepProxy, &useProxy, &enabled, &endpoint.Description); err != nil {
+		if err := rows.Scan(&name, &endpoint.Endpoint, &endpoint.APIKey, &endpoint.APIKeyEnv, &endpoint.SupportedClient, &endpoint.ListModelsCmd, &modelsJSON, &keepProxy, &useProxy, &enabled, &endpoint.Description); err != nil {
 			return providers.File{}, fmt.Errorf("appstate: scan provider: %w", err)
 		}
 		if err := json.Unmarshal([]byte(modelsJSON), &endpoint.Models); err != nil {
@@ -267,7 +296,7 @@ func (s Store) upsertProvider(ctx context.Context, name string, endpoint provide
 		return err
 	}
 	defer db.Close()
-	_, err = db.ExecContext(ctx, `INSERT INTO providers(name, endpoint, api_key_env, supported_client, list_models_cmd, models_json, keep_proxy_config, use_proxy, enabled, description, updated_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET endpoint = excluded.endpoint, api_key_env = excluded.api_key_env, supported_client = excluded.supported_client, list_models_cmd = excluded.list_models_cmd, models_json = excluded.models_json, keep_proxy_config = excluded.keep_proxy_config, use_proxy = excluded.use_proxy, enabled = excluded.enabled, description = excluded.description, updated_at = excluded.updated_at`, name, endpoint.Endpoint, endpoint.APIKeyEnv, endpoint.SupportedClient, endpoint.ListModelsCmd, string(models), endpoint.KeepProxyConfig, endpoint.UseProxy, enabled, endpoint.Description, time.Now().UTC().Format(time.RFC3339Nano))
+	_, err = db.ExecContext(ctx, `INSERT INTO providers(name, endpoint, api_key, api_key_env, supported_client, list_models_cmd, models_json, keep_proxy_config, use_proxy, enabled, description, updated_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET endpoint = excluded.endpoint, api_key = excluded.api_key, api_key_env = excluded.api_key_env, supported_client = excluded.supported_client, list_models_cmd = excluded.list_models_cmd, models_json = excluded.models_json, keep_proxy_config = excluded.keep_proxy_config, use_proxy = excluded.use_proxy, enabled = excluded.enabled, description = excluded.description, updated_at = excluded.updated_at`, name, endpoint.Endpoint, endpoint.APIKey, endpoint.APIKeyEnv, endpoint.SupportedClient, endpoint.ListModelsCmd, string(models), endpoint.KeepProxyConfig, endpoint.UseProxy, enabled, endpoint.Description, time.Now().UTC().Format(time.RFC3339Nano))
 	if err != nil {
 		return fmt.Errorf("appstate: upsert provider %s: %w", name, err)
 	}
@@ -293,6 +322,7 @@ PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS providers (
   name TEXT PRIMARY KEY,
   endpoint TEXT NOT NULL,
+  api_key TEXT NOT NULL DEFAULT '',
   api_key_env TEXT NOT NULL DEFAULT '',
   supported_client TEXT NOT NULL DEFAULT '',
   list_models_cmd TEXT NOT NULL DEFAULT '',

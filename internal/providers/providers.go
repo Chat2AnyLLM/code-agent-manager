@@ -29,7 +29,12 @@ type File struct {
 // Enabled is a pointer so a missing key is treated as the default ("true"),
 // matching the Python implementation.
 type Endpoint struct {
-	Endpoint        string `json:"endpoint"`
+	Endpoint string `json:"endpoint"`
+	// APIKey is the literal API key value stored directly with the provider.
+	// It takes precedence over APIKeyEnv when set. Storing the key here lets
+	// the desktop app and CLI write it into agent config files without
+	// relying on an environment variable being present in the process.
+	APIKey          string `json:"api_key"`
 	APIKeyEnv       string `json:"api_key_env"`
 	SupportedClient string `json:"supported_client"`
 	// ListModelsCmd is deprecated. CAM now fetches /v1/models directly and
@@ -139,10 +144,15 @@ func (e Endpoint) SupportsClient(client string) bool {
 	return false
 }
 
-// ResolveAPIKey resolves the endpoint's API key from the supplied env lookup
-// function.  Returns an empty string when APIKeyEnv is unset.  Callers should
-// inject os.Getenv (or a test stub) so this stays pure and easy to fake.
+// ResolveAPIKey resolves the endpoint's API key. A literal key stored on the
+// endpoint (APIKey) wins; otherwise the value is read from the environment
+// variable named by APIKeyEnv via the supplied env lookup function. Returns an
+// empty string when neither is set. Callers should inject os.Getenv (or a test
+// stub) so this stays pure and easy to fake.
 func ResolveAPIKey(e Endpoint, env func(string) string) string {
+	if strings.TrimSpace(e.APIKey) != "" {
+		return e.APIKey
+	}
 	if e.APIKeyEnv == "" || env == nil {
 		return ""
 	}

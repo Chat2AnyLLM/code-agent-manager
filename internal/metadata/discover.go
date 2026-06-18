@@ -42,6 +42,17 @@ func DiscoverResources(root, subPath string, kind entities.Kind) []DiscoveredRes
 	seen := map[string]bool{}
 
 	for _, scanRoot := range scanRoots {
+		// A directly-specified single file (e.g. an agentsPath that points at one
+		// .md) is the resource itself: walk it as one file, with no folder
+		// constraint. This is the "directly specified" subagent case.
+		if info, err := os.Stat(scanRoot); err == nil && !info.IsDir() {
+			res, ok := resourceFromFile(root, scanRoot, filepath.Base(scanRoot), kind)
+			if ok && !seen[res.Name+"|"+res.RelPath] {
+				seen[res.Name+"|"+res.RelPath] = true
+				out = append(out, res)
+			}
+			continue
+		}
 		_ = filepath.WalkDir(scanRoot, func(p string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
@@ -56,6 +67,13 @@ func DiscoverResources(root, subPath string, kind entities.Kind) []DiscoveredRes
 			if !ok {
 				return nil
 			}
+			// Subagents follow the convention that they live under an `agents/`
+			// folder (agents/, .claude/agents/, agents/<category>/…). A loose
+			// .md anywhere in the tree (README, CLAUDE.md, docs/*) is not a
+			// subagent. Directly-specified single files are handled above.
+			if kind == entities.KindAgent && !underAgentsFolder(root, p) {
+				return nil
+			}
 			if seen[res.Name+"|"+res.RelPath] {
 				return nil
 			}
@@ -65,6 +83,19 @@ func DiscoverResources(root, subPath string, kind entities.Kind) []DiscoveredRes
 		})
 	}
 	return out
+}
+
+// underAgentsFolder reports whether p (relative to the repo root) is beneath a
+// directory named "agents" at any depth, e.g. agents/foo.md,
+// .claude/agents/foo.md, or agents/category/foo.md.
+func underAgentsFolder(root, p string) bool {
+	rel := relPath(root, p)
+	for _, seg := range strings.Split(rel, "/") {
+		if seg == "agents" {
+			return true
+		}
+	}
+	return false
 }
 
 func resolveScanRoots(root, subPath string) []string {

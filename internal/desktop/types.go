@@ -52,6 +52,7 @@ type ProviderDTO struct {
 type ProviderInput struct {
 	Name            string   `json:"name"`
 	Endpoint        string   `json:"endpoint"`
+	APIKey          string   `json:"apiKey"`
 	APIKeyEnv       string   `json:"apiKeyEnv"`
 	SupportedClient string   `json:"supportedClient"`
 	Clients         []string `json:"clients"`
@@ -119,6 +120,24 @@ type LaunchPlanDTO struct {
 	Command     string            `json:"command"`
 	Args        []string          `json:"args"`
 	Environment map[string]string `json:"environment"`
+}
+
+// PlannedWriteDTO is one config key that ApplyConfig wrote (or would write).
+type PlannedWriteDTO struct {
+	KeyPath string `json:"keyPath"`
+	Value   any    `json:"value,omitempty"`
+	Op      string `json:"op"` // "upsert" | "remove"
+}
+
+// ApplyResultDTO is the outcome of writing a provider's config into an agent's
+// config file without launching it. ConfigPath is empty when the tool has no
+// config_target (nothing to write).
+type ApplyResultDTO struct {
+	Tool       ToolDTO           `json:"tool"`
+	Provider   ProviderDTO       `json:"provider"`
+	Model      string            `json:"model"`
+	ConfigPath string            `json:"configPath"`
+	Writes     []PlannedWriteDTO `json:"writes"`
 }
 
 type ConfigFileDTO struct {

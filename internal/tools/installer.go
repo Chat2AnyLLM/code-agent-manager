@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/google/shlex"
 )
@@ -133,6 +135,17 @@ func npmPackage(installCmd string) (string, bool) {
 	return "", false
 }
 
+// versionProbeTimeout bounds how long a single `<bin> --version` probe waits
+// for the process to exit. versionProbeWaitDelay bounds how long CombinedOutput
+// then waits for the process's pipes to close after the process is killed —
+// necessary because npm-installed CLIs spawn a child node process that inherits
+// (and holds open) the stdout pipe, which would otherwise deadlock the read
+// forever even after the wrapper process is killed.
+var (
+	versionProbeTimeout   = 2 * time.Second
+	versionProbeWaitDelay = 1 * time.Second
+)
+
 // IsInstalled reports whether the tool's CLI binary is reachable via PATH.
 func IsInstalled(tool Tool) bool {
 	bin := tool.LaunchCommand()
@@ -143,16 +156,52 @@ func IsInstalled(tool Tool) bool {
 	return err == nil
 }
 
+// Detect reports whether the tool's CLI binary is on PATH and, when installed,
+// its version string in a single pass. Version detection is skipped for missing
+// binaries — we never spawn a doomed process just to learn the binary is absent —
+// and each probe is bounded by versionProbeTimeout so one hung binary can't
+// stall the caller. Prefer this over IsInstalled + DetectVersion when you need
+// both values.
+func Detect(tool Tool) (installed bool, version string) {
+	bin := tool.LaunchCommand()
+	if bin == "" {
+		return false, ""
+	}
+	if _, err := exec.LookPath(bin); err != nil {
+		return false, ""
+	}
+	return true, detectVersion(bin)
+}
+
 // DetectVersion returns the tool's version string by running `<bin> --version`.
-// Returns "unknown" when the binary is missing or every probe fails.
+// Returns "unknown" when the binary is missing or every probe fails (including
+// timeout). Prefer Detect when the installed flag is also needed.
 func DetectVersion(tool Tool) string {
 	bin := tool.LaunchCommand()
 	if bin == "" {
 		return "unknown"
 	}
+	return detectVersion(bin)
+}
+
+// detectVersion probes the binary with a sequence of version flags, returning
+// the first non-empty response. Each probe is bounded: the process is killed
+// after versionProbeTimeout, and its pipes are forcibly closed after
+// versionProbeWaitDelay so a hung grandchild can't deadlock the read. If a flag
+// times out, the remaining flags are skipped — a binary that hangs on one
+// version flag will hang on the others too.
+func detectVersion(bin string) string {
 	for _, flag := range []string{"--version", "-v", "version"} {
-		out, err := exec.Command(bin, flag).CombinedOutput()
+		ctx, cancel := context.WithTimeout(context.Background(), versionProbeTimeout)
+		cmd := exec.CommandContext(ctx, bin, flag)
+		cmd.WaitDelay = versionProbeWaitDelay
+		out, err := cmd.CombinedOutput()
+		timedOut := ctx.Err() != nil // deadline fired (cancel runs below)
+		cancel()
 		if err != nil {
+			if timedOut {
+				break
+			}
 			continue
 		}
 		s := strings.TrimSpace(string(out))

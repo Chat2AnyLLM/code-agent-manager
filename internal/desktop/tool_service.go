@@ -2,6 +2,7 @@ package desktop
 
 import (
 	"bytes"
+	"sync"
 
 	"github.com/chat2anyllm/code-agent-manager/internal/tools"
 )
@@ -10,16 +11,40 @@ type ToolService struct{}
 
 func NewToolService() *ToolService { return &ToolService{} }
 
+// maxDetectionWorkers caps the detection pool. The work is I/O-bound — each
+// probe spends its time waiting on a subprocess — so we run up to one goroutine
+// per tool to minimize latency; the cap just keeps a very large registry from
+// spawning hundreds of subprocesses at once.
+const maxDetectionWorkers = 32
+
 func (s *ToolService) List() ([]ToolDTO, error) {
 	registry, err := tools.LoadDefault()
 	if err != nil {
 		return nil, wrapError("TOOL_REGISTRY_LOAD_FAILED", err)
 	}
-	out := make([]ToolDTO, 0, len(registry.Tools))
-	for _, name := range registry.Names() {
-		tool := registry.Tools[name]
-		out = append(out, toolDTO(tool))
+	names := registry.Names()
+	out := make([]ToolDTO, len(names))
+	// Each tool's detection blocks on subprocess execution (LookPath + version
+	// probes). Run them concurrently — one goroutine per tool, capped — so the
+	// Agents page doesn't wait on every binary serially. Writes target distinct
+	// slice indices, so no locking is required; output order still matches names.
+	workers := len(names)
+	if workers > maxDetectionWorkers {
+		workers = maxDetectionWorkers
 	}
+	sem := make(chan struct{}, workers)
+	var wg sync.WaitGroup
+	for i, name := range names {
+		tool := registry.Tools[name]
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(idx int, t tools.Tool) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			out[idx] = toolDTO(t)
+		}(i, tool)
+	}
+	wg.Wait()
 	return out, nil
 }
 
@@ -75,8 +100,9 @@ func loadTool(name string) (tools.Tool, error) {
 }
 
 func toolDTO(tool tools.Tool) ToolDTO {
+	installed, version := tools.Detect(tool)
 	return ToolDTO{
 		Name: tool.Name, Command: tool.LaunchCommand(), Description: tool.Description,
-		Enabled: tool.IsEnabled(), Installed: tools.IsInstalled(tool), Version: tools.DetectVersion(tool),
+		Enabled: tool.IsEnabled(), Installed: installed, Version: version,
 	}
 }

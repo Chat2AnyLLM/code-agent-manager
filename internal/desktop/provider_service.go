@@ -171,6 +171,7 @@ func providerInputFromDTO(input ProviderInput) appapi.ProviderInput {
 	return appapi.ProviderInput{
 		Name:            input.Name,
 		Endpoint:        input.Endpoint,
+		APIKey:          input.APIKey,
 		APIKeyEnv:       input.APIKeyEnv,
 		SupportedClient: input.SupportedClient,
 		Clients:         input.Clients,
@@ -189,6 +190,9 @@ func providerPatchFromDTO(input ProviderInput) appapi.ProviderPatch {
 	}
 	if input.Endpoint != "" {
 		patch.Endpoint = &input.Endpoint
+	}
+	if input.APIKey != "" {
+		patch.APIKey = &input.APIKey
 	}
 	if input.APIKeyEnv != "" {
 		patch.APIKeyEnv = &input.APIKeyEnv

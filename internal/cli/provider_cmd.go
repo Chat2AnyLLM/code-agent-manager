@@ -166,12 +166,17 @@ func (a *App) providerShowCommand(state *globalState) *cobra.Command {
 				"enabled":           provider.Enabled,
 				"description":       provider.Description,
 			}
-			if provider.APIKeyEnv != "" {
-				raw := os.Getenv(provider.APIKeyEnv)
+			// Resolve the key the same way apply/launch does: a stored literal
+			// key wins, otherwise fall back to the named env var.
+			resolved := provider.APIKey
+			if resolved == "" && provider.APIKeyEnv != "" {
+				resolved = os.Getenv(provider.APIKeyEnv)
+			}
+			if resolved != "" {
 				if revealKey {
-					payload["api_key"] = raw
+					payload["api_key"] = resolved
 				} else {
-					payload["api_key"] = providers.MaskedAPIKey(raw)
+					payload["api_key"] = providers.MaskedAPIKey(resolved)
 				}
 			}
 			return writeJSON(out, payload)
@@ -187,6 +192,7 @@ func (a *App) providerShowCommand(state *globalState) *cobra.Command {
 // don't accidentally clobber values.
 type addOrUpdateFlags struct {
 	endpoint        string
+	apiKey          string
 	apiKeyEnv       string
 	clients         string
 	models          string
@@ -202,6 +208,7 @@ type addOrUpdateFlags struct {
 
 func bindAddOrUpdateFlags(cmd *cobra.Command, f *addOrUpdateFlags) {
 	cmd.Flags().StringVar(&f.endpoint, "endpoint", "", "Endpoint URL")
+	cmd.Flags().StringVar(&f.apiKey, "api-key", "", "Literal API key value (stored with the provider; takes precedence over --api-key-env)")
 	cmd.Flags().StringVar(&f.apiKeyEnv, "api-key-env", "", "Name of the env var holding the API key")
 	cmd.Flags().StringVar(&f.clients, "client", "", "Supported clients (comma-separated; '+x' adds, '-x' removes, '=x,y' replaces on update)")
 	cmd.Flags().StringVar(&f.models, "model", "", "Models (comma-separated; '+x' adds, '-x' removes, '=x,y' replaces on update)")
@@ -277,6 +284,7 @@ func (a *App) providerAddFlagMode(cmd *cobra.Command, state *globalState, name s
 	input := appapi.ProviderInput{
 		Name:            name,
 		Endpoint:        flags.endpoint,
+		APIKey:          flags.apiKey,
 		APIKeyEnv:       flags.apiKeyEnv,
 		ListModelsCmd:   flags.listModelsCmd,
 		Description:     flags.description,
@@ -327,7 +335,7 @@ func (a *App) providerUpdateCommand(state *globalState) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			changedFlags := []string{"endpoint", "api-key-env", "client", "model", "list-models-cmd", "description", "use-proxy", "no-use-proxy", "keep-proxy-config", "no-keep-proxy-config", "enabled", "disabled"}
+			changedFlags := []string{"endpoint", "api-key", "api-key-env", "client", "model", "list-models-cmd", "description", "use-proxy", "no-use-proxy", "keep-proxy-config", "no-keep-proxy-config", "enabled", "disabled"}
 			for _, flagName := range changedFlags {
 				if cmd.Flags().Changed(flagName) {
 					return a.providerUpdateFlagMode(cmd, state, name, flags)
@@ -375,6 +383,10 @@ func (a *App) providerUpdateFlagMode(cmd *cobra.Command, state *globalState, nam
 	if cmd.Flags().Changed("endpoint") {
 		v := flags.endpoint
 		patch.Endpoint = &v
+	}
+	if cmd.Flags().Changed("api-key") {
+		v := flags.apiKey
+		patch.APIKey = &v
 	}
 	if cmd.Flags().Changed("api-key-env") {
 		v := flags.apiKeyEnv
@@ -574,6 +586,7 @@ func providerEndpointFromAPI(provider appapi.Provider) providers.Endpoint {
 	enabled := provider.Enabled
 	return providers.Endpoint{
 		Endpoint:        provider.Endpoint,
+		APIKey:          provider.APIKey,
 		APIKeyEnv:       provider.APIKeyEnv,
 		SupportedClient: provider.SupportedClient,
 		ListModelsCmd:   provider.ListModelsCmd,
@@ -589,6 +602,7 @@ func providerInputFromEndpoint(name string, endpoint providers.Endpoint) appapi.
 	return appapi.ProviderInput{
 		Name:            name,
 		Endpoint:        endpoint.Endpoint,
+		APIKey:          endpoint.APIKey,
 		APIKeyEnv:       endpoint.APIKeyEnv,
 		SupportedClient: endpoint.SupportedClient,
 		Models:          append([]string(nil), endpoint.Models...),
@@ -602,6 +616,7 @@ func providerInputFromEndpoint(name string, endpoint providers.Endpoint) appapi.
 
 func providerPatchFromEndpoint(endpoint providers.Endpoint) appapi.ProviderPatch {
 	endpointURL := endpoint.Endpoint
+	apiKey := endpoint.APIKey
 	apiKeyEnv := endpoint.APIKeyEnv
 	supportedClient := endpoint.SupportedClient
 	listModelsCmd := endpoint.ListModelsCmd
@@ -611,6 +626,7 @@ func providerPatchFromEndpoint(endpoint providers.Endpoint) appapi.ProviderPatch
 	models := providers.ListPatch{Op: providers.ListOpReplace, Items: append([]string(nil), endpoint.Models...)}
 	return appapi.ProviderPatch{
 		Endpoint:        &endpointURL,
+		APIKey:          &apiKey,
 		APIKeyEnv:       &apiKeyEnv,
 		SupportedClient: &supportedClient,
 		Models:          &models,

@@ -24,6 +24,7 @@ type OperationResult struct {
 type Provider struct {
 	Name            string
 	Endpoint        string
+	APIKey          string
 	APIKeyEnv       string
 	SupportedClient string
 	Clients         []string
@@ -40,6 +41,7 @@ type Provider struct {
 type ProviderInput struct {
 	Name            string
 	Endpoint        string
+	APIKey          string
 	APIKeyEnv       string
 	SupportedClient string
 	Clients         []string
@@ -54,6 +56,7 @@ type ProviderInput struct {
 // ProviderPatch updates a provider without forcing callers to overwrite every field.
 type ProviderPatch struct {
 	Endpoint        *string
+	APIKey          *string
 	APIKeyEnv       *string
 	SupportedClient *string
 	Clients         *providers.ListPatch
@@ -172,6 +175,7 @@ func (api ProviderAPI) Add(ctx context.Context, input ProviderInput) (Provider, 
 func (api ProviderAPI) Update(ctx context.Context, name string, patch ProviderPatch) (Provider, error) {
 	providerPatch := providers.Patch{
 		Endpoint:        patch.Endpoint,
+		APIKey:          patch.APIKey,
 		APIKeyEnv:       patch.APIKeyEnv,
 		Description:     patch.Description,
 		ListModelsCmd:   patch.ListModelsCmd,
@@ -249,6 +253,7 @@ func providerFromEndpoint(name string, endpoint providers.Endpoint, getenv func(
 	return Provider{
 		Name:            name,
 		Endpoint:        endpoint.Endpoint,
+		APIKey:          endpoint.APIKey,
 		APIKeyEnv:       endpoint.APIKeyEnv,
 		SupportedClient: endpoint.SupportedClient,
 		Clients:         endpoint.Clients(),
@@ -269,6 +274,7 @@ func endpointFromInput(input ProviderInput) providers.Endpoint {
 	}
 	endpoint := providers.Endpoint{
 		Endpoint:        input.Endpoint,
+		APIKey:          input.APIKey,
 		APIKeyEnv:       input.APIKeyEnv,
 		SupportedClient: supportedClient,
 		ListModelsCmd:   input.ListModelsCmd,

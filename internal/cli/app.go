@@ -94,6 +94,7 @@ func (a *App) rootCommand() *cobra.Command {
 	root.AddCommand(a.versionCommand())
 	root.AddCommand(a.completionCommand(root))
 	root.AddCommand(a.launchCommand(state))
+	root.AddCommand(a.applyCommand(state))
 	root.AddCommand(a.doctorCommand(state))
 	root.AddCommand(a.configCommand(state))
 	root.AddCommand(a.providerCommand(state))

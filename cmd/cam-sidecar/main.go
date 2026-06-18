@@ -21,7 +21,7 @@ func main() {
 	host := flag.String("host", "127.0.0.1", "Host to bind")
 	port := flag.Int("port", 0, "Port to bind; 0 selects a random free port")
 	token := flag.String("token", "", "Bearer token required by API requests; random when empty")
-	providersPath := flag.String("providers", "", "Path to providers.json")
+	providersPath := flag.String("providers", "", "Deprecated: path to a legacy providers.json used only for one-time migration into the SQLite store")
 	versionJSON := flag.Bool("version-json", false, "Print version JSON and exit")
 	flag.Parse()
 

@@ -23,6 +23,13 @@ const en: Record<string, string> = {
   'table.hideDetails': 'Hide details',
 
   // Providers page
+  'providers.apiKey': 'API key',
+  'providers.apiKeyPlaceholder': 'sk-… (stored with provider)',
+  'providers.apiKeyHint': 'Literal API key stored with the provider and written into agent configs. Takes precedence over the env var.',
+  'providers.setApiKey': 'Set API key',
+  'providers.apiKeySave': 'Save key',
+  'providers.apiKeySaving': 'Saving…',
+  'providers.apiKeySaved': 'Saved.',
   'providers.apiKeyEnv': 'API key env',
   'providers.apiKeyEnvHint': 'Name of the env var holding the key (e.g. OPENAI_API_KEY)',
   'providers.maskedKey': 'API key',
@@ -48,6 +55,13 @@ const en: Record<string, string> = {
   'agents.notDetected': 'Not detected on PATH',
   'agents.installedResources': 'Installed resources',
   'agents.provider': 'Provider',
+  'agents.model': 'Model',
+  'agents.apply': 'Apply',
+  'agents.applying': 'Applying…',
+  'agents.applied': 'Applied → {path} ({count} keys)',
+  'agents.applyFailed': 'Apply failed: {error}',
+  'agents.noConfigTarget': 'This agent has no config file to write.',
+  'agents.pickProviderFirst': 'Pick a provider and model first.',
 
   // Library (prompts/skills/subagents/plugins) pages
   'library.prompts.title': 'Prompts',
@@ -94,6 +108,13 @@ const zh: Record<string, string> = {
   'table.hideDetails': '隐藏详情',
 
   // Providers page
+  'providers.apiKey': 'API 密钥',
+  'providers.apiKeyPlaceholder': 'sk-…（与提供商一起保存）',
+  'providers.apiKeyHint': '与提供商一起保存并写入各代理配置的 API 密钥，优先级高于环境变量。',
+  'providers.setApiKey': '设置 API 密钥',
+  'providers.apiKeySave': '保存密钥',
+  'providers.apiKeySaving': '保存中…',
+  'providers.apiKeySaved': '已保存。',
   'providers.apiKeyEnv': 'API 密钥环境变量',
   'providers.apiKeyEnvHint': '存放密钥的环境变量名（例如 OPENAI_API_KEY）',
   'providers.maskedKey': 'API 密钥',
@@ -119,6 +140,13 @@ const zh: Record<string, string> = {
   'agents.notDetected': '未在 PATH 中检测到',
   'agents.installedResources': '已安装资源',
   'agents.provider': '服务商',
+  'agents.model': '模型',
+  'agents.apply': '应用',
+  'agents.applying': '应用中…',
+  'agents.applied': '已应用 → {path}（{count} 项）',
+  'agents.applyFailed': '应用失败：{error}',
+  'agents.noConfigTarget': '该智能体没有可写入的配置文件。',
+  'agents.pickProviderFirst': '请先选择服务商和模型。',
 
   // Library pages
   'library.prompts.title': '提示词',

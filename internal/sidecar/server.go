@@ -66,6 +66,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/config/files", s.handleConfigFiles)
 	mux.HandleFunc("/api/doctor/checks", s.handleDoctorChecks)
 	mux.HandleFunc("/api/launch/dry-run", s.handleLaunchDryRun)
+	mux.HandleFunc("/api/launch/apply", s.handleLaunchApply)
 	return s.withMiddleware(mux)
 }
 
@@ -288,6 +289,23 @@ func (s *Server) handleLaunchDryRun(w http.ResponseWriter, r *http.Request) {
 	}
 	plan, err := s.services.Launch.DryRun(input.Tool, input.Provider, input.Model, input.Args)
 	writeResult(w, plan, err)
+}
+
+func (s *Server) handleLaunchApply(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	input := struct {
+		Tool     string `json:"tool"`
+		Provider string `json:"provider"`
+		Model    string `json:"model"`
+	}{}
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&input)
+	}
+	result, err := s.services.Launch.ApplyConfig(input.Tool, input.Provider, input.Model)
+	writeResult(w, result, err)
 }
 
 func queryDefault(r *http.Request, key, fallback string) string {
