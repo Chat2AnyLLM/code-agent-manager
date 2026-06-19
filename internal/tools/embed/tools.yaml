@@ -40,7 +40,7 @@ tools:
       upsert:
         model_providers.{endpoint_name}.name: "{endpoint_name}"
         model_providers.{endpoint_name}.base_url: "{endpoint}"
-        model_providers.{endpoint_name}.env_key: "OPENAI_API_KEY"
+        model_providers.{endpoint_name}.env_key: "{api_key_env}"
         profiles.{selected_model}.model: "{selected_model}"
         profiles.{selected_model}.model_provider: "{endpoint_name}"
         profiles.{selected_model}.model_reasoning_effort: "low"
@@ -65,7 +65,7 @@ tools:
         - "-c profiles.custom.model={selected_model}"
         - "-c profiles.custom.model_provider=custom"
         - "-c profiles.custom.model_reasoning_effort=low"
-        - "-c model_providers.custom.env_key=OPENAI_API_KEY"
+        - "-c model_providers.custom.env_key={api_key_env}"
         - "-p custom"
 
   qwen-code:

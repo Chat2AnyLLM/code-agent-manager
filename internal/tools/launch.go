@@ -38,7 +38,7 @@ func ResolveLaunchEnv(tool Tool, endpoint providers.Endpoint, endpointName, mode
 	// env.exported are populated from the endpoint or model when the value
 	// contains a recognised placeholder.  Otherwise the literal value is used.
 	for k, v := range tool.Env.Exported {
-		env[k] = expandPlaceholders(v, endpoint, model, apiKey)
+		env[k] = expandPlaceholders(v, endpoint, endpointName, model, apiKey)
 	}
 	for k, v := range tool.Env.Managed {
 		env[k] = v
@@ -47,9 +47,17 @@ func ResolveLaunchEnv(tool Tool, endpoint providers.Endpoint, endpointName, mode
 		delete(env, removed)
 	}
 
+	// Tools that authenticate via an env var (e.g. codex's env_key) read the key
+	// from the environment, not from their config file. Export the resolved key
+	// under the endpoint's env-var name so such tools work even when the user
+	// only stored a literal token on the provider.
+	if apiKey != "" {
+		env[providers.ResolveAPIKeyEnv(endpoint, endpointName)] = apiKey
+	}
+
 	inject := make([]string, 0, len(tool.CLIParameters.Injected))
 	for _, raw := range tool.CLIParameters.Injected {
-		inject = append(inject, expandPlaceholders(raw, endpoint, model, apiKey))
+		inject = append(inject, expandPlaceholders(raw, endpoint, endpointName, model, apiKey))
 	}
 
 	return LaunchEnv{
@@ -61,10 +69,12 @@ func ResolveLaunchEnv(tool Tool, endpoint providers.Endpoint, endpointName, mode
 	}
 }
 
-func expandPlaceholders(raw string, ep providers.Endpoint, model, apiKey string) string {
+func expandPlaceholders(raw string, ep providers.Endpoint, endpointName, model, apiKey string) string {
 	out := raw
 	out = strings.ReplaceAll(out, "{BASE_URL}", ep.Endpoint)
 	out = strings.ReplaceAll(out, "{endpoint}", ep.Endpoint)
+	out = strings.ReplaceAll(out, "{endpoint_name}", endpointName)
+	out = strings.ReplaceAll(out, "{api_key_env}", providers.ResolveAPIKeyEnv(ep, endpointName))
 	out = strings.ReplaceAll(out, "{selected_model}", model)
 	out = strings.ReplaceAll(out, "{api_key}", apiKey)
 	return out

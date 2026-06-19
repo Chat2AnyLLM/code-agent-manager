@@ -85,7 +85,9 @@ func TestPerTool_OpenAICodex_GoldenTOML_GPT(t *testing.T) {
 	if mp["base_url"] != "https://api.test" {
 		t.Errorf("base_url = %v", mp["base_url"])
 	}
-	if mp["env_key"] != "OPENAI_API_KEY" {
+	// With no explicit api_key_env, the env-var name is derived from the
+	// endpoint name (myprov -> MYPROV_API_KEY).
+	if mp["env_key"] != "MYPROV_API_KEY" {
 		t.Errorf("env_key = %v", mp["env_key"])
 	}
 	if mp["wire_api"] != "responses" {
@@ -112,6 +114,25 @@ func TestPerTool_OpenAICodex_NonGPTUnsetsWireAPI(t *testing.T) {
 	raw, _ := os.ReadFile(path)
 	if strings.Contains(string(raw), "wire_api") {
 		t.Errorf("wire_api present for non-GPT model:\n%s", raw)
+	}
+}
+
+// When the provider sets api_key_env explicitly, codex's env_key uses that exact
+// name (e.g. OMNILLM_API_KEY) rather than a derived one.
+func TestPerTool_OpenAICodex_ExplicitEnvKey(t *testing.T) {
+	tool, path := loadToolFromRegistry(t, "openai-codex", "config.toml")
+	ep := providers.Endpoint{Endpoint: "https://api.test", APIKeyEnv: "OMNILLM_API_KEY"}
+	if _, err := WriteConfig(tool, ep, "omnillm", "claude-sonnet-4", ""); err != nil {
+		t.Fatalf("WriteConfig: %v", err)
+	}
+	raw, _ := os.ReadFile(path)
+	var got map[string]any
+	if err := tomlv2.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	mp := got["model_providers"].(map[string]any)["omnillm"].(map[string]any)
+	if mp["env_key"] != "OMNILLM_API_KEY" {
+		t.Errorf("env_key = %v, want OMNILLM_API_KEY", mp["env_key"])
 	}
 }
 

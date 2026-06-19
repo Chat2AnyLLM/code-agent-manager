@@ -50,7 +50,7 @@ tools:
         - "-c profiles.custom.model={selected_model}"
         - "-c profiles.custom.model_provider=custom"
         - "-c profiles.custom.model_reasoning_effort=low"
-        - "-c model_providers.custom.env_key=OPENAI_API_KEY"
+        - "-c model_providers.custom.env_key={api_key_env}"
         - "-p custom"
 
   qwen-code:

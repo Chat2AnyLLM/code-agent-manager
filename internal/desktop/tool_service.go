@@ -7,9 +7,14 @@ import (
 	"github.com/chat2anyllm/code-agent-manager/internal/tools"
 )
 
-type ToolService struct{}
+type ToolService struct {
+	// cache memoizes tool-detection results so the Agents page doesn't
+	// re-spawn a version probe for every CLI on each load. Held for the
+	// sidecar process lifetime and persisted to disk; see tool_cache.go.
+	cache *detectionCache
+}
 
-func NewToolService() *ToolService { return &ToolService{} }
+func NewToolService() *ToolService { return &ToolService{cache: newDetectionCache()} }
 
 // maxDetectionWorkers caps the detection pool. The work is I/O-bound — each
 // probe spends its time waiting on a subprocess — so we run up to one goroutine
@@ -24,27 +29,50 @@ func (s *ToolService) List() ([]ToolDTO, error) {
 	}
 	names := registry.Names()
 	out := make([]ToolDTO, len(names))
+
+	// Serve fresh cached detections synchronously; only the stale or
+	// not-yet-seen tools need a subprocess probe. This is what makes repeat
+	// Agents-page loads fast — detection is the page's dominant cost.
+	s.cache.loadOnce()
+	type pending struct {
+		idx  int
+		tool tools.Tool
+	}
+	var toProbe []pending
+	for i, name := range names {
+		if entry, fresh := s.cache.get(name); fresh {
+			out[i] = toolDTOWith(registry.Tools[name], entry.Installed, entry.Version)
+			continue
+		}
+		toProbe = append(toProbe, pending{idx: i, tool: registry.Tools[name]})
+	}
+	if len(toProbe) == 0 {
+		return out, nil
+	}
+
 	// Each tool's detection blocks on subprocess execution (LookPath + version
 	// probes). Run them concurrently — one goroutine per tool, capped — so the
 	// Agents page doesn't wait on every binary serially. Writes target distinct
 	// slice indices, so no locking is required; output order still matches names.
-	workers := len(names)
+	workers := len(toProbe)
 	if workers > maxDetectionWorkers {
 		workers = maxDetectionWorkers
 	}
 	sem := make(chan struct{}, workers)
 	var wg sync.WaitGroup
-	for i, name := range names {
-		tool := registry.Tools[name]
+	for _, p := range toProbe {
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(idx int, t tools.Tool) {
+		go func(p pending) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			out[idx] = toolDTO(t)
-		}(i, tool)
+			installed, version := tools.Detect(p.tool)
+			s.cache.put(p.tool.Name, installed, version)
+			out[p.idx] = toolDTOWith(p.tool, installed, version)
+		}(p)
 	}
 	wg.Wait()
+	s.cache.persist()
 	return out, nil
 }
 
@@ -101,6 +129,12 @@ func loadTool(name string) (tools.Tool, error) {
 
 func toolDTO(tool tools.Tool) ToolDTO {
 	installed, version := tools.Detect(tool)
+	return toolDTOWith(tool, installed, version)
+}
+
+// toolDTOWith assembles a ToolDTO from an already-known detection result so
+// the cached and freshly-probed paths produce identical output.
+func toolDTOWith(tool tools.Tool, installed bool, version string) ToolDTO {
 	return ToolDTO{
 		Name: tool.Name, Command: tool.LaunchCommand(), Description: tool.Description,
 		Enabled: tool.IsEnabled(), Installed: installed, Version: version,

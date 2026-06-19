@@ -16,6 +16,10 @@ export function Providers() {
   // users can set/replace the key on providers that predate the field.
   const [keyDraft, setKeyDraft] = useState<Record<string, string>>({})
   const [keyStatus, setKeyStatus] = useState<Record<string, string>>({})
+  // Per-provider draft API-key env-var name (used by tools like codex that read
+  // the key from an env var named by env_key).
+  const [envDraft, setEnvDraft] = useState<Record<string, string>>({})
+  const [envStatus, setEnvStatus] = useState<Record<string, string>>({})
 
   async function reload() { setProviders(await api.listProviders()) }
   useEffect(() => { void reload() }, [])
@@ -39,6 +43,21 @@ export function Providers() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setKeyStatus((s) => ({ ...s, [provider.name]: message }))
+    }
+  }
+
+  async function saveApiKeyEnv(provider: Provider) {
+    const value = envDraft[provider.name] ?? ''
+    if (!value) return
+    setEnvStatus((s) => ({ ...s, [provider.name]: t('providers.apiKeySaving') }))
+    try {
+      const updated = await api.updateProvider(provider.name, { apiKeyEnv: value })
+      setProviders((items) => items.map((item) => item.name === provider.name ? updated : item))
+      setEnvDraft((d) => ({ ...d, [provider.name]: '' }))
+      setEnvStatus((s) => ({ ...s, [provider.name]: t('providers.apiKeySaved') }))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setEnvStatus((s) => ({ ...s, [provider.name]: message }))
     }
   }
 
@@ -98,6 +117,22 @@ export function Providers() {
                 />
                 <button onClick={() => saveApiKey(p)} disabled={!(keyDraft[p.name] ?? '').length}>{t('providers.apiKeySave')}</button>
                 {keyStatus[p.name] && <span style={{ fontSize: '0.85em' }}>{keyStatus[p.name]}</span>}
+              </div>
+            </dd>
+          </div>
+          <div>
+            <dt>{t('providers.setApiKeyEnv')}</dt>
+            <dd>
+              <div className="inline-form">
+                <input
+                  aria-label={`${t('providers.setApiKeyEnv')} ${p.name}`}
+                  type="text"
+                  placeholder="OMNILLM_API_KEY"
+                  value={envDraft[p.name] ?? ''}
+                  onChange={(event) => setEnvDraft((d) => ({ ...d, [p.name]: event.target.value }))}
+                />
+                <button onClick={() => saveApiKeyEnv(p)} disabled={!(envDraft[p.name] ?? '').length}>{t('providers.apiKeySave')}</button>
+                {envStatus[p.name] && <span style={{ fontSize: '0.85em' }}>{envStatus[p.name]}</span>}
               </div>
             </dd>
           </div>

@@ -65,6 +65,7 @@ func expandConfigPlaceholders(raw string, ep providers.Endpoint, endpointName, m
 	s := raw
 	s = strings.ReplaceAll(s, "{endpoint}", ep.Endpoint)
 	s = strings.ReplaceAll(s, "{endpoint_name}", endpointName)
+	s = strings.ReplaceAll(s, "{api_key_env}", providers.ResolveAPIKeyEnv(ep, endpointName))
 	s = strings.ReplaceAll(s, "{api_key}", apiKey)
 	s = strings.ReplaceAll(s, "{selected_model}", model)
 	s = strings.ReplaceAll(s, "{model_2}", "")

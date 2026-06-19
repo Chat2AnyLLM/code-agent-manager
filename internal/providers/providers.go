@@ -159,6 +159,41 @@ func ResolveAPIKey(e Endpoint, env func(string) string) string {
 	return env(e.APIKeyEnv)
 }
 
+// ResolveAPIKeyEnv returns the environment-variable name that holds this
+// endpoint's API key. When the endpoint sets APIKeyEnv explicitly that name is
+// used; otherwise a stable name is derived from the endpoint name — e.g. the
+// endpoint "omnillm" yields "OMNILLM_API_KEY". Tools that authenticate via an
+// env var reference (codex's env_key) use this name.
+func ResolveAPIKeyEnv(e Endpoint, endpointName string) string {
+	if name := strings.TrimSpace(e.APIKeyEnv); name != "" {
+		return name
+	}
+	return deriveAPIKeyEnvName(endpointName)
+}
+
+// deriveAPIKeyEnvName builds a valid env-var name from an endpoint name by
+// upper-casing it, replacing any character that is not a letter or digit with
+// an underscore, and appending "_API_KEY".
+func deriveAPIKeyEnvName(endpointName string) string {
+	var b strings.Builder
+	for _, r := range strings.ToUpper(strings.TrimSpace(endpointName)) {
+		switch {
+		case r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('_')
+		}
+	}
+	name := b.String()
+	if name == "" {
+		return "API_KEY"
+	}
+	if name[0] >= '0' && name[0] <= '9' {
+		name = "_" + name
+	}
+	return name + "_API_KEY"
+}
+
 // MaskedAPIKey returns a redacted form suitable for display.
 func MaskedAPIKey(key string) string {
 	if key == "" {
