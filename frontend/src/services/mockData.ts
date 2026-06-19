@@ -1,4 +1,4 @@
-import type { ConfigFile, DoctorCheck, Entity, MCPClient, MCPServer, MetadataItem, Provider, Tool } from './types'
+import type { ConfigFile, DoctorCheck, Entity, MCPClient, MCPServer, MCPRegistryItem, MetadataItem, Provider, Tool } from './types'
 
 export const mockTools: Tool[] = [
   { name: 'claude-code', command: 'claude', description: 'Claude Code CLI', enabled: true, installed: true, version: 'mock' },
@@ -16,6 +16,12 @@ export const mockMCPClients: MCPClient[] = [
 
 export const mockMCPServers: MCPServer[] = [
   { name: 'github', client: 'claude', scope: 'user', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'], type: 'stdio' },
+]
+
+export const mockMCPRegistry: MCPRegistryItem[] = [
+  { name: 'github', displayName: 'GitHub MCP Server', description: 'Tools for interacting with GitHub repositories, issues, and pull requests.', repoUrl: 'https://github.com/modelcontextprotocol/servers', license: 'MIT', categories: ['Dev Tools'], tags: ['github', 'git'], installType: 'npm', installedClients: ['claude'] },
+  { name: 'filesystem', displayName: 'Filesystem MCP Server', description: 'Provides file system access for reading, writing, and searching files.', repoUrl: 'https://github.com/modelcontextprotocol/servers', license: 'MIT', categories: ['Dev Tools'], tags: ['files', 'fs'], installType: 'npm', installedClients: [] },
+  { name: 'puppeteer', displayName: 'Puppeteer MCP Server', description: 'Browser automation through Puppeteer for web scraping and interaction.', repoUrl: 'https://github.com/modelcontextprotocol/servers', license: 'MIT', categories: ['Web'], tags: ['browser', 'automation'], installType: 'npm', installedClients: [] },
 ]
 
 export const mockEntities: Entity[] = [

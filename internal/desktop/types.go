@@ -92,6 +92,22 @@ type MCPServerDTO struct {
 	Type    string            `json:"type,omitempty"`
 }
 
+// MCPRegistryItemDTO is one discovered MCP server from the bundled registry,
+// enriched with the clients it is already installed into (per scope). It mirrors
+// MetadataItem's shape so the MCP page can reuse the Library table layout.
+type MCPRegistryItemDTO struct {
+	Name             string   `json:"name"`
+	DisplayName      string   `json:"displayName,omitempty"`
+	Description      string   `json:"description,omitempty"`
+	RepoURL          string   `json:"repoUrl,omitempty"`
+	Homepage         string   `json:"homepage,omitempty"`
+	License          string   `json:"license,omitempty"`
+	Categories       []string `json:"categories,omitempty"`
+	Tags             []string `json:"tags,omitempty"`
+	InstallType      string   `json:"installType,omitempty"`
+	InstalledClients []string `json:"installedClients,omitempty"`
+}
+
 type EntityDTO struct {
 	Kind        string         `json:"kind"`
 	Name        string         `json:"name"`

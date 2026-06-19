@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/chat2anyllm/code-agent-manager/internal/desktop"
+	"github.com/chat2anyllm/code-agent-manager/internal/mcp"
 )
 
 // Server exposes CAM app operations over a localhost-only HTTP API for Tauri.
@@ -57,6 +58,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/tools", s.handleTools)
 	mux.HandleFunc("/api/mcp/clients", s.handleMCPClients)
 	mux.HandleFunc("/api/mcp/servers", s.handleMCPServers)
+	mux.HandleFunc("/api/mcp/registry", s.handleMCPRegistry)
+	mux.HandleFunc("/api/mcp/install", s.handleMCPInstall)
 	mux.HandleFunc("/api/entities", s.handleEntities)
 	mux.HandleFunc("/api/metadata/refresh", s.handleMetadataRefresh)
 	mux.HandleFunc("/api/metadata/search", s.handleMetadataSearch)
@@ -234,6 +237,61 @@ func (s *Server) handleMCPServers(w http.ResponseWriter, r *http.Request) {
 	scope := queryDefault(r, "scope", "user")
 	servers, err := s.services.MCP.ListInstalled(client, scope)
 	writeResult(w, servers, err)
+}
+
+// handleMCPRegistry lists the discovered (bundled) MCP servers, optionally
+// filtered by a query, each enriched with the clients it is installed into.
+func (s *Server) handleMCPRegistry(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	query := r.URL.Query().Get("q")
+	scope := mcp.Scope(queryDefault(r, "scope", "user"))
+	items, err := s.services.MCP.ListRegistry(query, scope)
+	writeResult(w, items, err)
+}
+
+// handleMCPInstall installs a registry server into one or more clients at a
+// scope, mirroring the metadata install endpoint's multi-target shape.
+func (s *Server) handleMCPInstall(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	var input struct {
+		Server   string   `json:"server"`
+		Clients  []string `json:"clients"`
+		Client   string   `json:"client"`
+		Scope    string   `json:"scope"`
+	}
+	if err := decodeJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	clients := input.Clients
+	if len(clients) == 0 && input.Client != "" {
+		clients = []string{input.Client}
+	}
+	if len(clients) == 0 {
+		writeError(w, http.StatusBadRequest, "no target clients specified")
+		return
+	}
+	if input.Server == "" {
+		writeError(w, http.StatusBadRequest, "server is required")
+		return
+	}
+	scope := input.Scope
+	if scope == "" {
+		scope = "user"
+	}
+	for _, clientName := range clients {
+		if _, err := s.services.MCP.InstallFromRegistry(clientName, scope, input.Server); err != nil {
+			writeResult(w, nil, err)
+			return
+		}
+	}
+	writeJSON(w, map[string]any{"status": "installed", "server": input.Server, "clients": clients})
 }
 
 func (s *Server) handleEntities(w http.ResponseWriter, r *http.Request) {

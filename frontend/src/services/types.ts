@@ -44,6 +44,22 @@ export type MCPServer = {
   type?: string
 }
 
+// MCPRegistryItem is one discovered MCP server from the bundled registry,
+// enriched with the clients it is already installed into. Mirrors MetadataItem
+// so the MCP page can reuse the Library table layout.
+export type MCPRegistryItem = {
+  name: string
+  displayName?: string
+  description?: string
+  repoUrl?: string
+  homepage?: string
+  license?: string
+  categories?: string[]
+  tags?: string[]
+  installType?: string
+  installedClients?: string[]
+}
+
 export type Entity = {
   kind: 'prompt' | 'skill' | 'agent' | 'plugin'
   name: string

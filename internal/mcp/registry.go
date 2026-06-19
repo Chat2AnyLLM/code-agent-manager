@@ -105,6 +105,17 @@ func (r *Registry) Names() []string {
 	return names
 }
 
+// All returns every registered schema, sorted by name. Unlike Search it returns
+// the full catalog when no query is supplied (Search returns nil for an empty
+// query), which is what the registry browser needs to list all discovered servers.
+func (r *Registry) All() []ServerSchema {
+	out := make([]ServerSchema, 0, len(r.schemas))
+	for _, name := range r.Names() {
+		out = append(out, r.schemas[name])
+	}
+	return out
+}
+
 // Search returns all schemas whose name, display name, description, tags or
 // categories contain the query (case-insensitive).
 func (r *Registry) Search(query string) []ServerSchema {

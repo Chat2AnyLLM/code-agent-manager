@@ -1,5 +1,5 @@
-import { mockConfigFiles, mockDoctorChecks, mockEntities, mockMCPClients, mockMCPServers, mockMetadataItems, mockProviders, mockTargets, mockTools } from './mockData'
-import type { ApplyResult, ConfigFile, DoctorCheck, Entity, LaunchPlan, MCPClient, MCPServer, MetadataDetail, MetadataRefreshSummary, MetadataSearchResponse, Provider, Tool } from './types'
+import { mockConfigFiles, mockDoctorChecks, mockEntities, mockMCPClients, mockMCPServers, mockMCPRegistry, mockMetadataItems, mockProviders, mockTargets, mockTools } from './mockData'
+import type { ApplyResult, ConfigFile, DoctorCheck, Entity, LaunchPlan, MCPClient, MCPRegistryItem, MCPServer, MetadataDetail, MetadataRefreshSummary, MetadataSearchResponse, Provider, Tool } from './types'
 
 type SidecarConfig = {
   baseUrl: string
@@ -84,6 +84,20 @@ export const api = {
   },
   async listMCPServers(client = 'claude', scope = 'user'): Promise<MCPServer[]> {
     return (await request<MCPServer[]>(`/api/mcp/servers?client=${encodeURIComponent(client)}&scope=${encodeURIComponent(scope)}`)) ?? mockMCPServers
+  },
+  // searchMCPRegistry returns the discovered (bundled) MCP servers, optionally
+  // filtered by query, each enriched with the clients it is installed into at
+  // scope. Falls back to client-side filtering of the mock catalog when no
+  // sidecar is available (browser-only/mock mode).
+  async searchMCPRegistry(query = '', scope = 'user'): Promise<MCPRegistryItem[]> {
+    const params = new URLSearchParams({ q: query, scope })
+    const resp = await request<MCPRegistryItem[]>(`/api/mcp/registry?${params.toString()}`)
+    if (resp) return resp
+    const q = query.trim().toLowerCase()
+    return mockMCPRegistry.filter((item) => q === '' || `${item.name} ${item.displayName ?? ''} ${item.description ?? ''}`.toLowerCase().includes(q))
+  },
+  async installMCPServer(server: string, clients: string[], scope = 'user'): Promise<{ status: string }> {
+    return (await request<{ status: string }>('/api/mcp/install', { method: 'POST', body: JSON.stringify({ server, clients, scope }) })) ?? { status: 'installed' }
   },
   async listEntities(kind: Entity['kind']): Promise<Entity[]> {
     return (await request<Entity[]>(`/api/entities?kind=${encodeURIComponent(kind)}`)) ?? mockEntities.filter((entity) => entity.kind === kind)

@@ -86,3 +86,33 @@ func TestSidecarProviderLifecycle(t *testing.T) {
 		t.Fatalf("delete status=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestSidecarMCPRegistry(t *testing.T) {
+	server := New(Options{Version: "test", Token: "secret"})
+	handler := server.Handler()
+
+	// Listing the registry returns the discovered servers as JSON.
+	req := httptest.NewRequest(http.MethodGet, "/api/mcp/registry", nil)
+	req.Header.Set("Authorization", "Bearer secret")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("registry status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var items []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("registry json: %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("expected discovered registry servers")
+	}
+
+	// Installing into no clients is rejected with a 400.
+	req = httptest.NewRequest(http.MethodPost, "/api/mcp/install", bytes.NewBufferString(`{"server":"github"}`))
+	req.Header.Set("Authorization", "Bearer secret")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("install status=%d body=%s, want 400", rec.Code, rec.Body.String())
+	}
+}

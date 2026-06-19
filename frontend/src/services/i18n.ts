@@ -96,6 +96,29 @@ const en: Record<string, string> = {
   'library.pagination': 'Page {current} of {total} ({count} total)',
   'library.previous': 'Previous',
   'library.next': 'Next',
+
+  // MCP Servers page (mirrors the Library layout: discovered registry servers
+  // with a per-row install-target dropdown)
+  'mcp.title': 'MCP Servers',
+  'mcp.description': 'Browse discovered MCP servers and install them to your code agents.',
+  'mcp.searchPlaceholder': 'Search MCP servers',
+  'mcp.search': 'Search',
+  'mcp.reload': 'Reload',
+  'mcp.reloading': 'Reloading…',
+  'mcp.installedOnly': 'Installed only',
+  'mcp.empty': 'No MCP servers found. Try a different search.',
+  'mcp.noDescription': '(no description)',
+  'mcp.notInstalled': 'not installed',
+  'mcp.installedClients': 'installed clients',
+  'mcp.installTargets': 'install targets for {name}',
+  'mcp.installTo': 'Install to {target}',
+  'mcp.installToCount': 'Install to {count} agents',
+  'mcp.installing': 'Installing…',
+  'mcp.selectTargets': 'Select agents',
+  'mcp.selectAgentsFor': 'Select agents for {name}',
+  'mcp.installed': 'Installed {name} to {targets}',
+  'mcp.installFailed': 'Install failed: {error}',
+  'mcp.searchFailed': 'Search failed: {error}',
 }
 
 const zh: Record<string, string> = {
@@ -182,6 +205,28 @@ const zh: Record<string, string> = {
   'library.pagination': '第 {current} / {total} 页（共 {count} 项）',
   'library.previous': '上一页',
   'library.next': '下一页',
+
+  // MCP 服务器页面（沿用 Library 的布局：已发现的注册表服务器 + 每行安装目标下拉框）
+  'mcp.title': 'MCP 服务器',
+  'mcp.description': '浏览已发现的 MCP 服务器并将其安装到你的编程智能体。',
+  'mcp.searchPlaceholder': '搜索 MCP 服务器',
+  'mcp.search': '搜索',
+  'mcp.reload': '重新加载',
+  'mcp.reloading': '加载中…',
+  'mcp.installedOnly': '仅显示已安装',
+  'mcp.empty': '未找到 MCP 服务器。请尝试其他搜索词。',
+  'mcp.noDescription': '（无描述）',
+  'mcp.notInstalled': '未安装',
+  'mcp.installedClients': '已安装的客户端',
+  'mcp.installTargets': '{name} 的安装目标',
+  'mcp.installTo': '安装到 {target}',
+  'mcp.installToCount': '安装到 {count} 个智能体',
+  'mcp.installing': '安装中…',
+  'mcp.selectTargets': '选择智能体',
+  'mcp.selectAgentsFor': '为 {name} 选择智能体',
+  'mcp.installed': '已将 {name} 安装到 {targets}',
+  'mcp.installFailed': '安装失败：{error}',
+  'mcp.searchFailed': '搜索失败：{error}',
 }
 
 const dictionaries: Record<Language, Record<string, string>> = { en, zh }
