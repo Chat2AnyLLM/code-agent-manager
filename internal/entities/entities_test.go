@@ -160,11 +160,17 @@ func TestInstructionPathUserLevelCodex(t *testing.T) {
 	}
 }
 
-func TestInstructionPathUserLevelUnsupportedCopilot(t *testing.T) {
-	// Copilot has no user-level path in v1.
-	_, err := entities.InstructionPath("copilot", entities.InstallLevelUser, "")
-	if err == nil {
-		t.Fatal("expected error for copilot user-level path")
+func TestInstructionPathUserLevelCopilot(t *testing.T) {
+	// Copilot supports user-level via ~/.copilot/copilot-instructions.md.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	path, err := entities.InstructionPath("copilot", entities.InstallLevelUser, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := filepath.Join(home, ".copilot", "copilot-instructions.md")
+	if path != expected {
+		t.Fatalf("expected %s, got %s", expected, path)
 	}
 }
 
@@ -384,10 +390,10 @@ func TestInstructionAppLevels(t *testing.T) {
 	if len(levels) != 2 {
 		t.Fatalf("expected 2 levels for claude, got %d", len(levels))
 	}
-	// Copilot supports only project
+	// Copilot supports both user and project
 	levels = entities.InstructionAppLevels("copilot")
-	if len(levels) != 1 || levels[0] != entities.InstallLevelProject {
-		t.Fatalf("expected 1 level (project) for copilot, got %v", levels)
+	if len(levels) != 2 {
+		t.Fatalf("expected 2 levels for copilot, got %v", levels)
 	}
 	// Unknown app
 	levels = entities.InstructionAppLevels("unknown")

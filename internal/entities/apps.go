@@ -109,13 +109,15 @@ var promptApps = map[string]string{
 	"claude":    "~/.claude/CLAUDE.md",
 	"codex":     "~/.codex/AGENTS.md",
 	"gemini":    "~/.gemini/GEMINI.md",
-	"copilot":   "~/.copilot/COPILOT.md",
+	"copilot":   "~/.copilot/copilot-instructions.md",
 	"codebuddy": "~/.codebuddy/CODEBUDDY.md",
 	"opencode":  "~/.config/opencode/AGENTS.md",
 	"cursor":    "~/.cursor/AGENTS.md",
-	"windsurf":  "~/.codeium/windsurf/AGENTS.md",
+	"windsurf":  "~/.codeium/windsurf/memories/global_rules.md",
 	"amp":       "~/.config/agents/AGENTS.md",
-	"roo":       "~/.roo/AGENTS.md",
+	"roo":       "~/.roo/rules/instructions.md",
+	"cline":     "~/Documents/Cline/Rules/instructions.md",
+	"aider":     "~/.aider.conf.yml",
 }
 
 // skillApps matches the cli/cli registry UserDir for skills — all 45 agents.
@@ -227,9 +229,16 @@ type InstructionInstallPaths struct {
 }
 
 // instructionApps maps app IDs to their instruction install paths.
-// AGENTS.md-compatible tools use UserPath from promptApps for consistency;
-// tools with known project-level paths include ProjectPath.
-// Copilot user-level is not supported in v1 (no official user file path verified).
+// Paths sourced from official documentation for each agent (June 2026):
+//
+//   - Claude Code: https://code.claude.com/docs/settings
+//   - Copilot: https://docs.github.com/copilot
+//   - Codex CLI: https://developers.openai.com/codex/guides/agents-md
+//   - Gemini CLI: https://geminicli.com/docs/cli/gemini-md/
+//   - Cursor: https://docs.cursor.com
+//   - Windsurf: https://docs.windsurf.com
+//   - Cline: https://docs.cline.bot/customization/cline-rules
+//   - Aider: https://aider.chat/docs/config.html
 var instructionApps = map[string]InstructionInstallPaths{
 	"claude": {
 		UserPath:    "~/.claude/CLAUDE.md",
@@ -240,9 +249,9 @@ var instructionApps = map[string]InstructionInstallPaths{
 		ProjectPath: "<project>/GEMINI.md",
 	},
 	"copilot": {
+		UserPath:    "~/.copilot/copilot-instructions.md",
 		ProjectPath: "<project>/.github/copilot-instructions.md",
 	},
-	// AGENTS.md-compatible tools: keep known user paths, add project-level AGENTS.md
 	"codex": {
 		UserPath:    "~/.codex/AGENTS.md",
 		ProjectPath: "<project>/AGENTS.md",
@@ -252,24 +261,33 @@ var instructionApps = map[string]InstructionInstallPaths{
 		ProjectPath: "<project>/AGENTS.md",
 	},
 	"cursor": {
-		UserPath:    "~/.cursor/AGENTS.md",
+		// Cursor stores user-level rules in a cloud DB, not a local file.
+		// Project-level supports .cursorrules (legacy) or .cursor/rules/*.mdc.
 		ProjectPath: "<project>/AGENTS.md",
 	},
 	"windsurf": {
-		UserPath:    "~/.codeium/windsurf/AGENTS.md",
-		ProjectPath: "<project>/AGENTS.md",
+		UserPath:    "~/.codeium/windsurf/memories/global_rules.md",
+		ProjectPath: "<project>/.windsurf/rules/instructions.md",
 	},
 	"amp": {
 		UserPath:    "~/.config/agents/AGENTS.md",
 		ProjectPath: "<project>/AGENTS.md",
 	},
+	"cline": {
+		UserPath:    "~/Documents/Cline/Rules/instructions.md",
+		ProjectPath: "<project>/.clinerules/instructions.md",
+	},
 	"roo": {
-		UserPath:    "~/.roo/AGENTS.md",
-		ProjectPath: "<project>/AGENTS.md",
+		UserPath:    "~/.roo/rules/instructions.md",
+		ProjectPath: "<project>/.roorules",
 	},
 	"codebuddy": {
 		UserPath:    "~/.codebuddy/CODEBUDDY.md",
 		ProjectPath: "<project>/AGENTS.md",
+	},
+	"aider": {
+		// Aider reads CONVENTIONS.md via --read or .aider.conf.yml read: directive.
+		ProjectPath: "<project>/CONVENTIONS.md",
 	},
 }
 

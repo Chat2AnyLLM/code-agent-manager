@@ -191,7 +191,12 @@ export const api = {
       { app: 'claude', supports: { user: true, project: true } },
       { app: 'codex', supports: { user: true, project: true } },
       { app: 'gemini', supports: { user: true, project: true } },
-      { app: 'copilot', supports: { user: false, project: true } },
+      { app: 'copilot', supports: { user: true, project: true } },
+      { app: 'cursor', supports: { user: false, project: true } },
+      { app: 'windsurf', supports: { user: true, project: true } },
+      { app: 'cline', supports: { user: true, project: true } },
+      { app: 'roo', supports: { user: true, project: true } },
+      { app: 'aider', supports: { user: false, project: true } },
     ]
   },
 }
