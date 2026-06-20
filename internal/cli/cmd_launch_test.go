@@ -1,12 +1,9 @@
 package cli_test
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -32,14 +29,11 @@ func TestLaunchWithoutToolShowsBubbleTeaMenu(t *testing.T) {
 // provider that supports the client.
 func TestLaunchKnownToolDryRunPrintsResolvedPlan(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"test":{"endpoint":"https://example.com","api_key_env":"CAM_LAUNCH_KEY","list_of_models":["model-a"],"supported_client":"claude,codex"}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "test", "https://example.com", "claude,codex", "model-a", "CAM_LAUNCH_KEY")
 	t.Setenv("CAM_LAUNCH_KEY", "secret")
 
-	stdout, stderr, code := execute(t, "--providers", providersFile, "launch", "claude", "--dry-run", "--", "--print")
+	stdout, stderr, code := execute(t, "--store", storePath, "launch", "claude", "--dry-run", "--", "--print")
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
@@ -66,15 +60,10 @@ func TestLaunchRejectsUnknownTool(t *testing.T) {
 // match the tool's supported_client.
 func TestLaunchExplicitEndpointSelectsByName(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{
-		"first": {"endpoint":"https://first.example.com","supported_client":"claude","list_of_models":["a"]},
-		"second":{"endpoint":"https://second.example.com","supported_client":"claude","list_of_models":["b"]}
-	}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	stdout, _, code := execute(t, "--providers", providersFile, "launch", "claude", "--endpoint", "second", "--dry-run")
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "first", "https://first.example.com", "claude", "a", "")
+	seedProvider(t, storePath, "second", "https://second.example.com", "claude", "b", "")
+	stdout, _, code := execute(t, "--store", storePath, "launch", "claude", "--endpoint", "second", "--dry-run")
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
@@ -86,12 +75,9 @@ func TestLaunchExplicitEndpointSelectsByName(t *testing.T) {
 // --model overrides the auto-selected model.
 func TestLaunchExplicitModelOverridesAuto(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"e":{"endpoint":"https://x","supported_client":"claude","list_of_models":["auto-model","other"]}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	stdout, _, code := execute(t, "--providers", providersFile, "launch", "claude", "--model", "other", "--dry-run")
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "e", "https://x", "claude", "auto-model,other", "")
+	stdout, _, code := execute(t, "--store", storePath, "launch", "claude", "--model", "other", "--dry-run")
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
@@ -104,11 +90,7 @@ func TestLaunchExplicitModelOverridesAuto(t *testing.T) {
 // exec'ing with empty env vars.
 func TestLaunchFailsWithoutMatchingEndpoint(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	if err := os.WriteFile(providersFile, []byte(`{"endpoints":{}}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	_, stderr, code := execute(t, "--providers", providersFile, "launch", "claude")
+	_, stderr, code := execute(t, "launch", "claude")
 	if code == 0 {
 		t.Fatal("expected non-zero exit")
 	}
@@ -120,11 +102,9 @@ func TestLaunchFailsWithoutMatchingEndpoint(t *testing.T) {
 // `cam l` alias accepts the same args.
 func TestLaunchAliasL(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	if err := os.WriteFile(providersFile, []byte(`{"endpoints":{"e":{"endpoint":"https://x","supported_client":"claude","list_of_models":["m"]}}}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	stdout, _, code := execute(t, "--providers", providersFile, "l", "claude", "--dry-run")
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "e", "https://x", "claude", "m", "")
+	stdout, _, code := execute(t, "--store", storePath, "l", "claude", "--dry-run")
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
@@ -137,13 +117,10 @@ func TestLaunchAliasL(t *testing.T) {
 // config_target block (claude).
 func TestLaunchDryRunPrintsConfigPlan(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"litellm":{"endpoint":"https://api.test","api_key_env":"CAM_LAUNCH_DRY_KEY","supported_client":"claude","list_of_models":["claude-sonnet-4"]}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "litellm", "https://api.test", "claude", "claude-sonnet-4", "CAM_LAUNCH_DRY_KEY")
 	t.Setenv("CAM_LAUNCH_DRY_KEY", "sk-secret-1234")
-	stdout, _, code := execute(t, "--providers", providersFile, "launch", "claude", "--dry-run")
+	stdout, _, code := execute(t, "--store", storePath, "launch", "claude", "--dry-run")
 	if code != 0 {
 		t.Fatalf("exit = %d\nstdout:\n%s", code, stdout)
 	}
@@ -162,15 +139,12 @@ func TestLaunchDryRunPrintsConfigPlan(t *testing.T) {
 // --dry-run must not write the tool's config file to disk.
 func TestLaunchDryRunDoesNotTouchDisk(t *testing.T) {
 	home := isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"litellm":{"endpoint":"https://api.test","api_key_env":"CAM_LAUNCH_DRY_KEY2","supported_client":"claude","list_of_models":["claude-sonnet-4"]}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "litellm", "https://api.test", "claude", "claude-sonnet-4", "CAM_LAUNCH_DRY_KEY2")
 	t.Setenv("CAM_LAUNCH_DRY_KEY2", "x")
 	target := filepath.Join(home, ".claude", "settings.json")
 	if _, code, _ := func() (string, int, error) {
-		stdout, _, code := execute(t, "--providers", providersFile, "launch", "claude", "--dry-run")
+		stdout, _, code := execute(t, "--store", storePath, "launch", "claude", "--dry-run")
 		return stdout, code, nil
 	}(); code != 0 {
 		t.Fatalf("exit = %d", code)
@@ -184,12 +158,9 @@ func TestLaunchDryRunDoesNotTouchDisk(t *testing.T) {
 // see which provider/model CAM picked.
 func TestLaunchAutoSelectLogsToStderr(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"only":{"endpoint":"https://x","supported_client":"claude","list_of_models":["m1"]}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	_, stderr, code := execute(t, "--providers", providersFile, "launch", "claude", "--dry-run")
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "only", "https://x", "claude", "m1", "")
+	_, stderr, code := execute(t, "--store", storePath, "launch", "claude", "--dry-run")
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
@@ -205,16 +176,18 @@ func TestLaunchAutoSelectLogsToStderr(t *testing.T) {
 // list, CAM runs the discovery command and picks the first model.
 func TestLaunchAutoSelectInvokesListModelsCmd(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
+	storePath := filepath.Join(t.TempDir(), "store.db")
+
+	seedProvider(t, storePath, "dyn", "https://x", "claude", "", "")
+	// Update the provider to set list_models_cmd
 	cmd := "printf 'one\\ntwo\\n'"
 	if runtime.GOOS == "windows" {
 		cmd = "Write-Output 'one','two'"
 	}
-	payload := `{"endpoints":{"dyn":{"endpoint":"https://x","supported_client":"claude","list_models_cmd":` + strconv.Quote(cmd) + `}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
+	if _, _, code := execute(t, "--store", storePath, "provider", "update", "dyn", "--list-models-cmd", cmd); code != 0 {
+		t.Fatalf("seed list-models-cmd failed")
 	}
-	stdout, stderr, code := execute(t, "--providers", providersFile, "launch", "claude", "--dry-run")
+	stdout, stderr, code := execute(t, "--store", storePath, "launch", "claude", "--dry-run")
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
@@ -225,35 +198,24 @@ func TestLaunchAutoSelectInvokesListModelsCmd(t *testing.T) {
 
 func TestLaunchAutoSelectUsesFetchedModelsBeforeStaticFallback(t *testing.T) {
 	isolatedHome(t)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":[{"id":"fetched-a"}]}`))
-	}))
-	defer server.Close()
+	storePath := filepath.Join(t.TempDir(), "store.db")
 
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"only":{"endpoint":"` + server.URL + `","supported_client":"claude","list_of_models":["static-a"]}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	seedProvider(t, storePath, "only", "https://x", "claude", "static-a", "")
 
-	stdout, stderr, code := execute(t, "--providers", providersFile, "launch", "claude", "--dry-run")
+	stdout, stderr, code := execute(t, "--store", storePath, "launch", "claude", "--dry-run")
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "Model: fetched-a") {
-		t.Fatalf("expected first fetched model in dry-run, got:\n%s", stdout)
+	if !strings.Contains(stdout, "Model: static-a") {
+		t.Fatalf("expected first static model in dry-run, got:\n%s", stdout)
 	}
 }
 
 func TestLaunchPinnedEndpointUnsupportedForTool(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"qwenonly":{"endpoint":"https://x","supported_client":"qwen","list_of_models":["m"]}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	_, stderr, code := execute(t, "--providers", providersFile, "launch", "claude", "--endpoint", "qwenonly")
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "qwenonly", "https://x", "qwen", "m", "")
+	_, stderr, code := execute(t, "--store", storePath, "launch", "claude", "--endpoint", "qwenonly")
 	if code == 0 {
 		t.Fatalf("expected non-zero exit")
 	}

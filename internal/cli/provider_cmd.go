@@ -17,14 +17,13 @@ import (
 )
 
 // providerCommand wires `cam provider <list|show|add|update|remove|enable|
-// disable|rename|init>`. All subcommands operate on providers.json at the
-// path resolved by state.providersPath (or providers.DiscoverPath() when
-// the flag is empty). The file is auto-created when missing.
+// disable|rename|init>`. All subcommands operate on provider records stored in
+// CAM's SQLite app state database. Use --store to select a non-default DB path.
 func (a *App) providerCommand(state *globalState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "provider",
 		Aliases: []string{"pr", "providers"},
-		Short:   "Manage providers.json entries (no manual editing required)",
+		Short:   "Manage provider records stored in SQLite app state",
 	}
 	cmd.AddCommand(a.providerListCommand(state))
 	cmd.AddCommand(a.providerShowCommand(state))
@@ -38,24 +37,14 @@ func (a *App) providerCommand(state *globalState) *cobra.Command {
 	return cmd
 }
 
-// resolveProvidersPath honours --providers when set; otherwise falls back to
-// providers.DefaultPath so a fresh machine still gets a deterministic
-// location for the auto-created file.
-func resolveProvidersPath(state *globalState) string {
-	if state != nil && state.providersPath != "" {
-		return state.providersPath
-	}
-	return providers.DefaultPath()
-}
-
 func providerAPI(state *globalState) appapi.ProviderAPI {
-	return appapi.ProviderAPI{ProvidersPath: resolveProvidersPath(state)}
+	return makeProviderAPI(state)
 }
 
 func (a *App) providerInitCommand(state *globalState) *cobra.Command {
 	return &cobra.Command{
 		Use:   "init",
-		Short: "Create an empty providers.json if it does not already exist",
+		Short: "Initialize the SQLite app state store if it does not already exist",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			result, err := providerAPI(state).Init(context.Background())
@@ -277,10 +266,6 @@ func (a *App) providerAddFlagMode(cmd *cobra.Command, state *globalState, name s
 		return errors.New("--enabled and --disabled are mutually exclusive")
 	}
 
-	path := resolveProvidersPath(state)
-	_, statErr := os.Stat(path)
-	created := os.IsNotExist(statErr)
-
 	input := appapi.ProviderInput{
 		Name:            name,
 		Endpoint:        flags.endpoint,
@@ -320,9 +305,6 @@ func (a *App) providerAddFlagMode(cmd *cobra.Command, state *globalState, name s
 		return err
 	}
 	out := cmd.OutOrStdout()
-	if created {
-		fmt.Fprintf(out, "Created %s\n", path)
-	}
 	fmt.Fprintf(out, "Added provider %q\n", name)
 	return nil
 }

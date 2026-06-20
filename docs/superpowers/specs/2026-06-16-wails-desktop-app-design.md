@@ -216,7 +216,7 @@ Persistent left sidebar with icons + labels. Collapsible on narrow widths (<800p
     - binary → `~/.local/bin/cam-desktop`
     - desktop entry (Linux) → `~/.local/share/applications/cam-desktop.desktop`
     - icon (Linux) → `~/.local/share/icons/hicolor/256x256/apps/cam-desktop.png`
-- Config dir (`~/.config/code-agent-manager/`) is shared with the CLI — same `providers.json`, `config.yaml`, `tools.yaml`, etc.
+- Config dir (`~/.config/code-agent-manager/`) is shared with the CLI — the same SQLite app state, `config.yaml`, `tools.yaml`, etc.
 - `install.sh uninstall` removes both CLI binaries and (if installed) the desktop binary + desktop entry + icon.
 
 ### Platform support

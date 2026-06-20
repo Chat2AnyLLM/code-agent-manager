@@ -13,13 +13,13 @@ from code_assistant_manager.cli.doctor import run_doctor_checks
 @pytest.fixture
 def mock_config(tmp_path):
     """Create a mock config object."""
-    config_file = tmp_path / "providers.json"
-    config_file.write_text(json.dumps({"providers": []}))
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"common": {}, "endpoints": {}}))
 
     config = MagicMock()
     config.config_path = str(config_file)
     # Add config_data attribute for JSON serialization in doctor checks
-    config.config_data = {"providers": []}
+    config.config_data = {"common": {}, "endpoints": {}}
     return config
 
 
@@ -55,7 +55,7 @@ class TestRunDoctorChecks:
         config = MagicMock()
         config.config_path = str(tmp_path / "nonexistent.json")
         # Add config_data for JSON serialization even when config file is missing
-        config.config_data = {"providers": []}
+        config.config_data = {"common": {}, "endpoints": {}}
 
         with patch(
             "code_assistant_manager.env_loader.find_env_file", return_value=None

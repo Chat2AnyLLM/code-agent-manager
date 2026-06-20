@@ -15,17 +15,15 @@ import (
 
 // Server exposes CAM app operations over a localhost-only HTTP API for Tauri.
 type Server struct {
-	version       string
-	providersPath string
-	token         string
-	services      desktop.Services
+	version  string
+	token    string
+	services desktop.Services
 }
 
 // Options configures the sidecar HTTP server.
 type Options struct {
-	Version       string
-	ProvidersPath string
-	Token         string
+	Version string
+	Token   string
 }
 
 // Startup describes the selected listen address after the server starts.
@@ -42,10 +40,9 @@ func New(opts Options) *Server {
 		version = "dev"
 	}
 	return &Server{
-		version:       version,
-		providersPath: opts.ProvidersPath,
-		token:         opts.Token,
-		services:      desktop.NewServices(version, opts.ProvidersPath),
+		version:  version,
+		token:    opts.Token,
+		services: desktop.NewServices(version, ""),
 	}
 }
 
@@ -260,10 +257,10 @@ func (s *Server) handleMCPInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		Server   string   `json:"server"`
-		Clients  []string `json:"clients"`
-		Client   string   `json:"client"`
-		Scope    string   `json:"scope"`
+		Server  string   `json:"server"`
+		Clients []string `json:"clients"`
+		Client  string   `json:"client"`
+		Scope   string   `json:"scope"`
 	}
 	if err := decodeJSON(r, &input); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

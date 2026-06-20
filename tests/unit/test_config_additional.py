@@ -1,8 +1,6 @@
 """Additional tests for code_assistant_manager.config module to increase coverage."""
 
 import pytest
-import tempfile
-import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -38,62 +36,19 @@ from code_assistant_manager.config import (
 class TestConfigManagerAdditional:
     """Additional tests for ConfigManager to increase coverage."""
 
-    def test_config_manager_with_config_path(self):
-        """Test ConfigManager initialization with config path."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump({"test": "data"}, f)
-            f.flush()
+    def test_config_manager_rejects_config_path(self):
+        """Test ConfigManager rejects deprecated providers.json paths."""
+        with pytest.raises(ValueError, match=r"providers\.json is deprecated; providers are stored in SQLite"):
+            ConfigManager("/tmp/providers.json")
 
-            try:
-                config = ConfigManager(f.name)
-                assert config is not None
-            finally:
-                Path(f.name).unlink()
-
-    def test_config_manager_invalid_config_path(self):
-        """Test ConfigManager with invalid config path."""
-        with pytest.raises(FileNotFoundError):
-            ConfigManager("/nonexistent/path.json")
-
-    def test_get_sections_with_config(self):
-        """Test get_sections method with actual config."""
-        config_data = {
-            "endpoints": {
-                "claude": {"endpoint": "https://api.example.com"},
-                "openai": {"endpoint": "https://api.openai.com"}
-            }
-        }
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(config_data, f)
-            f.flush()
-
-            try:
-                config = ConfigManager(f.name)
-                sections = config.get_sections()
-                assert "claude" in sections
-                assert "openai" in sections
-            finally:
-                Path(f.name).unlink()
-
-    def test_get_sections_exclude_common_false(self):
-        """Test get_sections with exclude_common=False."""
-        config_data = {
-            "endpoints": {
-                "claude": {"endpoint": "https://api.example.com"}
-            }
-        }
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(config_data, f)
-            f.flush()
-
-            try:
-                config = ConfigManager(f.name)
-                sections = config.get_sections(exclude_common=False)
-                assert "claude" in sections
-            finally:
-                Path(f.name).unlink()
+    def test_default_config_manager_never_reads_files(self):
+        """Test default ConfigManager uses empty in-memory config only."""
+        with patch("builtins.open", side_effect=AssertionError("should not open files")):
+            config = ConfigManager()
+            assert config.get_sections() == []
+            assert config.get_common_config() == {}
+            config.reload()
+            assert config.get_sections(exclude_common=False) == []
 
     def test_get_value_with_invalid_key(self):
         """Test get_value with invalid key."""

@@ -21,7 +21,7 @@ class TestValidateConfig:
 
     def test_validate_config_success(self, runner, tmp_path):
         """validate_config passes with valid configuration."""
-        config_file = tmp_path / "providers.json"
+        config_file = tmp_path / "config.json"
         config_file.write_text(json.dumps({"providers": []}))
 
         mock_cm = MagicMock()
@@ -37,7 +37,7 @@ class TestValidateConfig:
 
     def test_validate_config_failure(self, runner, tmp_path):
         """validate_config reports errors with invalid configuration."""
-        config_file = tmp_path / "providers.json"
+        config_file = tmp_path / "config.json"
         config_file.write_text(json.dumps({"providers": []}))
 
         mock_cm = MagicMock()
@@ -76,7 +76,8 @@ class TestListConfig:
         assert result.exit_code == 0
         assert "Configuration Files" in result.output
         # Should mention some standard locations
-        assert "providers.json" in result.output
+        assert "config.yaml" in result.output
+        assert "app-state.db" in result.output
 
     def test_list_config_shows_editor_configs(self, runner):
         """list_config shows editor configuration locations."""

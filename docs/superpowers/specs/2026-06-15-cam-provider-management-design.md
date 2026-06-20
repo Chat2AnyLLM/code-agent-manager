@@ -1,11 +1,11 @@
-# `cam provider` — CLI Management of `providers.json`
+# `cam provider` — CLI management of SQLite-backed provider records
 
 **Date:** 2026-06-15
 **Status:** Design approved, implementation in progress
 
 ## Goal
 
-Eliminate manual editing of `~/.config/code-agent-manager/providers.json`.
+Eliminate manual editing of legacy provider files in favor of SQLite-backed provider management.
 Every operation a user needs to perform on the provider catalog must be reachable through `cam` subcommands:
 
 1. If nothing is configured, create the file.
@@ -106,7 +106,7 @@ user
 - Missing required flags for `add` → cobra-level error.
 - Duplicate name on `add` → `provider "NAME" already exists`.
 - Unknown name on `update`/`remove`/`enable`/`disable`/`rename` → `provider "NAME" not found (try 'cam provider list')`.
-- Malformed `providers.json` on load → existing parse error from `providers.Load`, unchanged.
+- Malformed legacy `providers.json` on migration/load → explicit legacy parse error, unchanged.
 - File-write errors → wrapped as `provider: write %s: %w`.
 - Permissions: file `0o600`, parent dir `0o700`.
 
@@ -134,8 +134,8 @@ Two new test files, both following the existing repo idioms (`t.TempDir`, `t.Set
 ## Backward compatibility
 
 - `providers.Endpoint` struct gains no new fields. All existing readers (`launch`, `doctor`) work unchanged.
-- The shape of `providers.json` on disk is identical to today's hand-written file.
-- README updates that change the quick-start from `cp providers.json.example` to `cam provider add ...` are intentionally out of scope for this spec; the new commands are additive.
+- SQLite is now the source of truth; any remaining providers.json handling is legacy-only.
+- README updates should now point users at `cam provider add ...`; this spec is historical context for the original command design.
 
 ## Out of scope
 

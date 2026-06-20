@@ -8,12 +8,12 @@ import (
 )
 
 type DoctorService struct {
-	version       string
-	providersPath string
+	version string
+	dbPath  string
 }
 
-func NewDoctorService(version, providersPath string) *DoctorService {
-	return &DoctorService{version: version, providersPath: providersPath}
+func NewDoctorService(version, dbPath string) *DoctorService {
+	return &DoctorService{version: version, dbPath: dbPath}
 }
 
 func (s *DoctorService) ListChecks() []string {
@@ -32,10 +32,11 @@ func (s *DoctorService) RunChecks(ctx context.Context) ([]DoctorCheckDTO, error)
 }
 
 func (s *DoctorService) checks() []doctor.Check {
-	file, _ := appapi.ProviderAPI{ProvidersPath: s.providersPath}.File(context.Background())
+	api := appapi.ProviderAPI{}
+	file, _ := api.File(context.Background())
 	return []doctor.Check{
 		doctor.InstallationCheck{Version: s.version},
-		doctor.ConfigCheck{Path: s.providersPath},
+		doctor.ConfigCheck{Path: s.dbPath},
 		doctor.EnvCheck{},
 		doctor.EndpointFormatCheck{File: file},
 		doctor.CacheCheck{},

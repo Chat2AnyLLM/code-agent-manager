@@ -10,13 +10,13 @@ import { Settings } from './pages/Settings'
 import { useTheme } from './services/theme'
 import { LanguageProvider, useLanguage } from './services/i18n'
 
-type Route = 'agents' | 'providers' | 'mcp' | 'prompts' | 'skills' | 'subagents' | 'plugins' | 'config' | 'diagnostics' | 'settings'
+type Route = 'agents' | 'providers' | 'mcp' | 'instructions' | 'skills' | 'subagents' | 'plugins' | 'config' | 'diagnostics' | 'settings'
 
 const nav: { route: Route; labelKey: string; icon: typeof Bot }[] = [
   { route: 'providers', labelKey: 'nav.providers', icon: Server },
   { route: 'agents', labelKey: 'nav.agents', icon: Bot },
   { route: 'mcp', labelKey: 'nav.mcp', icon: Plug },
-  { route: 'prompts', labelKey: 'nav.prompts', icon: FileText },
+  { route: 'instructions', labelKey: 'nav.instructions', icon: FileText },
   { route: 'skills', labelKey: 'nav.skills', icon: Sparkles },
   { route: 'subagents', labelKey: 'nav.subagents', icon: Users },
   { route: 'plugins', labelKey: 'nav.plugins', icon: Puzzle },
@@ -50,7 +50,7 @@ function Shell() {
       {route === 'agents' && <Agents />}
       {route === 'providers' && <Providers />}
       {route === 'mcp' && <MCP />}
-      {route === 'prompts' && <Library kind="prompt" />}
+      {route === 'instructions' && <Library kind="instruction" />}
       {route === 'skills' && <Library kind="skill" />}
       {route === 'subagents' && <Library kind="agent" />}
       {route === 'plugins' && <Library kind="plugin" />}

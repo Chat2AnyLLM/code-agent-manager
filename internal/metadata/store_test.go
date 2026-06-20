@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -67,6 +68,44 @@ func TestSearchByKindFilter(t *testing.T) {
 	results, _ := s.Search(ctx, SearchQuery{Query: "my", Kind: "skill"})
 	if len(results) != 1 || results[0].Name != "my-skill" {
 		t.Fatalf("kind filter failed: got %+v", results)
+	}
+}
+
+// TestSearchAgentsRequiresAgentsFolder locks in the SubAgents-page rule: only
+// markdown files beneath an `agents/` folder are subagents. Rows left by an
+// older binary (commands/, docs/, README, …) must never surface in an agent
+// search, even though they sit in the index with kind=agent.
+func TestSearchAgentsRequiresAgentsFolder(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore(filepath.Join(t.TempDir(), "cam.db"))
+	if err := s.Init(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// A real subagent (under agents/) and several leaks that are not subagents.
+	s.UpsertItem(ctx, Item{Kind: "agent", Name: "security-auditor", ItemPath: "agents/security-auditor.md", InstallKey: "o/r:security-auditor", Description: "audits"})
+	s.UpsertItem(ctx, Item{Kind: "agent", Name: "nested", ItemPath: ".claude/agents/nested.md", InstallKey: "o/r:nested", Description: "nested"})
+	s.UpsertItem(ctx, Item{Kind: "agent", Name: "post", ItemPath: "commands/post.md", InstallKey: "o/r:post", Description: "a command"})
+	s.UpsertItem(ctx, Item{Kind: "agent", Name: "overview", ItemPath: "docs/overview.md", InstallKey: "o/r:overview", Description: "docs"})
+	s.UpsertItem(ctx, Item{Kind: "agent", Name: "readme", ItemPath: "README.md", InstallKey: "o/r:readme", Description: "readme"})
+
+	results, err := s.Search(ctx, SearchQuery{Query: "", Kind: "agent"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	names := map[string]bool{}
+	for _, r := range results {
+		names[r.Name] = true
+	}
+	if len(results) != 2 || !names["security-auditor"] || !names["nested"] {
+		t.Fatalf("expected only agents under agents/, got %+v", results)
+	}
+	if names["post"] || names["overview"] || names["readme"] {
+		t.Fatalf("non-agent files leaked into agent search: %+v", names)
+	}
+
+	total, _ := s.Count(ctx, SearchQuery{Query: "", Kind: "agent"})
+	if total != 2 {
+		t.Fatalf("Count should match Search (2), got %d", total)
 	}
 }
 
@@ -262,6 +301,67 @@ func TestMarkInstalled(t *testing.T) {
 	}
 }
 
+func TestInitMigratesPromptToInstructionIdempotent(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "cam.db")
+	s := NewStore(dbPath)
+	db, err := s.open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, schemaSQL); err != nil {
+		t.Fatalf("init schema: %v", err)
+	}
+	_, err = db.ExecContext(ctx, `INSERT INTO metadata_sources(kind, source_key, owner, repo) VALUES('prompt', 'legacy/source', 'owner', 'repo')`)
+	if err != nil {
+		t.Fatalf("insert source: %v", err)
+	}
+	_, err = db.ExecContext(ctx, `INSERT INTO metadata_items(kind, name, install_key) VALUES('prompt', 'legacy-prompt', 'legacy/source:legacy-prompt')`)
+	if err != nil {
+		t.Fatalf("insert item: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("migrating Init: %v", err)
+	}
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("second migrating Init: %v", err)
+	}
+
+	db, err = sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	for _, table := range []string{"metadata_sources", "metadata_items"} {
+		var prompts int
+		if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table+` WHERE kind = 'prompt'`).Scan(&prompts); err != nil {
+			t.Fatalf("count prompts in %s: %v", table, err)
+		}
+		if prompts != 0 {
+			t.Fatalf("%s still has %d prompt rows", table, prompts)
+		}
+		var instructions int
+		if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table+` WHERE kind = 'instruction'`).Scan(&instructions); err != nil {
+			t.Fatalf("count instructions in %s: %v", table, err)
+		}
+		if instructions != 1 {
+			t.Fatalf("%s instruction rows = %d, want 1", table, instructions)
+		}
+	}
+	var migrations int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM migration_meta WHERE id = 'prompt_to_instruction'`).Scan(&migrations); err != nil {
+		t.Fatalf("count migration rows: %v", err)
+	}
+	if migrations != 1 {
+		t.Fatalf("migration rows = %d, want 1", migrations)
+	}
+}
+
 func TestRefreshFromLocalRepoFiles(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -318,16 +418,16 @@ func TestRefreshFromLocalRepoFiles(t *testing.T) {
 
 // fakeFetcher writes a synthetic repo tree instead of downloading from GitHub,
 // so refresh tests are fast and deterministic. Every repo gets the same shape:
-// one SKILL.md, one agent .md, one prompt .md, and one plugin.json.
+// one SKILL.md, one agent .md, one instruction .md, and one plugin.json.
 type fakeFetcher struct{}
 
 func (fakeFetcher) Fetch(owner, repo, branch, dest string) (string, error) {
 	root := filepath.Join(dest, repo+"-"+branch)
 	files := map[string]string{
-		filepath.Join("skills", repo+"-skill", "SKILL.md"): "---\nname: " + repo + "-skill\ndescription: A skill from " + repo + "\n---\n",
-		filepath.Join("agents", repo+"-agent.md"):          "---\nname: " + repo + "-agent\ndescription: An agent\n---\n",
-		filepath.Join("prompts", repo+"-prompt.md"):        "---\nname: " + repo + "-prompt\ndescription: A prompt\n---\n",
-		filepath.Join(repo+"-plugin", "plugin.json"):       `{"name":"` + repo + `-plugin","description":"A plugin"}`,
+		filepath.Join("skills", repo+"-skill", "SKILL.md"):    "---\nname: " + repo + "-skill\ndescription: A skill from " + repo + "\n---\n",
+		filepath.Join("agents", repo+"-agent.md"):             "---\nname: " + repo + "-agent\ndescription: An agent\n---\n",
+		filepath.Join("instructions", repo+"-instruction.md"): "---\nname: " + repo + "-instruction\ndescription: An instruction\n---\n",
+		filepath.Join(repo+"-plugin", "plugin.json"):          `{"name":"` + repo + `-plugin","description":"A plugin"}`,
 	}
 	for rel, content := range files {
 		p := filepath.Join(root, rel)
@@ -357,8 +457,8 @@ func TestRefreshAll(t *testing.T) {
 		t.Fatal("expected resources discovered from repos")
 	}
 
-	// Every kind, including prompts (bug #1), should be represented.
-	for _, kind := range []string{"skill", "agent", "prompt", "plugin"} {
+	// Every kind, including instructions, should be represented.
+	for _, kind := range []string{"skill", "agent", "instruction", "plugin"} {
 		results, _ := s.Search(ctx, SearchQuery{Query: "", Kind: kind})
 		if len(results) == 0 {
 			t.Fatalf("expected %s results after refresh", kind)

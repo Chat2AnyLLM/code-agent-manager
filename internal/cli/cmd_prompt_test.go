@@ -11,21 +11,21 @@ import (
 
 // --- list ------------------------------------------------------------------
 
-func TestPromptListWhenEmpty(t *testing.T) {
+func TestInstructionListWhenEmpty(t *testing.T) {
 	isolatedHome(t)
-	stdout, _, code := execute(t, "prompt", "list")
+	stdout, _, code := execute(t, "instruction", "list")
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
-	if !strings.Contains(stdout, "No prompts installed across agents") {
+	if !strings.Contains(stdout, "No instructions installed across agents") {
 		t.Fatalf("missing empty state:\n%s", stdout)
 	}
 }
 
-func TestPromptListShowsInstalled(t *testing.T) {
+func TestInstructionListShowsInstalled(t *testing.T) {
 	home := isolatedHome(t)
-	installEntityToApp(t, home, entities.KindPrompt, "", "prompt content", "claude")
-	stdout, _, code := execute(t, "prompt", "list")
+	installEntityToApp(t, home, entities.KindInstruction, "", "instruction content", "claude")
+	stdout, _, code := execute(t, "instruction", "list")
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
@@ -36,11 +36,11 @@ func TestPromptListShowsInstalled(t *testing.T) {
 
 // --- search ----------------------------------------------------------------
 
-func TestPromptSearchFindsMatch(t *testing.T) {
+func TestInstructionSearchFindsMatch(t *testing.T) {
 	isolatedHome(t)
-	seedEntity(t, entities.KindPrompt, "greeting", "Hello", "A greeting prompt")
-	seedEntity(t, entities.KindPrompt, "farewell", "Bye", "A farewell prompt")
-	stdout, _, code := execute(t, "prompt", "search", "greeting", "--local")
+	seedEntity(t, entities.KindInstruction, "greeting", "Hello", "A greeting instruction")
+	seedEntity(t, entities.KindInstruction, "farewell", "Bye", "A farewell instruction")
+	stdout, _, code := execute(t, "instruction", "search", "greeting", "--local")
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
@@ -54,10 +54,10 @@ func TestPromptSearchFindsMatch(t *testing.T) {
 
 // --- install ---------------------------------------------------------------
 
-func TestPromptInstallWritesContentToAppPath(t *testing.T) {
+func TestInstructionInstallWritesContentToAppPath(t *testing.T) {
 	home := isolatedHome(t)
-	seedEntity(t, entities.KindPrompt, "demo", "prompt body", "")
-	stdout, _, code := execute(t, "prompt", "install", "demo", "--app", "claude")
+	seedEntity(t, entities.KindInstruction, "demo", "instruction body", "")
+	stdout, _, code := execute(t, "instruction", "install", "demo", "--app", "claude")
 	if code != 0 {
 		t.Fatalf("install exit = %d", code)
 	}
@@ -68,15 +68,15 @@ func TestPromptInstallWritesContentToAppPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected CLAUDE.md: %v", err)
 	}
-	if string(data) != "prompt body" {
+	if string(data) != "instruction body" {
 		t.Fatalf("content = %q", data)
 	}
 }
 
-func TestPromptInstallWithoutAppErrors(t *testing.T) {
+func TestInstructionInstallWithoutAppErrors(t *testing.T) {
 	isolatedHome(t)
-	seedEntity(t, entities.KindPrompt, "demo", "body", "")
-	_, stderr, code := execute(t, "prompt", "install", "demo")
+	seedEntity(t, entities.KindInstruction, "demo", "body", "")
+	_, stderr, code := execute(t, "instruction", "install", "demo")
 	if code == 0 {
 		t.Fatal("expected non-zero exit without --app")
 	}
@@ -85,15 +85,48 @@ func TestPromptInstallWithoutAppErrors(t *testing.T) {
 	}
 }
 
-// --- alias -----------------------------------------------------------------
+// --- deprecated prompt/p commands -----------------------------------------
 
-func TestPromptAliasP(t *testing.T) {
+func TestPromptCommandFailsWithRenameGuidance(t *testing.T) {
 	isolatedHome(t)
-	stdout, _, code := execute(t, "p", "list")
-	if code != 0 {
-		t.Fatalf("exit = %d", code)
+	_, stderr, code := execute(t, "prompt")
+	if code == 0 {
+		t.Fatal("expected non-zero exit for deprecated prompt command")
 	}
-	if !strings.Contains(stdout, "No prompts installed across agents") {
-		t.Fatalf("alias p output: %s", stdout)
+	if !strings.Contains(stderr, "renamed to cam instruction") {
+		t.Fatalf("stderr missing rename guidance: %s", stderr)
+	}
+}
+
+func TestPromptAliasPFailsWithRenameGuidance(t *testing.T) {
+	isolatedHome(t)
+	_, stderr, code := execute(t, "p")
+	if code == 0 {
+		t.Fatal("expected non-zero exit for deprecated p alias")
+	}
+	if !strings.Contains(stderr, "renamed to cam instruction") {
+		t.Fatalf("stderr missing rename guidance: %s", stderr)
+	}
+}
+
+func TestPromptSubcommandFailsWithRenameGuidance(t *testing.T) {
+	isolatedHome(t)
+	_, stderr, code := execute(t, "prompt", "list")
+	if code == 0 {
+		t.Fatal("expected non-zero exit for deprecated prompt subcommand")
+	}
+	if !strings.Contains(stderr, "renamed to cam instruction") {
+		t.Fatalf("stderr missing rename guidance: %s", stderr)
+	}
+}
+
+func TestPromptAliasPSubcommandFailsWithRenameGuidance(t *testing.T) {
+	isolatedHome(t)
+	_, stderr, code := execute(t, "p", "install", "demo")
+	if code == 0 {
+		t.Fatal("expected non-zero exit for deprecated p subcommand")
+	}
+	if !strings.Contains(stderr, "renamed to cam instruction") {
+		t.Fatalf("stderr missing rename guidance: %s", stderr)
 	}
 }

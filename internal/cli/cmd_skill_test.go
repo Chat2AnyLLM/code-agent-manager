@@ -34,7 +34,7 @@ func installEntityToApp(t *testing.T, home string, kind entities.Kind, name, con
 	}
 	resolved := os.ExpandEnv(strings.ReplaceAll(dest, "~", home))
 	switch kind {
-	case entities.KindPrompt:
+	case entities.KindPrompt, entities.KindInstruction:
 		if err := os.MkdirAll(filepath.Dir(resolved), 0o755); err != nil {
 			t.Fatal(err)
 		}

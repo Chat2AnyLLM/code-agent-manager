@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/chat2anyllm/code-agent-manager/internal/appapi"
 	"github.com/chat2anyllm/code-agent-manager/internal/doctor"
 	"github.com/chat2anyllm/code-agent-manager/internal/ui"
 )
@@ -28,7 +27,7 @@ func (a *App) doctorCommand(state *globalState) *cobra.Command {
 			printer := ui.New(out, cmd.ErrOrStderr())
 
 			// --- legacy summary header (preserves existing test assertions).
-			file, providersErr := appapi.ProviderAPI{ProvidersPath: state.providersPath}.File(context.Background())
+			file, providersErr := makeProviderAPI(state).File(context.Background())
 			if providersErr == nil {
 				names := file.SortedNames()
 				fmt.Fprintf(out, "Providers: %d\n", len(names))
@@ -56,7 +55,7 @@ func (a *App) doctorCommand(state *globalState) *cobra.Command {
 			// --- structured doctor checks (new in sub-project #1).
 			checks := []doctor.Check{
 				doctor.InstallationCheck{Version: a.version},
-				doctor.ConfigCheck{Path: state.providersPath},
+				doctor.ConfigCheck{Path: state.storePath},
 				doctor.EnvCheck{},
 				doctor.EndpointFormatCheck{File: file},
 				doctor.CacheCheck{},

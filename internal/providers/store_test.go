@@ -19,7 +19,7 @@ func TestLoadOrInitMissingReturnsSkeleton(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "providers.json")
 
-	file, created, err := providers.LoadOrInit(path)
+	file, created, err := loadOrInitLegacyFileForTest(path)
 	if err != nil {
 		t.Fatalf("LoadOrInit err = %v", err)
 	}
@@ -42,7 +42,7 @@ func TestLoadOrInitMissingReturnsSkeleton(t *testing.T) {
 
 func TestLoadOrInitExistingFile(t *testing.T) {
 	path := writeRawProviders(t, `{"endpoints":{"a":{"endpoint":"https://a.example"}}}`)
-	file, created, err := providers.LoadOrInit(path)
+	file, created, err := loadOrInitLegacyFileForTest(path)
 	if err != nil {
 		t.Fatalf("LoadOrInit err = %v", err)
 	}
@@ -56,7 +56,7 @@ func TestLoadOrInitExistingFile(t *testing.T) {
 
 func TestLoadOrInitMalformedJSON(t *testing.T) {
 	path := writeRawProviders(t, "not-json")
-	if _, _, err := providers.LoadOrInit(path); err == nil {
+	if _, _, err := loadOrInitLegacyFileForTest(path); err == nil {
 		t.Fatal("expected error on malformed JSON")
 	}
 }
@@ -75,11 +75,11 @@ func TestSaveRoundTrip(t *testing.T) {
 			},
 		},
 	}
-	if err := providers.Save(path, file); err != nil {
+	if err := saveLegacyFileForTest(path, file); err != nil {
 		t.Fatalf("Save err = %v", err)
 	}
 
-	got, err := providers.Load(path)
+	got, err := loadLegacyStoreFileForTest(path)
 	if err != nil {
 		t.Fatalf("Load err = %v", err)
 	}
@@ -94,7 +94,7 @@ func TestSaveCreatesParentDirAndSetsPerm(t *testing.T) {
 	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nested", "providers.json")
-	if err := providers.Save(path, providers.File{}); err != nil {
+	if err := saveLegacyFileForTest(path, providers.File{}); err != nil {
 		t.Fatalf("Save err = %v", err)
 	}
 	info, err := os.Stat(path)
@@ -116,7 +116,7 @@ func TestSaveCreatesParentDirAndSetsPerm(t *testing.T) {
 func TestSaveNilMapsBecomeEmpty(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "providers.json")
-	if err := providers.Save(path, providers.File{}); err != nil {
+	if err := saveLegacyFileForTest(path, providers.File{}); err != nil {
 		t.Fatalf("Save err = %v", err)
 	}
 	data, err := os.ReadFile(path)
@@ -317,10 +317,10 @@ func TestSaveThenLoadOrInitMatchesDiskFormat(t *testing.T) {
 			},
 		},
 	}
-	if err := providers.Save(path, file); err != nil {
+	if err := saveLegacyFileForTest(path, file); err != nil {
 		t.Fatal(err)
 	}
-	loaded, created, err := providers.LoadOrInit(path)
+	loaded, created, err := loadOrInitLegacyFileForTest(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,4 +343,57 @@ func writeRawProviders(t *testing.T, body string) string {
 		t.Fatal(err)
 	}
 	return path
+}
+
+func loadLegacyStoreFileForTest(path string) (providers.File, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return providers.File{}, err
+	}
+	var file providers.File
+	if err := json.Unmarshal(data, &file); err != nil {
+		return providers.File{}, err
+	}
+	if file.Common == nil {
+		file.Common = map[string]any{}
+	}
+	if file.Endpoints == nil {
+		file.Endpoints = map[string]providers.Endpoint{}
+	}
+	return file, nil
+}
+
+func loadOrInitLegacyFileForTest(path string) (providers.File, bool, error) {
+	if _, err := os.Stat(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return providers.File{Common: map[string]any{}, Endpoints: map[string]providers.Endpoint{}}, true, nil
+		}
+		return providers.File{}, false, err
+	}
+	file, err := loadLegacyStoreFileForTest(path)
+	if err != nil {
+		return providers.File{}, false, err
+	}
+	return file, false, nil
+}
+
+func saveLegacyFileForTest(path string, file providers.File) error {
+	if file.Common == nil {
+		file.Common = map[string]any{}
+	}
+	if file.Endpoints == nil {
+		file.Endpoints = map[string]providers.Endpoint{}
+	}
+	dir := filepath.Dir(path)
+	if dir != "" {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return err
+		}
+	}
+	data, err := json.MarshalIndent(file, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return os.WriteFile(path, data, 0o600)
 }

@@ -63,6 +63,7 @@ func (svc *Service) RefreshFromFiles(ctx context.Context, cfgDir string) (Refres
 	}{
 		{"skill_repos.json", "skill"},
 		{"agent_repos.json", "agent"},
+		{"instruction_repos.json", "instruction"},
 		{"plugin_repos.json", "plugin"},
 	}
 
@@ -115,7 +116,7 @@ func (svc *Service) RefreshFromFiles(ctx context.Context, cfgDir string) (Refres
 }
 
 // RefreshAll downloads every enabled repository for each kind (skill, agent,
-// prompt, plugin), discovers the individual resources inside each repo, and
+// instruction, plugin), discovers the individual resources inside each repo, and
 // indexes them into SQLite as cached metadata. Each resource — not each repo —
 // becomes one searchable/installable item, so the counts reflect real resources.
 //
@@ -139,7 +140,7 @@ func (svc *Service) RefreshAll(ctx context.Context) (RefreshSummary, error) {
 	}{
 		{"skill", entities.KindSkill},
 		{"agent", entities.KindAgent},
-		{"prompt", entities.KindPrompt},
+		{"instruction", entities.KindInstruction},
 		{"plugin", entities.KindPlugin},
 	}
 
@@ -318,6 +319,49 @@ func (svc *Service) Install(ctx context.Context, kind, installKey, targetApp str
 	return svc.InstallToTargets(ctx, kind, installKey, []string{targetApp})
 }
 
+// InstallInstructionToTargets installs an instruction item into multiple target
+// agents at the given install level. User-level installs use the app-specific
+// instruction file path; project-level installs require projectDir. Install
+// status is recorded per successful target.
+func (svc *Service) InstallInstructionToTargets(ctx context.Context, installKey string, targetApps []string, level entities.InstallLevel, projectDir string) error {
+	if len(targetApps) == 0 {
+		return fmt.Errorf("metadata: no target agents specified")
+	}
+	item, err := svc.store.GetItem(ctx, "instruction", installKey)
+	if err != nil {
+		return fmt.Errorf("metadata: item not found: %w", err)
+	}
+	content := svc.fetchResourceContent(item)
+	entity := entities.Entity{
+		Kind:        entities.KindInstruction,
+		Name:        item.Name,
+		Description: item.Description,
+		Content:     content,
+		Repo: &entities.RepoRef{
+			Owner:  item.RepoOwner,
+			Name:   item.RepoName,
+			Branch: item.RepoBranch,
+			Path:   item.ItemPath,
+		},
+	}
+	var installed []string
+	var lastErr error
+	for _, app := range targetApps {
+		if _, err := entities.InstallInstruction(entity, app, level, projectDir); err != nil {
+			lastErr = fmt.Errorf("metadata: install instruction to %s: %w", app, err)
+			continue
+		}
+		installed = append(installed, app)
+	}
+	if len(installed) == 0 {
+		return lastErr
+	}
+	if err := svc.store.MarkInstalled(ctx, "instruction", installKey, strings.Join(installed, ",")); err != nil {
+		return err
+	}
+	return lastErr
+}
+
 // InstallToTargets installs an item into multiple target agents in one call.
 // It downloads the source repo once, reads the resource content, then writes it
 // to each target. Install status is recorded per successful target.
@@ -368,7 +412,7 @@ func (svc *Service) InstallToTargets(ctx context.Context, kind, installKey strin
 // manifest content. Failures return an empty string so install still creates the
 // directory structure; the directory presence is what installed-status detection
 // keys on. ItemPath points at the resource directory (skills/plugins) or the
-// manifest file itself (agents/prompts) relative to the repo root.
+// manifest file itself (agents/instructions) relative to the repo root.
 func (svc *Service) fetchResourceContent(item Item) string {
 	content, _ := svc.fetchResourceManifest(item)
 	return content
@@ -415,6 +459,8 @@ func defaultManifest(kind string) string {
 		return "SKILL.md"
 	case "agent":
 		return "AGENT.md"
+	case "instruction":
+		return "INSTRUCTION.md"
 	case "plugin":
 		return "plugin.json"
 	}
@@ -545,6 +591,8 @@ func entryPath(e repoEntry, kind string) string {
 		return e.SkillsPath
 	case "agent":
 		return e.AgentsPath
+	case "instruction":
+		return e.AgentsPath
 	case "plugin":
 		return e.PluginPath
 	}
@@ -557,6 +605,8 @@ func defaultTargetApps(kind string) []string {
 		return []string{"claude", "codex", "gemini", "copilot"}
 	case "agent":
 		return []string{"claude", "codex", "gemini", "copilot"}
+	case "instruction":
+		return []string{"claude", "codex", "gemini", "copilot", "codebuddy", "opencode", "cursor", "windsurf", "amp", "roo"}
 	case "plugin":
 		return []string{"claude", "codebuddy"}
 	}

@@ -71,17 +71,16 @@ func (a *App) rootCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "cam",
 		Short: "Code Assistant Manager",
-		Long: "Code Assistant Manager (CAM) manages AI coding assistant configuration, prompts, " +
+		Long: "Code Assistant Manager (CAM) manages AI coding assistant configuration, instructions, " +
 			"skills, plugins, MCP servers, and launch commands.\n\n" +
-			"Aliases: launch/l, doctor/d, agent/ag, prompt/p, skill/s, plugin/pl, mcp/m, " +
+			"Aliases: launch/l, doctor/d, agent/ag, instruction, skill/s, plugin/pl, mcp/m, " +
 			"provider/pr, upgrade/u, install/i, uninstall/un, config/cf, completion/comp/c, version/v.",
 		Version: a.version,
 	}
 	root.SetVersionTemplate("{{.Version}}\n")
 
 	root.PersistentFlags().StringVar(&state.configPath, "config", "", "Path to CAM config.yaml")
-	root.PersistentFlags().StringVar(&state.providersPath, "providers", "", "Path to providers.json")
-	root.PersistentFlags().StringVar(&state.storePath, "store", "", "Path to command state store")
+	root.PersistentFlags().StringVar(&state.storePath, "store", "", "Path to SQLite state store (default: ~/.config/code-agent-manager/cam.db)")
 	root.PersistentFlags().StringVar(&state.endpoints, "endpoints", "",
 		"Print endpoint information for all tools or a specific tool")
 	root.PersistentFlags().BoolVarP(&state.debug, "debug", "d", false,
@@ -99,7 +98,9 @@ func (a *App) rootCommand() *cobra.Command {
 	root.AddCommand(a.configCommand(state))
 	root.AddCommand(a.providerCommand(state))
 	root.AddCommand(a.managementCommand("agent", "ag", state))
-	root.AddCommand(a.managementCommand("prompt", "p", state))
+	root.AddCommand(a.managementCommand("instruction", "", state))
+	root.AddCommand(a.deprecatedPromptCommand("prompt"))
+	root.AddCommand(a.deprecatedPromptCommand("p"))
 	root.AddCommand(a.managementCommand("skill", "s", state))
 	root.AddCommand(a.managementCommand("plugin", "pl", state))
 	root.AddCommand(a.mcpCommand(state))
@@ -109,4 +110,22 @@ func (a *App) rootCommand() *cobra.Command {
 	root.AddCommand(a.lifecycleCommand("install", "i"))
 	root.AddCommand(a.lifecycleCommand("uninstall", "un"))
 	return root
+}
+
+func (a *App) deprecatedPromptCommand(name string) *cobra.Command {
+	msg := "cam prompt was renamed to cam instruction. Use cam instruction --help."
+	cmd := &cobra.Command{
+		Use:   name,
+		Short: msg,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return errors.New(msg)
+		},
+	}
+	cmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+		return errors.New(msg)
+	})
+	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	return cmd
 }

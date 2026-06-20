@@ -1,18 +1,9 @@
-// Package providers — write layer.
-//
-// store.go adds the mutation primitives (LoadOrInit, Save, Add, Update,
-// Remove, Rename, SetEnabled) used by the `cam provider` CLI subcommands.
-// The functions are intentionally pure: callers pass in an explicit path
-// (or use providers.DiscoverPath) so the package never reaches into the
-// filesystem on its own behalf.
+// Package providers mutation helpers for in-memory provider data.
 package providers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -51,86 +42,6 @@ type Patch struct {
 	Enabled         *bool
 	Clients         *ListPatch
 	Models          *ListPatch
-}
-
-// LoadOrInit returns the parsed providers.json at path. If the file does
-// not exist, an empty File{Common:{}, Endpoints:{}} is returned with
-// created=true so the caller can report "creating new file" semantics on
-// the first save. Malformed JSON surfaces a descriptive error.
-func LoadOrInit(path string) (File, bool, error) {
-	if path == "" {
-		path = DefaultPath()
-	}
-	if _, err := os.Stat(path); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return File{
-				Common:    map[string]any{},
-				Endpoints: map[string]Endpoint{},
-			}, true, nil
-		}
-		return File{}, false, fmt.Errorf("providers: stat %s: %w", path, err)
-	}
-	file, err := Load(path)
-	if err != nil {
-		return File{}, false, err
-	}
-	if file.Common == nil {
-		file.Common = map[string]any{}
-	}
-	if file.Endpoints == nil {
-		file.Endpoints = map[string]Endpoint{}
-	}
-	return file, false, nil
-}
-
-// Save writes file to path atomically with mode 0o600 and 2-space JSON
-// indentation. The parent directory is created with 0o700 if missing.
-func Save(path string, file File) error {
-	if path == "" {
-		path = DefaultPath()
-	}
-	if file.Common == nil {
-		file.Common = map[string]any{}
-	}
-	if file.Endpoints == nil {
-		file.Endpoints = map[string]Endpoint{}
-	}
-	dir := filepath.Dir(path)
-	if dir != "" {
-		if err := os.MkdirAll(dir, 0o700); err != nil {
-			return fmt.Errorf("providers: mkdir %s: %w", dir, err)
-		}
-	}
-	data, err := json.MarshalIndent(file, "", "  ")
-	if err != nil {
-		return fmt.Errorf("providers: marshal: %w", err)
-	}
-	data = append(data, '\n')
-	tmp, err := os.CreateTemp(dir, ".providers-*.json.tmp")
-	if err != nil {
-		return fmt.Errorf("providers: temp file: %w", err)
-	}
-	tmpPath := tmp.Name()
-	cleanup := func() { _ = os.Remove(tmpPath) }
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		cleanup()
-		return fmt.Errorf("providers: write temp: %w", err)
-	}
-	if err := tmp.Chmod(0o600); err != nil {
-		_ = tmp.Close()
-		cleanup()
-		return fmt.Errorf("providers: chmod temp: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		cleanup()
-		return fmt.Errorf("providers: close temp: %w", err)
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		cleanup()
-		return fmt.Errorf("providers: rename %s -> %s: %w", tmpPath, path, err)
-	}
-	return nil
 }
 
 // Add inserts ep under name. Returns ErrAlreadyExists if name is already

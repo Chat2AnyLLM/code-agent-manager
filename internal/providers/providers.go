@@ -1,21 +1,12 @@
-// Package providers loads and queries providers.json, the file that holds the
-// CAM endpoint catalog.
-//
-// Endpoints describe a remote LLM provider (URL, API key environment variable,
-// available models, the list of clients it supports).  CAM consumes these
-// records when launching tools, running doctor, and showing the --endpoints
-// summary.
+// Package providers contains provider data structures and helper functions
+// shared by CAM's SQLite-backed provider store, launch flows, and doctor
+// checks. Legacy providers.json migration lives elsewhere; production code
+// should not treat JSON files as the active provider store.
 package providers
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/chat2anyllm/code-agent-manager/internal/pathutil"
 )
 
 // File mirrors the top-level structure of providers.json.
@@ -46,56 +37,6 @@ type Endpoint struct {
 	UseProxy        bool     `json:"use_proxy"`
 	Enabled         *bool    `json:"enabled,omitempty"`
 	Description     string   `json:"description"`
-}
-
-// DefaultPath returns the canonical providers.json location under CAM's config
-// directory.
-func DefaultPath() string {
-	return filepath.Join(pathutil.ConfigDir(), "providers.json")
-}
-
-// DiscoverPath returns the first providers.json that exists across the
-// canonical search locations.  It mirrors Python's discovery chain: the user's
-// config directory, the current working directory, and the user's home.
-func DiscoverPath() string {
-	for _, candidate := range []string{
-		DefaultPath(),
-		filepath.Join(mustGetwd(), "providers.json"),
-		filepath.Join(pathutil.Home(), "providers.json"),
-	} {
-		if pathutil.Exists(candidate) {
-			return candidate
-		}
-	}
-	return DefaultPath()
-}
-
-func mustGetwd() string {
-	if dir, err := os.Getwd(); err == nil {
-		return dir
-	}
-	return "."
-}
-
-// Load returns the parsed providers.json at path.  When path is empty the
-// discovery chain is used.  Missing files surface os.ErrNotExist; malformed
-// JSON surfaces a descriptive error.
-func Load(path string) (File, error) {
-	if path == "" {
-		path = DiscoverPath()
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return File{}, fmt.Errorf("providers: read %s: %w", path, err)
-	}
-	var file File
-	if err := json.Unmarshal(data, &file); err != nil {
-		return File{}, fmt.Errorf("providers: parse %s: %w", path, err)
-	}
-	if file.Endpoints == nil {
-		file.Endpoints = map[string]Endpoint{}
-	}
-	return file, nil
 }
 
 // SortedNames returns the endpoint names sorted for deterministic output.

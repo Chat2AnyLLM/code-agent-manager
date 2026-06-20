@@ -70,25 +70,22 @@ type ProviderPatch struct {
 
 // ProviderAPI contains provider workflows shared by CLI and desktop adapters.
 type ProviderAPI struct {
-	ProvidersPath string
-	DBPath        string
-	CacheTTL      time.Duration
-	Env           func(string) string
+	DBPath   string
+	CacheTTL time.Duration
+	Env      func(string) string
 }
 
-func (api ProviderAPI) path() string {
-	if api.ProvidersPath != "" {
-		return api.ProvidersPath
+func deleteProvidersJSON() {
+	if p := filepath.Join(pathutil.ConfigDir(), "providers.json"); p != "" {
+		if _, err := os.Stat(p); err == nil {
+			_ = os.Remove(p)
+		}
 	}
-	return providers.DefaultPath()
 }
 
 func (api ProviderAPI) dbPath() string {
 	if api.DBPath != "" {
 		return api.DBPath
-	}
-	if api.ProvidersPath != "" {
-		return api.ProvidersPath + ".db"
 	}
 	return appstate.DefaultPath()
 }
@@ -111,30 +108,38 @@ func (api ProviderAPI) cacheTTL() time.Duration {
 	return time.Hour
 }
 
-// Init creates the SQLite app state database and imports providers.json when present.
+func (api ProviderAPI) prepareProviderOperation() error {
+	deleteProvidersJSON()
+	return nil
+}
+
+func (api ProviderAPI) listProvidersFile(ctx context.Context) (providers.File, error) {
+	if err := api.prepareProviderOperation(); err != nil {
+		return providers.File{}, err
+	}
+	return api.store().ListProviders(ctx)
+}
+
+// Init creates the SQLite app state database and deletes the legacy providers.json.
 func (api ProviderAPI) Init(ctx context.Context) (OperationResult, error) {
-	store := api.store()
-	if err := store.Init(ctx); err != nil {
+	if err := api.prepareProviderOperation(); err != nil {
 		return OperationResult{}, err
 	}
-	if err := store.ImportProvidersJSON(ctx, api.path()); err != nil {
+	store := api.store()
+	if err := store.Init(ctx); err != nil {
 		return OperationResult{}, err
 	}
 	return OperationResult{OK: true, Message: fmt.Sprintf("SQLite app state ready at %s", store.Path()), Path: store.Path()}, nil
 }
 
-// File returns providers in legacy providers.File shape for adapters that still need existing helpers.
+// File returns providers in providers.File shape for adapters that still need existing helpers.
 func (api ProviderAPI) File(ctx context.Context) (providers.File, error) {
-	store := api.store()
-	if err := store.ImportProvidersJSON(ctx, api.path()); err != nil {
-		return providers.File{}, err
-	}
-	return store.ListProviders(ctx)
+	return api.listProvidersFile(ctx)
 }
 
 // List returns all configured providers.
 func (api ProviderAPI) List(ctx context.Context) ([]Provider, error) {
-	file, err := api.File(ctx)
+	file, err := api.listProvidersFile(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +152,7 @@ func (api ProviderAPI) List(ctx context.Context) ([]Provider, error) {
 
 // Show returns one provider by name.
 func (api ProviderAPI) Show(ctx context.Context, name string) (Provider, error) {
-	store := api.store()
-	if err := store.ImportProvidersJSON(ctx, api.path()); err != nil {
-		return Provider{}, err
-	}
-	file, err := store.ListProviders(ctx)
+	file, err := api.listProvidersFile(ctx)
 	if err != nil {
 		return Provider{}, err
 	}
@@ -164,6 +165,9 @@ func (api ProviderAPI) Show(ctx context.Context, name string) (Provider, error) 
 
 // Add inserts a new provider.
 func (api ProviderAPI) Add(ctx context.Context, input ProviderInput) (Provider, error) {
+	if err := api.prepareProviderOperation(); err != nil {
+		return Provider{}, err
+	}
 	endpoint := endpointFromInput(input)
 	if err := api.store().AddProvider(ctx, input.Name, endpoint); err != nil {
 		return Provider{}, err
@@ -173,6 +177,9 @@ func (api ProviderAPI) Add(ctx context.Context, input ProviderInput) (Provider, 
 
 // Update applies a sparse provider patch.
 func (api ProviderAPI) Update(ctx context.Context, name string, patch ProviderPatch) (Provider, error) {
+	if err := api.prepareProviderOperation(); err != nil {
+		return Provider{}, err
+	}
 	providerPatch := providers.Patch{
 		Endpoint:        patch.Endpoint,
 		APIKey:          patch.APIKey,
@@ -201,6 +208,9 @@ func (api ProviderAPI) Update(ctx context.Context, name string, patch ProviderPa
 
 // Remove deletes a provider.
 func (api ProviderAPI) Remove(ctx context.Context, name string) (OperationResult, error) {
+	if err := api.prepareProviderOperation(); err != nil {
+		return OperationResult{}, err
+	}
 	if !api.store().RemoveProvider(ctx, name) {
 		return OperationResult{}, fmt.Errorf("provider %q not found: %w", name, providers.ErrNotFound)
 	}
@@ -209,6 +219,9 @@ func (api ProviderAPI) Remove(ctx context.Context, name string) (OperationResult
 
 // SetEnabled toggles a provider's enabled state.
 func (api ProviderAPI) SetEnabled(ctx context.Context, name string, enabled bool) (Provider, error) {
+	if err := api.prepareProviderOperation(); err != nil {
+		return Provider{}, err
+	}
 	store := api.store()
 	if err := store.SetProviderEnabled(ctx, name, enabled); err != nil {
 		return Provider{}, err
@@ -222,6 +235,9 @@ func (api ProviderAPI) SetEnabled(ctx context.Context, name string, enabled bool
 
 // Rename changes a provider key.
 func (api ProviderAPI) Rename(ctx context.Context, oldName, newName string) (Provider, error) {
+	if err := api.prepareProviderOperation(); err != nil {
+		return Provider{}, err
+	}
 	store := api.store()
 	if err := store.RenameProvider(ctx, oldName, newName); err != nil {
 		return Provider{}, err
@@ -235,11 +251,7 @@ func (api ProviderAPI) Rename(ctx context.Context, oldName, newName string) (Pro
 
 // ResolveModels resolves static or dynamically discovered models for a provider.
 func (api ProviderAPI) ResolveModels(ctx context.Context, name string) ([]string, error) {
-	store := api.store()
-	if err := store.ImportProvidersJSON(ctx, api.path()); err != nil {
-		return nil, err
-	}
-	file, err := store.ListProviders(ctx)
+	file, err := api.listProvidersFile(ctx)
 	if err != nil {
 		return nil, err
 	}

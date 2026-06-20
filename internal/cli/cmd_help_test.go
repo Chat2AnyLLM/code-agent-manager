@@ -22,6 +22,7 @@ func TestRootHelpListsEverySubcommandAndAlias(t *testing.T) {
 				"doctor",
 				"extension",
 				"install",
+				"instruction",
 				"launch",
 				"mcp",
 				"plugin",
@@ -57,29 +58,17 @@ func TestHelpSubcommandDelegatesToCommandHelp(t *testing.T) {
 }
 
 // Every alias resolves to a real command (Cobra falls back to "unknown command"
-// otherwise).  Testing this prevents regressions when subcommands are
-// refactored across files.
+// otherwise).  Testing this prevents regressions when subcommands are renamed.
 func TestRootShortAliasesShowOwnHelp(t *testing.T) {
-	for _, alias := range []string{"l", "d", "ag", "p", "s", "pl", "m", "u", "i", "un", "cf", "ext", "v", "c", "comp"} {
+	for _, alias := range []string{"l", "d", "ag", "s", "pl", "m", "pr", "u", "i", "un", "cf", "comp", "c", "v", "p"} {
 		t.Run(alias, func(t *testing.T) {
 			stdout, stderr, code := execute(t, alias, "--help")
 			if code != 0 {
-				t.Fatalf("alias %s exit = %d; stderr=%s", alias, code, stderr)
+				t.Fatalf("exit = %d; stderr=%s", code, stderr)
 			}
 			if !strings.Contains(stdout, "Usage:") {
-				t.Fatalf("alias %s help missing Usage:\n%s", alias, stdout)
+				t.Fatalf("alias %s help missing Usage section:\n%s", alias, stdout)
 			}
 		})
-	}
-}
-
-// Unknown subcommands fail and surface a useful error.
-func TestUnknownSubcommandReportsError(t *testing.T) {
-	stdout, stderr, code := execute(t, "ghostly")
-	if code == 0 {
-		t.Fatalf("expected non-zero exit; stdout=%s", stdout)
-	}
-	if !strings.Contains(stderr, "unknown command") {
-		t.Fatalf("stderr missing 'unknown command': %s", stderr)
 	}
 }

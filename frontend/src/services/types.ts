@@ -61,7 +61,7 @@ export type MCPRegistryItem = {
 }
 
 export type Entity = {
-  kind: 'prompt' | 'skill' | 'agent' | 'plugin'
+  kind: 'instruction' | 'skill' | 'agent' | 'plugin'
   name: string
   description?: string
   content?: string
@@ -120,6 +120,7 @@ export type MetadataItem = {
   repo_owner: string
   repo_name: string
   repo_branch: string
+  item_path?: string
   target_apps: string
   installed_apps?: string[]
   installed: boolean

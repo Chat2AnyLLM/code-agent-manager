@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/chat2anyllm/code-agent-manager/internal/appapi"
 	"github.com/chat2anyllm/code-agent-manager/internal/providers"
 	"github.com/chat2anyllm/code-agent-manager/internal/tools"
 )
@@ -38,7 +37,7 @@ func (a *App) applyCommand(state *globalState) *cobra.Command {
 				positionalTool = args[0]
 			}
 
-			// Validate the positional tool name BEFORE touching providers.json
+			// Validate the positional tool name BEFORE touching providers
 			// so an unknown name surfaces the right error even when no
 			// providers config exists.
 			pinned := launchSelection{
@@ -53,7 +52,7 @@ func (a *App) applyCommand(state *globalState) *cobra.Command {
 				pinned.Tool = tool
 			}
 
-			file, perr := appapi.ProviderAPI{ProvidersPath: state.providersPath}.File(context.Background())
+			file, perr := makeProviderAPI(state).File(context.Background())
 			if perr != nil {
 				return perr
 			}

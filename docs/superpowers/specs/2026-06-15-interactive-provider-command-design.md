@@ -8,7 +8,7 @@
 
 Add an interactive mode to every mutating `cam provider` subcommand
 (`add`, `update`, `remove`, `enable`, `disable`, `rename`) so users can
-manage `providers.json` without memorising flags, while keeping every
+manage provider records without memorising flags, while keeping every
 existing flag-based invocation byte-for-byte compatible for scripting
 and CI use.
 
@@ -396,7 +396,7 @@ and `wizardResult`.
 
 - Every existing flag-driven invocation behaves identically.
 - No flag is renamed, removed, or has its meaning changed.
-- `providers.json` on-disk format is unchanged.
+- Provider persistence is SQLite-backed in current builds; the JSON notes here are historical.
 - `providers.Endpoint`, `Patch`, `LoadOrInit`, `Save`, `Add`,
   `Update`, `Remove`, `Rename`, `SetEnabled` are unchanged.
 - The existing inline confirmation prompt in `providerRemoveCommand`

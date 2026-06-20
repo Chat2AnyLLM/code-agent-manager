@@ -46,7 +46,7 @@ func (a *App) configListCommand(state *globalState) *cobra.Command {
 			out := cmd.OutOrStdout()
 			fmt.Fprintln(out, "CAM configuration:")
 			for _, p := range []string{
-				filepath.Join(pathutil.ConfigDir(), "providers.json"),
+				filepath.Join(pathutil.ConfigDir(), "cam.db"),
 				filepath.Join(pathutil.ConfigDir(), "config.yaml"),
 				filepath.Join(pathutil.Home(), ".env"),
 			} {

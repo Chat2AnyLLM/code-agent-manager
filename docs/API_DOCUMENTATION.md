@@ -57,7 +57,7 @@ Used for command-line argument parsing.
 ### Classes
 
 #### `ConfigManager`
-Manages providers.json file parsing and endpoint configuration.
+Manages SQLite-era provider configuration state for Python callers. Active runtime code does not load `providers.json`.
 
 **Constructor:**
 ```python
@@ -65,12 +65,12 @@ ConfigManager(config_path: Optional[str] = None)
 ```
 
 **Parameters:**
-- `config_path` (str, optional): Path to providers.json. If None, looks for it in standard locations.
+- `config_path` (str, optional): Deprecated legacy `providers.json` path. Passing it raises `ValueError` because providers are stored in SQLite.
 
 **Methods:**
 
 ##### `reload()`
-Reload configuration from file.
+Reset the empty in-memory configuration view.
 
 **Parameters:**
 - None

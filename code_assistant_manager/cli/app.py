@@ -1165,7 +1165,7 @@ def launch(ctx: Context):
         _get_logger().debug(f"Using config path: {config_path}")
 
         try:
-            config = ConfigManager(config_path)
+            config = ConfigManager()
             is_valid, errors = config.validate_config()
             if not is_valid:
                 _get_logger().error(f"Configuration validation errors: {errors}")
@@ -1248,7 +1248,7 @@ def _create_lazy_tool_command(tool_name: str):
 
         # Initialize config
         try:
-            config_obj = ConfigManager(config_path)
+            config_obj = ConfigManager()
             # Validate configuration
             is_valid, errors = config_obj.validate_config()
             if not is_valid:
@@ -1378,7 +1378,7 @@ def create_editor_subcommands():
 
             # Initialize config
             try:
-                config_obj = ConfigManager(config_path)
+                config_obj = ConfigManager()
                 # Validate configuration
                 is_valid, errors = config_obj.validate_config()
                 if not is_valid:
@@ -1520,7 +1520,7 @@ def doctor(
 
     # Initialize config
     try:
-        config = ConfigManager(config_path)
+        config = ConfigManager()
         # Load environment variables from .env file
         config.load_env_file()
         # Validate configuration
@@ -1585,7 +1585,7 @@ def upgrade_command(
 
     # Initialize config
     try:
-        config = ConfigManager(config_path)
+        config = ConfigManager()
         # Validate configuration
         is_valid, errors = config.validate_config()
         if not is_valid:
@@ -1769,7 +1769,7 @@ def validate_config(
     from code_assistant_manager.menu.base import Colors
 
     try:
-        cm = ConfigManager(config)
+        cm = ConfigManager()
         typer.echo(
             f"{Colors.GREEN}✓ Configuration file loaded successfully{Colors.RESET}"
         )
@@ -1814,9 +1814,8 @@ def list_config():
     typer.echo(f"{Colors.CYAN}Code Assistant Manager (CAM):{Colors.RESET}")
     home = Path.home()
     cam_config_locations = [
-        home / ".config" / "code-agent-manager" / "providers.json",
-        Path.cwd() / "providers.json",
-        home / "providers.json",
+        home / ".config" / "code-agent-manager" / "config.yaml",
+        home / ".config" / "code-agent-manager" / "app-state.db",
     ]
     for path in cam_config_locations:
         status = f"{Colors.GREEN}✓{Colors.RESET}" if path.exists() else " "

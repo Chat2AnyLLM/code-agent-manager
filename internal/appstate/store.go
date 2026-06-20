@@ -76,40 +76,12 @@ func migrate(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-// ImportProvidersJSON performs a one-time migration of providers from a legacy
-// providers.json file into the SQLite store, and only when the providers table
-// is still empty.
-//
-// Deprecated: providers.json is no longer the source of truth — the SQLite
-// database is. This import remains solely to migrate existing users off the
-// legacy file; new providers are created and persisted directly in SQLite via
-// the provider CLI/desktop commands. Once a provider exists in the database the
-// JSON file is ignored entirely.
+// ImportProvidersJSON is a no-op. Providers were historically migrated from a
+// legacy providers.json file into the SQLite store. That migration is complete
+// — the SQLite database is the sole source of truth.
 func (s Store) ImportProvidersJSON(ctx context.Context, path string) error {
-	if path == "" || !pathutil.Exists(path) {
-		return nil
-	}
-	if err := s.Init(ctx); err != nil {
-		return err
-	}
-	if providers, err := s.ListProviders(ctx); err != nil {
-		return err
-	} else if len(providers.Endpoints) > 0 {
-		return nil
-	}
-	file, err := providerspkgLoad(path)
-	if err != nil {
-		return err
-	}
-	for _, name := range file.SortedNames() {
-		if err := s.AddProvider(ctx, name, file.Endpoints[name]); err != nil {
-			return err
-		}
-	}
 	return nil
 }
-
-func providerspkgLoad(path string) (providers.File, error) { return providers.Load(path) }
 
 // ListProviders returns all providers in providers.File shape for compatibility.
 func (s Store) ListProviders(ctx context.Context) (providers.File, error) {

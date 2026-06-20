@@ -84,7 +84,7 @@ export function Providers() {
     ) },
   ]
 
-  return <Page title="Providers" description="Manage providers.json entries, models, API key env vars, and enablement.">
+  return <Page title="Providers" description="Manage SQLite-backed provider entries, models, API key env vars, and enablement.">
     <section className="card"><h2>Add Provider</h2>
       <div className="inline-form">
         <input aria-label="Provider name" placeholder="name" value={name} onChange={(event) => setName(event.target.value)} />

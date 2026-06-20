@@ -93,13 +93,7 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
     if found_env and found_env not in env_file_paths:
         env_file_paths.insert(0, Path(found_env))
 
-    config_file_paths = [
-        Path.home() / ".config" / "code-agent-manager" / "providers.json",
-        Path.cwd() / "providers.json",
-        Path.home() / "providers.json",
-    ]
     env_found = False
-    config_found = False
 
     # Check for .env files
     for env_path in env_file_paths:
@@ -120,32 +114,15 @@ def run_doctor_checks(config, verbose: bool = False) -> int:
         except Exception as e:
             logger.debug(f"Error while checking env file {env_path}: {e}")
 
-    # Check for providers.json files
-    for config_path in config_file_paths:
-        if config_path.exists():
-            config_found = True
-            check_passed(f"Providers config file found: {config_path}")
-            # Check permissions
-            perms = oct(config_path.stat().st_mode)[-3:]
-            if perms in ["600", "400"]:
-                check_passed("Providers config file has secure permissions")
-            else:
-                check_warning(
-                    f"Providers config file permissions: {perms}",
-                    "Consider setting permissions to 600 for security",
-                )
-            break
 
     if not env_found:
         check_warning(
             "No .env file found", "Create a .env file for sensitive configuration"
         )
 
-    if not config_found:
-        check_warning(
-            "No providers.json file found",
-            "Create a providers.json file for configuration",
-        )
+    check_passed(
+        "Provider configuration is managed via the SQLite provider store and provider commands"
+    )
 
     # 5. Tool Installation Check
 

@@ -7,7 +7,7 @@
 
 **One CLI to Rule Them All.**
 <br>
-Tired of juggling multiple AI coding assistants? **CAM** is a unified Go CLI to manage configurations, prompts, skills, plugins, MCP servers, and launch settings for **17 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, Blackbox, Goose, Continue, and more from a single terminal interface.
+Tired of juggling multiple AI coding assistants? **CAM** is a unified Go CLI to manage configurations, instructions, skills, plugins, MCP servers, and launch settings for **17 AI assistants** including Claude, Codex, Gemini, Qwen, Copilot, Blackbox, Goose, Continue, and more from a single terminal interface.
 
 </div>
 
@@ -65,7 +65,6 @@ go build -o dist/cam ./cmd/cam
 1. **Create your base config files**:
    ```bash
    mkdir -p ~/.config/code-agent-manager
-   cp providers.json.example ~/.config/code-agent-manager/providers.json
    touch ~/.env
    chmod 600 ~/.env
    ```
@@ -158,15 +157,15 @@ make clean   # remove generated build outputs
 
 CAM uses these main configuration files:
 
-- `~/.config/code-agent-manager/providers.json`: endpoint/provider settings used by `cam`.
+- `~/.config/code-agent-manager/cam.db`: SQLite app state database that stores providers and other state.
 - `~/.env`: API keys and sensitive environment variables.
-- `~/.config/code-agent-manager/config.yaml`: repository-source config for skills, agents, and plugins.
+- `~/.config/code-agent-manager/config.yaml`: repository-source config for instructions, skills, agents, and plugins.
 
-### How `config.yaml` is used for skill/agent/plugin repos
+### How `config.yaml` is used for instruction/skill/agent/plugin repos
 
 - CAM loads `~/.config/code-agent-manager/config.yaml` first; if missing, it falls back to bundled `code_assistant_manager/config.yaml`.
-- The file defines source lists for `skills`, `agents`, and `plugins`.
-- Local JSON sources (`skill_repos.json`, `agent_repos.json`, `plugin_repos.json`) are loaded first.
+- The file defines source lists for `instructions`, `skills`, `agents`, and `plugins`.
+- Local JSON sources (`instruction_repos.json`, `skill_repos.json`, `agent_repos.json`, `plugin_repos.json`) are loaded first.
 - Remote sources are merged after local sources and do not override existing local keys.
 - Remote responses are cached in `~/.cache/code-agent-manager/repos` (TTL controlled by `config.yaml`).
 
@@ -189,10 +188,10 @@ CAM solves this by providing a single, consistent interface to manage everything
 ### Core Capabilities
 
 - **Unified Management:** One tool (`cam`) to install, configure, and run all your AI assistants
-- **Centralized Configuration:** Manage all API keys and endpoint settings from a single `providers.json` file with environment variables in `.env`
+- **Centralized Configuration:** Manage API keys with environment variables in `.env` and persist provider settings in CAM's SQLite app state
 - **Interactive TUI:** A polished, interactive menu (`cam launch`) for easy navigation and operation with arrow-key navigation
 - **MCP Registry:** Built-in registry with **381 pre-configured MCP servers** ready to install across all supported tools
-- **Extensible Framework:** Standardized architecture for managing agents, prompts, skills, and plugins
+- **Extensible Framework:** Standardized architecture for managing agents, instructions, skills, and plugins
 
 ### Supported AI Assistants
 
@@ -220,13 +219,13 @@ CAM supports **17 AI coding assistants**:
 
 ---
 
-## Agents, Prompts & Skills
+## Agents, Instructions & Skills
 
 ### Agents
 Manage standalone assistant configurations with markdown-based definitions and YAML front matter.
 
-### Prompts
-Reusable system prompts with fancy name generation synced across assistants at user or project scope.
+### Instructions
+Managed coding-agent instruction files such as CLAUDE.md, AGENTS.md, GEMINI.md, and Copilot instruction files, installable at user or project scope where supported.
 
 ### Skills
 Custom tools and functionalities for your agents (directory-based with SKILL.md).
@@ -243,7 +242,7 @@ Marketplace extensions for supported assistants (GitHub repos or local paths).
 | `cam launch [TOOL]` | `l` | Launch interactive TUI or a specific assistant |
 | `cam doctor` | `d` | Run diagnostic checks on environment and API keys |
 | `cam agent` | `ag` | Manage agent configurations (list, install, fetch from repos) |
-| `cam prompt` | `p` | Manage and sync system prompts across assistants |
+| `cam instruction` | — | Manage and sync coding-agent instruction files across assistants |
 | `cam skill` | `s` | Install and manage skill collections |
 | `cam plugin` | `pl` | Manage marketplace extensions (plugins) |
 | `cam mcp` | `m` | Manage MCP servers (add, remove, list, install) |

@@ -236,7 +236,7 @@ func runProviderWizard(
 - All existing flag-based invocations behave identically
 - Non-TTY callers (scripts, CI) see clear error messages directing them to flags
 - The `--yes` flag on `remove` is unaffected
-- `providers.json` format is unchanged
+- Provider records are now persisted in SQLite app state; this note is historical
 - No new dependencies (Bubble Tea is already imported)
 
 ## Not In Scope

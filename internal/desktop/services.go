@@ -12,15 +12,15 @@ type Services struct {
 	Launch    *LaunchService
 }
 
-func NewServices(version, providersPath string) Services {
+func NewServices(version, dbPath string) Services {
 	return Services{
 		App:       NewAppService(version),
-		Providers: NewProviderService(providersPath),
+		Providers: NewProviderService(dbPath),
 		MCP:       NewMCPService(),
 		Entities:  NewEntityService(),
 		Tools:     NewToolService(),
-		Doctor:    NewDoctorService(version, providersPath),
+		Doctor:    NewDoctorService(version, dbPath),
 		Config:    NewConfigService(),
-		Launch:    NewLaunchService(providersPath),
+		Launch:    NewLaunchService(dbPath),
 	}
 }

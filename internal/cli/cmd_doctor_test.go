@@ -1,8 +1,6 @@
 package cli_test
 
 import (
-	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,28 +8,15 @@ import (
 
 // `cam doctor` always runs to completion (exit 0) and prints both the legacy
 // "Providers: N" summary block and the new per-section structured checks.
-// We seed a providers.json and an env var so the summary picks them up.
+// We seed providers via the SQLite store and an env var so the summary picks them up.
 func TestDoctorPrintsProviderSummaryAndAllSections(t *testing.T) {
 	home := isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := map[string]any{
-		"endpoints": map[string]any{
-			"test-endpoint": map[string]any{
-				"endpoint":         "https://example.com/v1",
-				"api_key_env":      "CAM_DOCTOR_KEY",
-				"list_of_models":   []string{"model-a"},
-				"supported_client": "claude,codex",
-			},
-		},
-	}
-	data, _ := json.Marshal(payload)
-	if err := os.WriteFile(providersFile, data, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "test-endpoint", "https://example.com/v1", "claude,codex", "model-a", "CAM_DOCTOR_KEY")
 	t.Setenv("CAM_DOCTOR_KEY", "secret")
 	_ = home // ensure HOME is honored when doctor walks ~/.env etc
 
-	stdout, stderr, code := execute(t, "--providers", providersFile, "doctor")
+	stdout, stderr, code := execute(t, "--store", storePath, "doctor")
 	if code != 0 {
 		t.Fatalf("doctor exit = %d; stderr=%s", code, stderr)
 	}
@@ -58,12 +43,9 @@ func TestDoctorPrintsProviderSummaryAndAllSections(t *testing.T) {
 // legacy block.
 func TestDoctorVerboseShowsSupportedClients(t *testing.T) {
 	isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"test":{"endpoint":"https://x","supported_client":"claude,codex"}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	stdout, _, code := execute(t, "--providers", providersFile, "doctor", "--verbose")
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "test", "https://x", "claude,codex", "", "")
+	stdout, _, code := execute(t, "--store", storePath, "doctor", "--verbose")
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
@@ -72,8 +54,8 @@ func TestDoctorVerboseShowsSupportedClients(t *testing.T) {
 	}
 }
 
-// When providers.json is missing entirely, doctor must still run all checks
-// — it just notes the failure under the Configuration Check section.
+// When no providers are configured, doctor must still run all checks
+// — it just notes the store is empty under the Configuration Check section.
 func TestDoctorWithMissingProvidersStillRunsChecks(t *testing.T) {
 	isolatedHome(t)
 	stdout, _, code := execute(t, "doctor")
@@ -83,9 +65,8 @@ func TestDoctorWithMissingProvidersStillRunsChecks(t *testing.T) {
 	if !strings.Contains(stdout, "Installation Check") {
 		t.Fatalf("missing installation check section:\n%s", stdout)
 	}
-	if !strings.Contains(stdout, "Configuration file not found") &&
-		!strings.Contains(stdout, "Providers config could not be loaded") {
-		t.Fatalf("missing provider failure note:\n%s", stdout)
+	if !strings.Contains(stdout, "Providers in store: 0") {
+		t.Fatalf("missing zero-provider note:\n%s", stdout)
 	}
 }
 

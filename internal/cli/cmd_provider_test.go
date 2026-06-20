@@ -12,7 +12,7 @@ import (
 )
 
 // `cam provider list` on a fresh machine emits a friendly "no providers"
-// message and does NOT crash because providers.json is missing.
+// message and does NOT crash because no store exists.
 func TestProviderListEmptyAutoCreatesNothing(t *testing.T) {
 	home := isolatedHome(t)
 	stdout, stderr, code := execute(t, "provider", "list")
@@ -22,7 +22,8 @@ func TestProviderListEmptyAutoCreatesNothing(t *testing.T) {
 	if !strings.Contains(stdout, "No providers configured") {
 		t.Fatalf("expected friendly empty message, got: %s", stdout)
 	}
-	// LoadOrInit must not touch disk on its own.
+	// The SQLite store is auto-created during listing (ListProviders calls Init).
+	// Verify that no providers.json was written (it's no longer used).
 	cfgPath := filepath.Join(home, "cfg", "providers.json")
 	if _, err := os.Stat(cfgPath); !os.IsNotExist(err) {
 		t.Fatalf("expected providers.json to remain missing, got err=%v", err)
@@ -31,9 +32,8 @@ func TestProviderListEmptyAutoCreatesNothing(t *testing.T) {
 
 // `cam provider init` creates the SQLite app-state database and is idempotent.
 func TestProviderInitCreatesEmptyFile(t *testing.T) {
-	home := isolatedHome(t)
-	cfgPath := filepath.Join(home, "cfg", "providers.json")
-	dbPath := cfgPath + ".db"
+	isolatedHome(t)
+	dbPath := ""
 
 	stdout, _, code := execute(t, "provider", "init")
 	if code != 0 {
@@ -42,8 +42,10 @@ func TestProviderInitCreatesEmptyFile(t *testing.T) {
 	if !strings.Contains(stdout, "SQLite app state ready") {
 		t.Fatalf("expected SQLite ready notice, got: %s", stdout)
 	}
+	// The new DB path is at the default config dir + "cam.db".
+	dbPath = filepath.Join(os.Getenv("CAM_CONFIG_DIR"), "cam.db")
 	if _, err := os.Stat(dbPath); err != nil {
-		t.Fatalf("db stat err = %v", err)
+		t.Fatalf("db stat err = %v (path=%s)", err, dbPath)
 	}
 
 	stdout, _, code = execute(t, "provider", "init")
@@ -55,11 +57,11 @@ func TestProviderInitCreatesEmptyFile(t *testing.T) {
 	}
 }
 
-// End-to-end: `cam provider add` on a fresh machine creates the app-state DB
+// End-to-end: `cam provider add` on a fresh machine creates the SQLite store
 // AND writes the new endpoint in one go.
 func TestProviderAddOnFreshMachineCreatesFile(t *testing.T) {
-	home := isolatedHome(t)
-	cfgPath := filepath.Join(home, "cfg", "providers.json")
+	isolatedHome(t)
+	dbPath := filepath.Join(os.Getenv("CAM_CONFIG_DIR"), "cam.db")
 
 	stdout, stderr, code := execute(t,
 		"provider", "add", "alpha",
@@ -72,14 +74,11 @@ func TestProviderAddOnFreshMachineCreatesFile(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("add exit = %d; stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "Created") {
-		t.Fatalf("expected 'Created' notice on first run, got: %s", stdout)
-	}
 	if !strings.Contains(stdout, `Added provider "alpha"`) {
 		t.Fatalf("expected 'Added provider' notice, got: %s", stdout)
 	}
 
-	file, err := appstate.New(cfgPath + ".db").ListProviders(context.Background())
+	file, err := appstate.New(dbPath).ListProviders(context.Background())
 	if err != nil {
 		t.Fatalf("read providers from db: %v", err)
 	}
@@ -504,23 +503,34 @@ func TestProviderAddBooleanFlagsPersist(t *testing.T) {
 	}
 }
 
-// Make sure the --providers flag override works (writes to non-default path).
-func TestProviderRespectsProvidersFlag(t *testing.T) {
-	isolatedHome(t)
-	dir := t.TempDir()
-	custom := filepath.Join(dir, "custom-providers.json")
+func TestProviderAddAndListDeleteDefaultProvidersJSON(t *testing.T) {
+	home := isolatedHome(t)
+	legacyPath := filepath.Join(home, "cfg", "providers.json")
+	if err := os.MkdirAll(filepath.Dir(legacyPath), 0o700); err != nil {
+		t.Fatalf("mkdir legacy dir: %v", err)
+	}
+	if err := os.WriteFile(legacyPath, []byte(`{"endpoints":{"legacy":{"endpoint":"https://legacy.example"}}}`), 0o600); err != nil {
+		t.Fatalf("write legacy providers.json: %v", err)
+	}
 
-	if _, _, code := execute(t,
-		"--providers", custom,
-		"provider", "add", "alpha", "--endpoint", "https://a",
-	); code != 0 {
-		t.Fatal("add failed")
+	if _, stderr, code := execute(t, "provider", "add", "alpha", "--endpoint", "https://a"); code != 0 {
+		t.Fatalf("add exit = %d; stderr=%s", code, stderr)
 	}
-	if _, err := os.Stat(custom + ".db"); err != nil {
-		t.Fatalf("expected custom db written, err=%v", err)
+	if _, err := os.Stat(legacyPath); !os.IsNotExist(err) {
+		t.Fatalf("expected add to delete providers.json, got err=%v", err)
 	}
-	stdout, _, _ := execute(t, "--providers", custom, "provider", "list")
-	if !strings.Contains(stdout, "alpha") {
-		t.Fatalf("alpha not visible via custom path: %s", stdout)
+
+	if err := os.WriteFile(legacyPath, []byte(`{"endpoints":{"legacy":{"endpoint":"https://legacy.example"}}}`), 0o600); err != nil {
+		t.Fatalf("rewrite legacy providers.json: %v", err)
+	}
+	stdout, stderr, code := execute(t, "provider", "list")
+	if code != 0 {
+		t.Fatalf("list exit = %d; stderr=%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "alpha") || strings.Contains(stdout, "legacy") {
+		t.Fatalf("unexpected list output: %s", stdout)
+	}
+	if _, err := os.Stat(legacyPath); !os.IsNotExist(err) {
+		t.Fatalf("expected list to delete providers.json, got err=%v", err)
 	}
 }

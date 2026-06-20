@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chat2anyllm/code-agent-manager/internal/appstate"
 	"github.com/chat2anyllm/code-agent-manager/internal/doctor"
 	"github.com/chat2anyllm/code-agent-manager/internal/providers"
 )
@@ -78,28 +79,29 @@ func TestInstallationCheck(t *testing.T) {
 
 func TestConfigCheckMissingFile(t *testing.T) {
 	r := &fakeReporter{}
-	res := doctor.ConfigCheck{Path: filepath.Join(t.TempDir(), "missing.json")}.Run(context.Background(), r)
+	res := doctor.ConfigCheck{Path: filepath.Join(t.TempDir(), "missing.db")}.Run(context.Background(), r)
 	if res.Issues == 0 {
 		t.Fatal("expected issue for missing file")
 	}
-	if !contains(r.fails, "Configuration file not found") {
+	if !contains(r.fails, "SQLite store not found") {
 		t.Fatalf("missing fail message: %v", r.fails)
 	}
 }
 
 func TestConfigCheckParsesValidFile(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Windows does not preserve POSIX 0600 permission bits")
-	}
 	dir := t.TempDir()
-	path := filepath.Join(dir, "providers.json")
-	if err := os.WriteFile(path, []byte(`{"endpoints":{}}`), 0o600); err != nil {
+	dbPath := filepath.Join(dir, "providers.db")
+	store := appstate.New(dbPath)
+	if err := store.Init(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	r := &fakeReporter{}
-	res := doctor.ConfigCheck{Path: path}.Run(context.Background(), r)
+	res := doctor.ConfigCheck{Path: dbPath}.Run(context.Background(), r)
 	if res.Issues != 0 {
 		t.Fatalf("expected 0 issues, got %d (warns=%v fails=%v)", res.Issues, r.warns, r.fails)
+	}
+	if !contains(r.passes, "SQLite store") {
+		t.Fatalf("expected SQLite store pass, got %v", r.passes)
 	}
 }
 

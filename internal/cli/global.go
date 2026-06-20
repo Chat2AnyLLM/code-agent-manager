@@ -15,13 +15,22 @@ import (
 
 // globalState holds the persistent flag values bound on the root command.  The
 // struct is shared by every subcommand so they can look up --config /
-// --providers / --store / --endpoints / --debug consistently.
+// --store / --endpoints / --debug consistently.
 type globalState struct {
-	configPath    string
-	providersPath string
-	storePath     string
-	endpoints     string
-	debug         bool
+	configPath string
+	storePath  string
+	endpoints  string
+	debug      bool
+}
+
+// makeProviderAPI constructs an appapi.ProviderAPI from the persistent CLI
+// state. --store selects the SQLite DB path.
+func makeProviderAPI(state *globalState) appapi.ProviderAPI {
+	api := appapi.ProviderAPI{}
+	if state != nil && state.storePath != "" {
+		api.DBPath = state.storePath
+	}
+	return api
 }
 
 // errEndpointsHandled is returned by PersistentPreRunE when the --endpoints
@@ -33,7 +42,7 @@ func handleEndpointsShortCircuit(cmd *cobra.Command, state *globalState) error {
 	if state.endpoints == "" {
 		return nil
 	}
-	file, err := appapi.ProviderAPI{ProvidersPath: state.providersPath}.File(context.Background())
+	file, err := makeProviderAPI(state).File(context.Background())
 	if err != nil {
 		return err
 	}

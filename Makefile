@@ -50,7 +50,7 @@ ifeq ($(OS),Windows_NT)
 	pwsh.exe -NoProfile -Command "New-Item -ItemType Directory -Force '$(INSTALL_DIR)', '$(CONFIG_DIR)' | Out-Null"
 	pwsh.exe -NoProfile -Command "Copy-Item 'dist/cam$(EXE)' '$(INSTALL_DIR)/cam$(EXE)' -Force"
 	pwsh.exe -NoProfile -Command "Copy-Item 'dist/code-agent-manager$(EXE)' '$(INSTALL_DIR)/code-agent-manager$(EXE)' -Force"
-	pwsh.exe -NoProfile -Command "if (Test-Path 'providers.json') { if (-not (Test-Path '$(CONFIG_DIR)/providers.json')) { Copy-Item 'providers.json' '$(CONFIG_DIR)/providers.json' -Force } } elseif (Test-Path 'providers.json.example') { if (-not (Test-Path '$(CONFIG_DIR)/providers.json')) { Copy-Item 'providers.json.example' '$(CONFIG_DIR)/providers.json' -Force } }"
+	pwsh.exe -NoProfile -Command "if (Test-Path '$(CONFIG_DIR)/providers.json') { Remove-Item '$(CONFIG_DIR)/providers.json' -Force }"
 	pwsh.exe -NoProfile -Command "if (Test-Path 'code_assistant_manager/config.yaml') { if (-not (Test-Path '$(CONFIG_DIR)/config.yaml')) { Copy-Item 'code_assistant_manager/config.yaml' '$(CONFIG_DIR)/config.yaml' -Force } }"
 	pwsh.exe -NoProfile -Command "if (-not (Test-Path '$(USERPROFILE)/.env')) { New-Item -ItemType File -Force '$(USERPROFILE)/.env' | Out-Null }"
 	@echo "Installed cam and code-agent-manager to $(INSTALL_DIR)"

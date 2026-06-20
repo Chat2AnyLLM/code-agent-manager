@@ -18,14 +18,7 @@ func NewProviderService(path string) *ProviderService {
 }
 
 func (s *ProviderService) api() appapi.ProviderAPI {
-	return appapi.ProviderAPI{ProvidersPath: s.path}
-}
-
-func (s *ProviderService) providersPath() string {
-	if s.path != "" {
-		return s.path
-	}
-	return providers.DefaultPath()
+	return appapi.ProviderAPI{DBPath: s.path}
 }
 
 func (s *ProviderService) Init() (OperationResult, error) {

@@ -50,3 +50,23 @@ func isolatedHome(t *testing.T) string {
 	t.Setenv("CAM_CONFIG_DIR", filepath.Join(dir, "cfg"))
 	return dir
 }
+
+// seedProvider seeds a single provider into the SQLite store at storePath
+// by running `cam provider add` via execute().
+func seedProvider(t *testing.T, storePath, name, endpoint, client, models, apiKeyEnv string) {
+	t.Helper()
+	args := []string{"--store", storePath, "provider", "add", name, "--endpoint", endpoint}
+	if client != "" {
+		args = append(args, "--client", client)
+	}
+	if models != "" {
+		args = append(args, "--model", models)
+	}
+	if apiKeyEnv != "" {
+		args = append(args, "--api-key-env", apiKeyEnv)
+	}
+	stdout, stderr, code := execute(t, args...)
+	if code != 0 {
+		t.Fatalf("seed provider %s: exit=%d stderr=%s stdout=%s", name, code, stderr, stdout)
+	}
+}

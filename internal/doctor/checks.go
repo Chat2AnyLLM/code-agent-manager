@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/chat2anyllm/code-agent-manager/internal/appstate"
 	"github.com/chat2anyllm/code-agent-manager/internal/envfile"
 	"github.com/chat2anyllm/code-agent-manager/internal/pathutil"
 	"github.com/chat2anyllm/code-agent-manager/internal/providers"
@@ -53,40 +54,30 @@ func (c InstallationCheck) Run(_ context.Context, r Reporter) Result {
 	return res
 }
 
-// ConfigCheck verifies that providers.json exists, parses cleanly, and has
-// secure permissions.  Path is resolved from --providers (or defaults).
+// ConfigCheck verifies that the SQLite app state store exists and has the
+// correct schema. The store path is resolved from --store (or defaults to
+// cam.db in the config directory).
 type ConfigCheck struct {
 	Path string
 }
 
 func (c ConfigCheck) Name() string { return "Configuration Check" }
-func (c ConfigCheck) Run(_ context.Context, r Reporter) Result {
+func (c ConfigCheck) Run(ctx context.Context, r Reporter) Result {
 	res := Result{}
-	path := c.Path
-	if path == "" {
-		path = providers.DiscoverPath()
-	}
-	if !pathutil.Exists(path) {
+	store := appstate.New(c.Path)
+	if !pathutil.Exists(store.Path()) {
 		res.Issues++
-		r.Fail("Configuration file not found", "Create "+path)
+		r.Fail("SQLite store not found", "Run 'cam provider init' to create it, or use --store to specify the path")
 		return res
 	}
-	r.Pass(fmt.Sprintf("Configuration file exists: %s", path))
-	info, err := os.Stat(path)
-	if err == nil {
-		perms := info.Mode().Perm()
-		if perms == 0o600 || perms == 0o400 {
-			r.Pass("Configuration file has secure permissions")
-		} else {
-			res.Issues++
-			r.Warn(fmt.Sprintf("Configuration file permissions: %o", perms),
-				"Consider chmod 600 for secure storage of API keys")
-		}
-	}
-	if _, err := providers.Load(path); err != nil {
+	r.Pass(fmt.Sprintf("SQLite store: %s", store.Path()))
+	file, err := store.ListProviders(ctx)
+	if err != nil {
 		res.Issues++
-		r.Fail("providers.json failed to parse", err.Error())
+		r.Fail("SQLite store failed to read providers", err.Error())
+		return res
 	}
+	r.Pass(fmt.Sprintf("Providers in store: %d", len(file.Endpoints)))
 	return res
 }
 
@@ -141,7 +132,7 @@ func (c EndpointFormatCheck) Run(_ context.Context, r Reporter) Result {
 		if ep.Endpoint == "" {
 			res.Issues++
 			r.Warn(fmt.Sprintf("%s has no endpoint URL", name),
-				"Add an endpoint URL to providers.json")
+				"Add a provider endpoint with 'cam provider add NAME --endpoint URL'")
 			continue
 		}
 		parsed, err := url.Parse(ep.Endpoint)

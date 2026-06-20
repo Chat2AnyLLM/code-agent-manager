@@ -40,7 +40,7 @@
 - Every commit message uses the form: `<area>: <change>` (e.g. `tools: add config-file writer`).
 - Per project CLAUDE.md: never `Co-Authored-By: Claude`. Author is `James Zhu <zhujian0805@gmail.com>` (already the default git user).
 - Per project CLAUDE.md: ask the user before any `git commit` / `git push`. Each "commit" step in this plan is a request for approval, not an auto-commit.
-- Per project CLAUDE.md: after all code changes, run `rm -rf dist/* && ./install.sh uninstall && ./install.sh && cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json` to reinstall. Tests run independently via `go test ./...` and `find . -name '*_test.go' -path './internal/*'` per CLAUDE.md "find all files and run them one by one".
+- Per project CLAUDE.md: after all code changes, run `rm -rf dist/* && ./install.sh uninstall && ./install.sh && # providers.json is deprecated; no restore step is needed` to reinstall. Tests run independently via `go test ./...` and `find . -name '*_test.go' -path './internal/*'` per CLAUDE.md "find all files and run them one by one".
 - TDD throughout: write the failing test first, see it fail, write the minimum code, see it pass, then commit.
 
 ---
@@ -2079,7 +2079,7 @@ Run:
 rm -rf dist/*
 ./install.sh uninstall
 ./install.sh
-cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json
+# providers.json is deprecated; no restore step is needed
 ```
 
 Expected: install completes; `cam version` works; `cam launch --dry-run claude` shows the new "Config writes (...)" block.

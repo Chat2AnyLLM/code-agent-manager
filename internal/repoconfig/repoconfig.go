@@ -41,6 +41,9 @@ var bundledPluginRepos []byte
 //go:embed embed/prompt_repos.json
 var bundledPromptRepos []byte
 
+//go:embed embed/instruction_repos.json
+var bundledInstructionRepos []byte
+
 // RepoEntry is a single repository definition.  Field names match the JSON
 // keys used in the Python version so the same files work for both.
 type RepoEntry struct {
@@ -106,6 +109,8 @@ func (r RepoEntry) SubPath(kind entities.Kind) string {
 		return r.SkillsPath
 	case entities.KindAgent:
 		return r.AgentsPath
+	case entities.KindInstruction:
+		return r.AgentsPath
 	case entities.KindPlugin:
 		return r.PluginPath
 	}
@@ -129,6 +134,11 @@ func (r RepoEntry) SubPath(kind entities.Kind) string {
 // If config.yaml has no sources or cannot be loaded, only the bundled
 // entries are returned.
 func LoadAll(kind entities.Kind) (map[string]RepoEntry, error) {
+	if kind == entities.KindInstruction {
+		if _, err := MigrateRepoConfigFiles(pathutil.ConfigDir()); err != nil {
+			return nil, err
+		}
+	}
 	merged := make(map[string]RepoEntry)
 
 	// 1. Bundled defaults (lowest priority).
@@ -213,6 +223,8 @@ func loadBundled(kind entities.Kind) (map[string]RepoEntry, error) {
 		raw = bundledPluginRepos
 	case entities.KindPrompt:
 		raw = bundledPromptRepos
+	case entities.KindInstruction:
+		raw = bundledInstructionRepos
 	default:
 		// Unknown kinds return an empty map so config.yaml sources
 		// can still be loaded.
@@ -318,5 +330,45 @@ func parseRepoJSON(data []byte) (map[string]RepoEntry, error) {
 }
 
 func repoConfigKey(kind entities.Kind) string {
+	if kind == entities.KindInstruction {
+		return "instructions"
+	}
 	return string(kind) + "s" // "skills", "agents", "plugins"
+}
+
+// MigrateRepoConfigFiles migrates legacy prompt_repos.json files to the
+// canonical instruction_repos.json name. If instruction_repos.json already
+// exists, it is preferred and prompt_repos.json is left untouched. If only
+// prompt_repos.json exists, its repository entries are copied as-is because repo
+// config entries do not store an entity kind.
+func MigrateRepoConfigFiles(cfgDir string) (bool, error) {
+	oldPath := filepath.Join(cfgDir, "prompt_repos.json")
+	newPath := filepath.Join(cfgDir, "instruction_repos.json")
+
+	if fileExists(newPath) {
+		return false, nil
+	}
+
+	data, err := os.ReadFile(oldPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("repoconfig: read %s: %w", oldPath, err)
+	}
+	if _, err := parseRepoJSON(data); err != nil {
+		return false, err
+	}
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		return false, fmt.Errorf("repoconfig: mkdir %s: %w", cfgDir, err)
+	}
+	if err := os.WriteFile(newPath, data, 0o644); err != nil {
+		return false, fmt.Errorf("repoconfig: write %s: %w", newPath, err)
+	}
+	return true, nil
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

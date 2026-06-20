@@ -56,7 +56,7 @@ def legacy_main():
                     tool_args.pop(idx)
 
             try:
-                config = ConfigManager(config_path)
+                config = ConfigManager()
                 is_valid, errors = config.validate_config()
                 if not is_valid:
                     logger.error(
@@ -88,7 +88,7 @@ def legacy_main():
                     else None
                 )
                 # Instantiate but don't raise on errors here; callers handle them
-                ConfigManager(config_path)
+                ConfigManager()
                 logger.debug(
                     f"Early config instantiation for legacy compatibility: {config_path}"
                 )

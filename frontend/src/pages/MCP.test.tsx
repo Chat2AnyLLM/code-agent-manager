@@ -31,6 +31,13 @@ describe('MCP page', () => {
     expect(badges.textContent).toMatch(/claude/i)
   })
 
+  it('links each server name to its source repository', async () => {
+    render(<MCP />)
+    const link = await screen.findByRole('link', { name: /github mcp server/i })
+    expect(link).toHaveAttribute('href', 'https://github.com/modelcontextprotocol/servers')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
   it('offers a per-server agent picker with multiple targets', async () => {
     render(<MCP />)
     expect(await findRow(/github/i)).toBeInTheDocument()

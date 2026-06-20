@@ -88,7 +88,7 @@ func (a *App) metadataSearchCommand(state *globalState) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&kindFilter, "type", "", "Filter by kind (skill, agent, plugin)")
+	cmd.Flags().StringVar(&kindFilter, "type", "", "Filter by kind (skill, agent, instruction, plugin)")
 	return cmd
 }
 
@@ -110,7 +110,7 @@ func (a *App) metadataInstallCommand(state *globalState) *cobra.Command {
 
 			// Try each kind until found.
 			var lastErr error
-			for _, kind := range []string{"skill", "agent", "prompt", "plugin"} {
+			for _, kind := range []string{"skill", "agent", "instruction", "plugin"} {
 				err := svc.InstallToTargets(context.Background(), kind, installKey, targets)
 				if err == nil {
 					fmt.Fprintf(out, "✓ Installed %s to %s\n", installKey, strings.Join(targets, ", "))

@@ -13,6 +13,8 @@ exit 42
 FAKE
 chmod +x "$workdir/pathbin/cam"
 
+touch "$workdir/config/providers.json"
+
 output=$(cd "$repo_root" && PATH="$workdir/pathbin:$PATH" INSTALL_DIR="$workdir/install-bin" CAM_CONFIG_DIR="$workdir/config" VERSION="shell-test" ./install.sh install 2>&1)
 
 if grep -q "old-python-cam" <<<"$output"; then
@@ -24,8 +26,9 @@ fi
 "$workdir/install-bin/cam" --version | grep -qx "shell-test"
 "$workdir/install-bin/code-agent-manager" --version | grep -qx "shell-test"
 
-CAM_CONFIG_DIR="$workdir/config" "$workdir/install-bin/cam" config list | grep -q "$workdir/config/providers.json"
+CAM_CONFIG_DIR="$workdir/config" "$workdir/install-bin/cam" config list | grep -q "$workdir/config/cam.db"
 CAM_CONFIG_DIR="$workdir/config" "$workdir/install-bin/cam" config list | grep -q "$workdir/config/config.yaml"
+[ ! -e "$workdir/config/providers.json" ]
 
 cd "$repo_root" && INSTALL_DIR="$workdir/install-bin" CAM_CONFIG_DIR="$workdir/config" ./install.sh uninstall >/dev/null
 [ ! -e "$workdir/install-bin/cam" ]

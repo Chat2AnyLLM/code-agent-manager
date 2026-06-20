@@ -1,13 +1,13 @@
 # Configuration Refactoring Summary
 
 ## Overview
-Successfully refactored Code Assistant Manager configuration from INI format to JSON format.
+Historical note: CAM first refactored configuration from INI to JSON, but provider storage has since moved again to SQLite app state.
 
 ## Changes Made
 
 ### 1. Created New Configuration Files
-- ✅ `providers.json` - Main configuration file in JSON format
-- ✅ `code_assistant_manager/providers.json` - Bundled fallback copy with detailed comments
+- Historical: `providers.json` was the main configuration file during the JSON transition
+- Historical: `code_assistant_manager/providers.json` was a bundled fallback copy with detailed comments
 
 ### 2. Updated Python Code
 - ✅ Modified `code_assistant_manager/config.py`:
@@ -53,15 +53,12 @@ All configuration tests pass successfully.
 
 ## Migration Path
 
-Old `.conf` files are no longer used. Users should:
-1. Copy `providers.json` to their preferred configuration location
-2. Transfer their settings from old `.conf` file
-3. Remove old `.conf` files to avoid confusion
+Old `.conf` files are no longer used. Users should now:
+1. Initialize the SQLite store with `cam provider init`
+2. Recreate providers with `cam provider add ...`
+3. Remove stale `providers.json` files to avoid confusion
 
-The system automatically looks for files in this order:
-1. `providers.json` (in project directory)
-2. `~/.config/code-agent-manager/providers.json`
-3. `code_assistant_manager/providers.json` (fallback)
+This document is historical context for the earlier JSON migration; current production builds use SQLite app state for provider records.
 
 ## Next Steps
 

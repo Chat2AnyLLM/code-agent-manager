@@ -13,14 +13,11 @@ import (
 // lands in a temp dir and never touches the developer's real config.
 func TestApplyWritesConfigWithoutLaunching(t *testing.T) {
 	home := isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"litellm":{"endpoint":"https://api.test","api_key_env":"CAM_APPLY_KEY","supported_client":"claude","list_of_models":["claude-sonnet-4"]}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "litellm", "https://api.test", "claude", "claude-sonnet-4", "CAM_APPLY_KEY")
 	t.Setenv("CAM_APPLY_KEY", "sk-secret-1234")
 
-	stdout, stderr, code := execute(t, "--providers", providersFile, "apply", "claude", "--endpoint", "litellm", "--model", "claude-sonnet-4")
+	stdout, stderr, code := execute(t, "--store", storePath, "apply", "claude", "--endpoint", "litellm", "--model", "claude-sonnet-4")
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
@@ -67,12 +64,9 @@ func TestApplyRejectsUnknownTool(t *testing.T) {
 // `cam ap` alias accepts the same args.
 func TestApplyAliasAp(t *testing.T) {
 	home := isolatedHome(t)
-	providersFile := filepath.Join(t.TempDir(), "providers.json")
-	payload := `{"endpoints":{"e":{"endpoint":"https://x","supported_client":"claude","list_of_models":["m"]}}}`
-	if err := os.WriteFile(providersFile, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	stdout, _, code := execute(t, "--providers", providersFile, "ap", "claude")
+	storePath := filepath.Join(t.TempDir(), "store.db")
+	seedProvider(t, storePath, "e", "https://x", "claude", "m", "")
+	stdout, _, code := execute(t, "--store", storePath, "ap", "claude")
 	if code != 0 {
 		t.Fatal("expected zero exit")
 	}

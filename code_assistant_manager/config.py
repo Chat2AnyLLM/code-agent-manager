@@ -1,6 +1,5 @@
 """Configuration management for Code Assistant Manager."""
 
-import json
 import logging
 import time
 from pathlib import Path
@@ -269,90 +268,41 @@ SAFE_EXECUTABLES = frozenset(
 
 
 class ConfigManager:
-    """Manages providers.json file parsing and endpoint configuration."""
+    """Manages SQLite-era provider configuration state for Python callers.
+
+    providers.json is deprecated and must not be loaded by active runtime code.
+    Passing ``config_path`` now raises ``ValueError`` to make that deprecation
+    explicit. When omitted, ConfigManager exposes an empty in-memory config view.
+    """
 
     def __init__(self, config_path: Optional[str] = None):
-        """
-        Initialize ConfigManager.
+        """Initialize ConfigManager.
 
         Args:
-            config_path: Path to providers.json. If None, looks for it in standard locations.
+            config_path: Deprecated legacy providers.json path. Supplying it raises
+                ValueError because providers are stored in SQLite now.
         """
         logger.debug(f"Initializing ConfigManager with config_path: {config_path}")
-        if config_path is None:
-            # Lookup order for providers.json (installed location first):
-            # 1) ~/.config/code-agent-manager/providers.json
-            # 2) ./providers.json (current working directory)
-            # 3) $HOME/providers.json
-            script_dir = Path(__file__).parent
-            home_config = Path.home() / ".config" / "code-agent-manager" / "providers.json"
-            cwd_config = Path.cwd() / "providers.json"
-            home_root_config = Path.home() / "providers.json"
-
-            logger.debug(
-                "Checking config locations: "
-                f"home={home_config}, cwd={cwd_config}, "
-                f"home_root={home_root_config}"
+        if config_path is not None:
+            raise ValueError(
+                "providers.json is deprecated; providers are stored in SQLite"
             )
 
-            if home_config.exists():
-                config_path = str(home_config)
-                logger.debug(f"Using home config: {config_path}")
-            elif cwd_config.exists():
-                config_path = str(cwd_config)
-                logger.debug(f"Using cwd config: {config_path}")
-            elif home_root_config.exists():
-                config_path = str(home_root_config)
-                logger.debug(f"Using home root config: {config_path}")
-            else:
-                # Fallback to bundled providers.json in the package
-                config_path = str(script_dir / "providers.json")
-                logger.debug(f"Using fallback config: {config_path}")
-
-        self.config_path = Path(config_path)
-
-        # Validate that the config path is safe to prevent path traversal
-        if not _validate_safe_path(self.config_path):
-            raise ValueError(f"Unsafe config path: {config_path}")
-
-        self.config_data: Dict[str, Any] = {}
+        self.config_path = None
+        self.config_data: Dict[str, Any] = {"common": {}, "endpoints": {}}
         self._validation_cache: Optional[Tuple[bool, List[str]]] = None
         self._validation_cache_time: float = 0.0
         self._validation_cache_ttl: int = 60
-        logger.debug(f"ConfigManager initialized with path: {self.config_path}")
-        self.reload()
+        logger.debug(
+            "No config path provided; using empty SQLite-era placeholder config"
+        )
 
     def reload(self):
-        """Reload configuration from file and invalidate cache."""
-        logger.debug(f"Reloading configuration from: {self.config_path}")
-
-        # Validate path before accessing file
-        if not _validate_safe_path(self.config_path):
-            raise ValueError(f"Unsafe config path: {self.config_path}")
-
-        if self.config_path.exists():
-            try:
-                with open(self.config_path, "r", encoding="utf-8") as f:
-                    self.config_data = json.load(f)
-                logger.debug(
-                    f"Successfully loaded config with {len(self.config_data.get('endpoints', {}))} endpoints"
-                )
-            except json.JSONDecodeError as e:
-                error_msg = (
-                    f"Invalid JSON in configuration file {self.config_path}.\n"
-                    f"Error: {e}\n"
-                    f"Please check the JSON syntax and fix any formatting issues."
-                )
-                logger.error(error_msg)
-                raise ValueError(error_msg) from e
-        else:
-            logger.error(f"Configuration file not found: {self.config_path}")
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-
-        # Invalidate validation cache when config changes
+        """Reload the empty in-memory SQLite-era placeholder config."""
+        self.config_data = {"common": {}, "endpoints": {}}
         self._validation_cache = None
         self._validation_cache_time = 0
-        logger.debug("Invalidated validation cache")
+        logger.debug("Reloaded empty SQLite-era placeholder config")
 
     def get_sections(self, exclude_common: bool = True) -> List[str]:
         """

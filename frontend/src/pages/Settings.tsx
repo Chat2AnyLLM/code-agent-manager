@@ -5,7 +5,7 @@ type SettingRow = { name: string; summary: string; detail: string }
 
 const rows: SettingRow[] = [
   { name: 'Appearance', summary: 'Theme follows system preferences.', detail: 'A persistent theme toggle can be wired to AppService.SetTheme.' },
-  { name: 'About', summary: 'code-agent-manager desktop shares providers, MCP servers, config, and library stores with the CLI.', detail: 'The desktop app and the CLI operate on the same SQLite app state and providers.json.' },
+  { name: 'About', summary: 'code-agent-manager desktop shares providers, MCP servers, config, and library stores with the CLI.', detail: 'The desktop app and the CLI operate on the same SQLite app state.' },
 ]
 
 export function Settings() {

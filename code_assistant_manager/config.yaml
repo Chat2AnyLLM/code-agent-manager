@@ -1,5 +1,5 @@
 # Code Assistant Manager - Repository Configuration
-# This file configures sources for skills, agents, and plugins
+# This file configures sources for instructions, skills, agents, and plugins
 
 repositories:
   # Skill repositories
@@ -35,12 +35,16 @@ repositories:
       - type: remote
         url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/plugin_repos.json
 
-  # Prompt repositories
-  prompts:
+  # Instruction repositories
+  instructions:
     sources:
       # Local user file (highest priority)
       - type: local
-        path: ~/.config/code-agent-manager/prompt_repos.json
+        path: ~/.config/code-agent-manager/instruction_repos.json
+
+      # Remote awesome repository configs
+      - type: remote
+        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/instruction_repos.json
 
 # Cache settings for remote sources
 cache:

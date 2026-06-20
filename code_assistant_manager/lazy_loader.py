@@ -156,7 +156,7 @@ def lazy_attr(module_name: str, attr_name: str) -> Any:
             "ConfigManager"
         )
         # ... later when used ...
-        config = ConfigManager(path)
+        config = ConfigManager()
 
     Args:
         module_name: Module containing the attribute

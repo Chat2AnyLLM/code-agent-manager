@@ -24,7 +24,7 @@ curl -fsSL https://shell.blackbox.ai/api/scripts/blackbox-cli-v2/download.sh | b
 
 ### 1. Provider Configuration
 
-Add a Blackbox provider to your `~/.config/code-agent-manager/providers.json`:
+Add a Blackbox provider to CAM's SQLite app state:
 
 ```json
 {
@@ -175,7 +175,7 @@ The `BlackboxTool` class (`code_assistant_manager/tools/blackbox.py`) handles:
 
 ## Custom Providers
 
-You can configure custom Blackbox-compatible providers by adding them to `providers.json`:
+You can configure custom Blackbox-compatible providers with `cam provider add`:
 
 ```json
 {
@@ -250,5 +250,5 @@ cp ~/.blackboxcli/settings.json ~/.blackboxcli/settings.json.bak
 ## Related Documentation
 
 - [Configuration Guide](./INSTALL.md)
-- [Provider Setup](../providers.json.example)
+- `cam provider --help`
 - [CAM Quick Reference](./QUICK_REFERENCE.md)

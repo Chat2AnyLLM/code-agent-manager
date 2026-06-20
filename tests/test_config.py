@@ -1,6 +1,4 @@
-"""Tests for code_assistant_manager.config module."""
-
-import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -118,133 +116,63 @@ class TestValidateFunctions:
 class TestConfigManager:
     """Test ConfigManager class."""
 
-    @pytest.fixture
-    def temp_config(self):
-        """Create a temporary config file for testing."""
-        import json
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            config_data = {
-                "common": {
-                    "http_proxy": "http://proxy.example.com:3128/",
-                    "https_proxy": "http://proxy.example.com:3128/",
-                    "cache_ttl_seconds": 3600,
-                },
-                "endpoints": {
-                    "endpoint1": {
-                        "endpoint": "https://api.example.com",
-                        "api_key": "test-key-12345",
-                        "description": "Test Endpoint 1",
-                        "supported_client": "claude,codex",
-                    },
-                    "endpoint2": {
-                        "endpoint": "https://api2.example.com",
-                        "api_key_env": "API_KEY_2",
-                        "description": "Test Endpoint 2",
-                        "list_models_cmd": "echo model1 model2",
-                        "use_proxy": True,
-                    },
-                },
-            }
-            json.dump(config_data, f, indent=2)
-            config_path = f.name
-        yield config_path
-        Path(config_path).unlink()
-
-    def test_config_manager_initialization(self, temp_config):
+    def test_config_manager_initialization(self):
         """Test ConfigManager initialization."""
-        config = ConfigManager(temp_config)
-        assert config.config_path == Path(temp_config)
+        config = ConfigManager()
+        assert config.config_path is None
+        assert config.config_data == {"common": {}, "endpoints": {}}
 
-    def test_get_sections(self, temp_config):
+    def test_config_manager_rejects_legacy_path(self):
+        """Test ConfigManager rejects deprecated providers.json paths."""
+        with pytest.raises(ValueError, match=r"providers\.json is deprecated"):
+            ConfigManager("/tmp/providers.json")
+
+    def test_get_sections(self):
         """Test getting sections from config."""
-        config = ConfigManager(temp_config)
-        sections = config.get_sections()
-        assert "endpoint1" in sections
-        assert "endpoint2" in sections
-        assert "common" not in sections
+        config = ConfigManager()
+        assert config.get_sections() == []
 
-    def test_get_sections_include_common(self, temp_config):
+    def test_get_sections_include_common(self):
         """Test getting sections including common."""
-        config = ConfigManager(temp_config)
-        # In JSON format, get_sections always returns only endpoint names
-        # The exclude_common parameter is kept for API compatibility but doesn't affect behavior
-        sections = config.get_sections(exclude_common=False)
-        assert "common" not in sections  # Common is separate in JSON format
+        config = ConfigManager()
+        assert config.get_sections(exclude_common=False) == []
 
-    def test_get_value(self, temp_config):
-        """Test getting a value from config."""
-        config = ConfigManager(temp_config)
-        value = config.get_value("endpoint1", "endpoint")
-        assert value == "https://api.example.com"
-
-    def test_get_value_default(self, temp_config):
+    def test_get_value_default(self):
         """Test getting a value with default."""
-        config = ConfigManager(temp_config)
+        config = ConfigManager()
         value = config.get_value("endpoint1", "nonexistent", "default")
         assert value == "default"
 
-    def test_get_endpoint_config(self, temp_config):
-        """Test getting full endpoint config."""
-        config = ConfigManager(temp_config)
-        ep_config = config.get_endpoint_config("endpoint1")
-        assert ep_config["endpoint"] == "https://api.example.com"
-        assert ep_config["api_key"] == "test-key-12345"
-        assert ep_config["description"] == "Test Endpoint 1"
-        assert ep_config["supported_client"] == "claude,codex"
-
-    def test_get_endpoint_config_with_boolean(self, temp_config):
-        """Test getting endpoint config with boolean values."""
-        config = ConfigManager(temp_config)
-        ep_config = config.get_endpoint_config("endpoint2")
-        # Boolean values should be converted to strings
-        assert ep_config["use_proxy"] == "true"
-
-    def test_get_endpoint_config_missing(self, temp_config):
+    def test_get_endpoint_config_missing(self):
         """Test getting missing endpoint config."""
-        config = ConfigManager(temp_config)
+        config = ConfigManager()
         ep_config = config.get_endpoint_config("nonexistent")
         assert ep_config == {}
 
-    def test_get_common_config(self, temp_config):
+    def test_get_common_config(self):
         """Test getting common config."""
-        config = ConfigManager(temp_config)
-        common = config.get_common_config()
-        assert common["http_proxy"] == "http://proxy.example.com:3128/"
-        assert common["cache_ttl_seconds"] == "3600"
+        config = ConfigManager()
+        assert config.get_common_config() == {}
 
-    def test_reload(self, temp_config):
+    def test_reload(self):
         """Test reloading config."""
-        config = ConfigManager(temp_config)
-        sections_before = config.get_sections()
+        config = ConfigManager()
         config.reload()
-        sections_after = config.get_sections()
-        assert sections_before == sections_after
+        assert config.get_sections() == []
 
-    def test_file_not_found(self):
-        """Test ConfigManager with non-existent file."""
-        with pytest.raises(FileNotFoundError):
-            ConfigManager("/nonexistent/path/config.json")
-
-    def test_load_env_file(self, temp_config):
+    def test_load_env_file(self, tmp_path):
         """Test loading .env file."""
-        import os
-
-        # Create temporary .env file
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
-            f.write("TEST_VAR=test_value\n")
-            f.write("API_KEY=secret123\n")
-            env_path = f.name
-
+        env_path = tmp_path / ".env"
+        env_path.write_text("TEST_VAR=test_value\nAPI_KEY=secret123\n", encoding="utf-8")
         try:
-            config = ConfigManager(temp_config)
-            config.load_env_file(env_path)
+            config = ConfigManager()
+            config.load_env_file(str(env_path))
             assert os.environ.get("TEST_VAR") == "test_value"
             assert os.environ.get("API_KEY") == "secret123"
         finally:
-            Path(env_path).unlink()
             os.environ.pop("TEST_VAR", None)
             os.environ.pop("API_KEY", None)
+
 
 
 class TestConfigManagerEdgeCases:
@@ -252,108 +180,48 @@ class TestConfigManagerEdgeCases:
 
     def test_get_value_with_boolean_conversion(self):
         """Test getting boolean values converted to strings."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(
-                {
-                    "endpoints": {
-                        "test": {"use_proxy": True, "keep_proxy_config": False}
-                    }
-                },
-                f,
-            )
-            config_path = f.name
-
-        try:
-            config = ConfigManager(config_path)
-            assert config.get_value("test", "use_proxy") == "true"
-            assert config.get_value("test", "keep_proxy_config") == "false"
-        finally:
-            Path(config_path).unlink()
+        config = ConfigManager()
+        config.config_data = {"endpoints": {"test": {"use_proxy": True, "keep_proxy_config": False}}}
+        assert config.get_value("test", "use_proxy") == "true"
+        assert config.get_value("test", "keep_proxy_config") == "false"
 
     def test_get_value_with_numeric_conversion(self):
         """Test getting numeric values converted to strings."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"common": {"cache_ttl_seconds": 3600, "max_retries": 5}}, f)
-            config_path = f.name
-
-        try:
-            config = ConfigManager(config_path)
-            assert config.get_value("common", "cache_ttl_seconds") == "3600"
-            assert config.get_value("common", "max_retries") == "5"
-        finally:
-            Path(config_path).unlink()
+        config = ConfigManager()
+        config.config_data = {"common": {"cache_ttl_seconds": 3600, "max_retries": 5}}
+        assert config.get_value("common", "cache_ttl_seconds") == "3600"
+        assert config.get_value("common", "max_retries") == "5"
 
     def test_get_value_with_whitespace_stripping(self):
         """Test that values with whitespace are stripped."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(
-                {
-                    "endpoints": {
-                        "test": {
-                            "endpoint": "  https://api.example.com  ",
-                            "api_key": "\tkey123\n",
-                        }
-                    }
-                },
-                f,
-            )
-            config_path = f.name
-
-        try:
-            config = ConfigManager(config_path)
-            assert config.get_value("test", "endpoint") == "https://api.example.com"
-            assert config.get_value("test", "api_key") == "key123"
-        finally:
-            Path(config_path).unlink()
+        config = ConfigManager()
+        config.config_data = {"endpoints": {"test": {"endpoint": "  https://api.example.com  ", "api_key": "\tkey123\n"}}}
+        assert config.get_value("test", "endpoint") == "https://api.example.com"
+        assert config.get_value("test", "api_key") == "key123"
 
     def test_get_endpoint_config_empty_endpoint(self):
         """Test getting config for endpoint with no values."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"endpoints": {"empty": {}}}, f)
-            config_path = f.name
-
-        try:
-            config = ConfigManager(config_path)
-            ep_config = config.get_endpoint_config("empty")
-            assert ep_config == {}
-        finally:
-            Path(config_path).unlink()
+        config = ConfigManager()
+        config.config_data = {"endpoints": {"empty": {}}}
+        ep_config = config.get_endpoint_config("empty")
+        assert ep_config == {}
 
     def test_get_common_config_missing(self):
         """Test getting common config when it doesn't exist."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"endpoints": {}}, f)
-            config_path = f.name
-
-        try:
-            config = ConfigManager(config_path)
-            common = config.get_common_config()
-            assert common == {}
-        finally:
-            Path(config_path).unlink()
+        config = ConfigManager()
+        config.config_data = {"endpoints": {}}
+        common = config.get_common_config()
+        assert common == {}
 
     def test_load_env_file_nonexistent(self):
         """Test loading non-existent .env file."""
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"endpoints": {}}, f)
-            config_path = f.name
-
-        try:
-            config = ConfigManager(config_path)
-            # Should not raise error
-            config.load_env_file("/nonexistent/.env")
-        finally:
-            Path(config_path).unlink()
+        config = ConfigManager()
+        # Should not raise error
+        config.load_env_file("/nonexistent/.env")
 
     def test_load_env_file_with_comments_and_empty_lines(self):
         """Test loading .env file with comments and empty lines."""
         import os
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"endpoints": {}}, f)
-            config_path = f.name
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("# This is a comment\n")
@@ -365,12 +233,11 @@ class TestConfigManagerEdgeCases:
             env_path = f.name
 
         try:
-            config = ConfigManager(config_path)
+            config = ConfigManager()
             config.load_env_file(env_path)
             assert os.environ.get("VAR1") == "value1"
             assert os.environ.get("VAR2") == "value2"
         finally:
-            Path(config_path).unlink()
             Path(env_path).unlink()
             os.environ.pop("VAR1", None)
             os.environ.pop("VAR2", None)
@@ -379,10 +246,6 @@ class TestConfigManagerEdgeCases:
         """Test loading .env file with quoted values."""
         import os
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"endpoints": {}}, f)
-            config_path = f.name
-
         with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write('VAR1="quoted value"\n')
             f.write("VAR2='single quoted'\n")
@@ -390,13 +253,12 @@ class TestConfigManagerEdgeCases:
             env_path = f.name
 
         try:
-            config = ConfigManager(config_path)
+            config = ConfigManager()
             config.load_env_file(env_path)
             assert os.environ.get("VAR1") == "quoted value"
             assert os.environ.get("VAR2") == "single quoted"
             assert os.environ.get("VAR3") == "unquoted"
         finally:
-            Path(config_path).unlink()
             Path(env_path).unlink()
             os.environ.pop("VAR1", None)
             os.environ.pop("VAR2", None)

@@ -19,7 +19,7 @@ func TestConfigListHonorsCAMConfigDir(t *testing.T) {
 		t.Fatalf("list exit = %d; stderr=%s", code, stderr)
 	}
 	for _, want := range []string{
-		filepath.Join(dir, "providers.json"),
+		filepath.Join(dir, "cam.db"),
 		filepath.Join(dir, "config.yaml"),
 		"Editor configurations:",
 	} {

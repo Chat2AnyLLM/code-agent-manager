@@ -59,10 +59,41 @@ describe('Library page', () => {
     expect(await screen.findByText(/code-reviewer/i)).toBeInTheDocument()
   })
 
-  it('renders prompts page (regression: was blank)', async () => {
-    render(<Library kind="prompt" />)
-    expect(await screen.findByRole('heading', { name: /prompts/i })).toBeInTheDocument()
+  it('links each resource name to its source file on GitHub', async () => {
+    render(<Library kind="agent" />)
+    // The mock agent lives at agents/code-reviewer.md in iannuttall/claude-agents.
+    const link = await screen.findByRole('link', { name: /code-reviewer/i })
+    expect(link).toHaveAttribute('href', 'https://github.com/iannuttall/claude-agents/blob/main/agents/code-reviewer.md')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('renders instructions page (replaces old prompts page)', async () => {
+    render(<Library kind="instruction" />)
+    expect(await screen.findByRole('heading', { name: /instructions/i })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: /summarize/i })).toBeInTheDocument()
+  })
+
+  it('shows project-level install controls only for instructions', async () => {
+    const installSpy = vi.spyOn(api, 'installMetadata').mockResolvedValue({ status: 'installed' })
+    render(<Library kind="instruction" />)
+    expect(await screen.findByText(/summarize/i)).toBeInTheDocument()
+
+    const level = await screen.findByLabelText(/install level/i)
+    fireEvent.change(level, { target: { value: 'project' } })
+    fireEvent.click(screen.getByRole('button', { name: /install to claude/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/project directory is required/i)
+
+    fireEvent.change(screen.getByLabelText(/project directory/i), { target: { value: 'C:/repo/demo' } })
+    fireEvent.click(screen.getByRole('button', { name: /install to claude/i }))
+    await waitFor(() => expect(installSpy).toHaveBeenCalledWith('instruction', 'anthropics/prompts:summarize', ['claude'], 'project', 'C:/repo/demo'))
+    vi.restoreAllMocks()
+  })
+
+  it('does not show instruction level controls for non-instruction resources', async () => {
+    render(<Library kind="skill" />)
+    expect(await screen.findByText(/golang-testing/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/install level/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/project directory/i)).not.toBeInTheDocument()
   })
 
   it('offers a per-resource agent picker with multiple targets', async () => {

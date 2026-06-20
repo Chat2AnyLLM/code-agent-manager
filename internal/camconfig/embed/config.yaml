@@ -2,6 +2,17 @@
 # This file configures sources for skills, agents, and plugins
 
 repositories:
+  # Instruction repositories
+  instructions:
+    sources:
+      # Local user file (highest priority)
+      - type: local
+        path: ~/.config/code-agent-manager/instruction_repos.json
+
+      # Remote awesome repository configs
+      - type: remote
+        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/instruction_repos.json
+
   # Skill repositories
   skills:
     sources:

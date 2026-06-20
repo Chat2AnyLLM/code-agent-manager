@@ -12,7 +12,7 @@
 (see [2026-06-15-launch-config-file-refactor-design.md](./2026-06-15-launch-config-file-refactor-design.md)).
 The provider and model the writer uses are resolved silently:
 
-- **Provider** (endpoint): the first enabled entry in `providers.json`
+- **Provider** (endpoint): the first enabled provider record in SQLite app state
   whose `supported_client` includes the chosen tool.
 - **Model**: `endpoint.Models[0]`.
 - Flags `--endpoint` / `--model` override either, but there is no

@@ -135,8 +135,11 @@ cam --version
 Create basic configuration files:
 
 ```bash
-# Create providers.json (copy from template)
-cp code_assistant_manager/providers.json ~/.config/code-agent-manager/providers.json
+# Initialize the SQLite provider store
+cam provider init
+
+# Add a provider endpoint
+cam provider add my-provider --endpoint https://api.example.com/v1 --api-key-env API_KEY_MY_PROVIDER --client claude
 
 # Create .env file for API keys
 touch ~/.env
@@ -380,7 +383,7 @@ pip install code-agent-manager
 
 After successful installation:
 
-1. **Configure Endpoints**: Set up your AI service endpoints in `providers.json`
+1. **Configure Providers**: Add provider records to the SQLite app state with `cam provider add ...`
 2. **Add API Keys**: Configure your API keys in `.env` file
 3. **Test Integration**: Run `code-agent-manager doctor` to verify setup
 4. **Explore Features**: Try `code-agent-manager --help` to see all options

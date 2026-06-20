@@ -14,18 +14,33 @@ function repoUrl(owner: string, name: string, branch: string): string {
   return branch && branch !== 'main' ? `${base}/tree/${branch}` : base
 }
 
+// Build a direct GitHub link to the resource's in-repo location (the manifest
+// file for agents/instructions, the resource directory for skills/plugins). A path
+// with a file extension links via /blob/; a directory links via /tree/. When no
+// path is indexed, it falls back to the repo root so the link is never dead.
+function sourceUrl(item: MetadataItem): string {
+  const base = `https://github.com/${item.repo_owner}/${item.repo_name}`
+  const ref = item.repo_branch || 'main'
+  const path = item.item_path?.replace(/^\/+/, '')
+  if (path) {
+    const segment = /\.[a-z0-9]+$/i.test(path) ? 'blob' : 'tree'
+    return `${base}/${segment}/${ref}/${path}`
+  }
+  return repoUrl(item.repo_owner, item.repo_name, item.repo_branch)
+}
+
 // Each kind maps to its own i18n title/description keys. The "agent" kind is
 // labelled "Subagents" in the UI to distinguish installable subagent resources
 // from the runnable code agents shown on the Agents page.
 const titleKeys: Record<Entity['kind'], string> = {
-  prompt: 'library.prompts.title',
+  instruction: 'library.instructions.title',
   skill: 'library.skills.title',
   agent: 'library.agents.title',
   plugin: 'library.plugins.title',
 }
 
 const descriptionKeys: Record<Entity['kind'], string> = {
-  prompt: 'library.prompts.description',
+  instruction: 'library.instructions.description',
   skill: 'library.skills.description',
   agent: 'library.agents.description',
   plugin: 'library.plugins.description',
@@ -113,10 +128,10 @@ export function Library({ kind }: LibraryProps) {
     }
   }
 
-  async function installTo(item: MetadataItem, apps: string[]) {
+  async function installTo(item: MetadataItem, apps: string[], level?: string, projectDir?: string) {
     setStatus('')
     try {
-      await api.installMetadata(item.kind, item.install_key, apps)
+      await api.installMetadata(item.kind, item.install_key, apps, level, projectDir)
       setStatus(`Installed ${item.name} to ${apps.join(', ')}`)
       await load(query, offset)
     } catch (err) {
@@ -133,7 +148,13 @@ export function Library({ kind }: LibraryProps) {
   const visibleItems = installedOnly ? items.filter((item) => (item.installed_apps ?? []).length > 0) : items
 
   const columns: Column<MetadataItem>[] = [
-    { header: 'Name', cell: (item) => <h3 className="row-name">{item.name}</h3> },
+    { header: 'Name', cell: (item) => (
+      <h3 className="row-name">
+        <a className="source-link" href={sourceUrl(item)} target="_blank" rel="noopener noreferrer" title={`Open ${item.name} source on GitHub`}>
+          {item.name}
+        </a>
+      </h3>
+    ) },
     { header: 'Repo', cell: (item) => (
       <a className="repo-link" href={repoUrl(item.repo_owner, item.repo_name, item.repo_branch)} target="_blank" rel="noopener noreferrer" title={`Open ${item.repo_owner}/${item.repo_name} on GitHub`}>
         {item.repo_owner}/{item.repo_name}{item.repo_branch && item.repo_branch !== 'main' ? `@${item.repo_branch}` : ''}
@@ -185,24 +206,33 @@ export function Library({ kind }: LibraryProps) {
 type ResourceActionsProps = {
   item: MetadataItem
   targets: string[]
-  onInstall: (item: MetadataItem, apps: string[]) => Promise<void>
+  onInstall: (item: MetadataItem, apps: string[], level?: string, projectDir?: string) => Promise<void>
 }
 
 // ResourceActions renders the install-target picker and install button inside a
 // table row's Actions cell. The picker is a collapsed <details> so the full
 // agent list stays one click away (and in the DOM for accessibility) without
-// making the row tall.
+// making the row tall. Instruction rows also expose install level controls.
 function ResourceActions({ item, targets, onInstall }: ResourceActionsProps) {
   const { t } = useLanguage()
   const installedApps = item.installed_apps ?? []
   const [selected, setSelected] = useState<string[]>([])
   const [installing, setInstalling] = useState(false)
+  const [installLevel, setInstallLevel] = useState<'user' | 'project'>('user')
+  const [projectDir, setProjectDir] = useState('')
+  const [projectDirError, setProjectDirError] = useState('')
+  const isInstruction = item.kind === 'instruction'
 
   async function doInstall() {
     const apps = selected.length > 0 ? selected : ['claude']
+    if (isInstruction && installLevel === 'project' && !projectDir.trim()) {
+      setProjectDirError('Project directory is required for project-level install')
+      return
+    }
+    setProjectDirError('')
     setInstalling(true)
     try {
-      await onInstall(item, apps)
+      await onInstall(item, apps, isInstruction ? installLevel : undefined, isInstruction ? projectDir : undefined)
       setSelected([])
     } catch {
       // status surfaced by parent
@@ -227,6 +257,31 @@ function ResourceActions({ item, targets, onInstall }: ResourceActionsProps) {
         triggerAriaLabel={t('library.selectAgentsFor', { name: item.name })}
         listboxAriaLabel={t('library.installTargets', { name: item.name })}
       />
+      {isInstruction && (
+        <div className="install-level-controls">
+          <label className="level-label">
+            <select
+              aria-label="Install level"
+              value={installLevel}
+              onChange={(event) => setInstallLevel(event.target.value as 'user' | 'project')}
+            >
+              <option value="user">User level</option>
+              <option value="project">Project level</option>
+            </select>
+          </label>
+          {installLevel === 'project' && (
+            <label className="project-dir-label">
+              <input
+                aria-label="Project directory"
+                value={projectDir}
+                onChange={(event) => { setProjectDir(event.target.value); setProjectDirError('') }}
+                placeholder="/path/to/project"
+              />
+              {projectDirError && <span className="error-text" role="alert">{projectDirError}</span>}
+            </label>
+          )}
+        </div>
+      )}
       <button className="primary" onClick={doInstall} disabled={installing}>{installLabel}</button>
     </div>
   )

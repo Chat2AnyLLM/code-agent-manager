@@ -26,10 +26,15 @@ import (
 type Kind string
 
 const (
+	// KindPrompt is the legacy name for instructions, kept so that
+	// metadata and CLI packages that still reference it can compile.
+	// It is NOT used inside this package; use KindInstruction instead.
 	KindPrompt Kind = "prompt"
-	KindSkill  Kind = "skill"
-	KindAgent  Kind = "agent"
-	KindPlugin Kind = "plugin"
+
+	KindInstruction Kind = "instruction"
+	KindSkill       Kind = "skill"
+	KindAgent       Kind = "agent"
+	KindPlugin      Kind = "plugin"
 )
 
 // Entity is the canonical representation stored on disk.
@@ -74,6 +79,9 @@ func (s *Store) Path() string {
 
 // All returns every entity in the store sorted by name.
 func (s *Store) All() ([]Entity, error) {
+	if err := s.migrateIfInstruction(); err != nil {
+		return nil, err
+	}
 	data := map[string]Entity{}
 	raw, err := os.ReadFile(s.Path())
 	if err != nil {
@@ -144,6 +152,9 @@ func (s *Store) Delete(name string) (bool, error) {
 }
 
 func (s *Store) allMap() (map[string]Entity, error) {
+	if err := s.migrateIfInstruction(); err != nil {
+		return nil, err
+	}
 	out := map[string]Entity{}
 	raw, err := os.ReadFile(s.Path())
 	if err != nil {
@@ -172,6 +183,61 @@ func (s *Store) write(all map[string]Entity) error {
 	data = append(data, '\n')
 	if err := os.WriteFile(s.Path(), data, 0o600); err != nil {
 		return fmt.Errorf("entities: write %s: %w", s.Path(), err)
+	}
+	return nil
+}
+
+func (s *Store) migrateIfInstruction() error {
+	if s.kind != KindInstruction {
+		return nil
+	}
+	return MigrateEntityStorage()
+}
+
+// MigrateEntityStorage migrates legacy prompt entities to instruction storage
+// idempotently. It reads prompts.json, converts each entity's Kind from
+// "prompt" to "instruction", and writes them to instructions.json. The
+// prompts.json file is left untouched. If instructions.json already exists or
+// prompts.json does not exist, no migration is performed.
+func MigrateEntityStorage() error {
+	dir := pathutil.ConfigDir()
+	oldPath := filepath.Join(dir, "prompts.json")
+	newPath := filepath.Join(dir, "instructions.json")
+
+	if _, err := os.Stat(newPath); err == nil {
+		return nil
+	}
+
+	raw, err := os.ReadFile(oldPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("entities: read %s: %w", oldPath, err)
+	}
+	if len(raw) == 0 {
+		return nil
+	}
+
+	entitiesByName := map[string]Entity{}
+	if err := json.Unmarshal(raw, &entitiesByName); err != nil {
+		return fmt.Errorf("entities: parse %s: %w", oldPath, err)
+	}
+	for name, entity := range entitiesByName {
+		entity.Kind = KindInstruction
+		entitiesByName[name] = entity
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("entities: mkdir %s: %w", dir, err)
+	}
+	data, err := json.MarshalIndent(entitiesByName, "", "  ")
+	if err != nil {
+		return fmt.Errorf("entities: marshal migrated instructions: %w", err)
+	}
+	data = append(data, '\n')
+	if err := os.WriteFile(newPath, data, 0o600); err != nil {
+		return fmt.Errorf("entities: write %s: %w", newPath, err)
 	}
 	return nil
 }

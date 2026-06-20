@@ -197,7 +197,7 @@ Run:
 rm -rf dist/*
 ./install.sh uninstall
 ./install.sh
-cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json
+# providers.json is deprecated; no restore step is needed
 ```
 
 Expected: install completes successfully.

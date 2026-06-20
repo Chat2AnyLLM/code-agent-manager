@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -30,8 +31,8 @@ func seedMetadataDB(t *testing.T, dbPath string) {
 }
 
 func TestMetadataRefreshCommand(t *testing.T) {
-	if testing.Short() {
-		t.Skip("refresh performs live network downloads; skipped in -short mode")
+	if testing.Short() || os.Getenv("CAM_RUN_LIVE_TESTS") != "1" {
+		t.Skip("refresh performs live network downloads; set CAM_RUN_LIVE_TESTS=1 to run")
 	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)

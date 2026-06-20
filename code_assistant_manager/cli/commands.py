@@ -62,7 +62,7 @@ def _get_config_manager(ctx: Context):
         config_path = None
         if ctx and ctx.obj and hasattr(ctx.obj, "get"):
             config_path = ctx.obj.get("config_path")
-        return ConfigManager(config_path) if config_path else ConfigManager()
+        return ConfigManager() if config_path else ConfigManager()
     except Exception:
         return ConfigManager()
 
@@ -93,7 +93,7 @@ def upgrade(
 
     # Initialize config
     try:
-        config = ConfigManager(config_path)
+        config = ConfigManager()
         # Validate configuration
         is_valid, errors = config.validate_config()
         if not is_valid:
@@ -149,7 +149,7 @@ def doctor(
 
     # Initialize config
     try:
-        config = ConfigManager(config_path)
+        config = ConfigManager()
         # Load environment variables from .env file
         config.load_env_file()
         # Validate configuration
@@ -201,7 +201,7 @@ def launch_alias(ctx: Context, tool_name: str = TOOL_NAME_OPTION):
             # Get any extra args passed after the tool name
             tool_args = ctx.args if hasattr(ctx, 'args') else []
             try:
-                config = ConfigManager(config_path)
+                config = ConfigManager()
                 is_valid, errors = config.validate_config()
                 if not is_valid:
                     typer.echo("Configuration validation errors:")
@@ -248,7 +248,7 @@ def launch_alias(ctx: Context, tool_name: str = TOOL_NAME_OPTION):
         logger.debug(f"Using config path: {config_path}")
 
         try:
-            config = ConfigManager(config_path)
+            config = ConfigManager()
             is_valid, errors = config.validate_config()
             if not is_valid:
                 logger.error(f"Configuration validation errors: {errors}")
@@ -439,7 +439,7 @@ def validate_config(
     from code_assistant_manager.config import ConfigManager
     from code_assistant_manager.menu.base import Colors
     try:
-        cm = ConfigManager(config)
+        cm = ConfigManager()
         typer.echo(
             f"{Colors.GREEN}✓ Configuration file loaded successfully{Colors.RESET}"
         )

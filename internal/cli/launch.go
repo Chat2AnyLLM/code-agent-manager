@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/chat2anyllm/code-agent-manager/internal/appapi"
 	"github.com/chat2anyllm/code-agent-manager/internal/pathutil"
 	"github.com/chat2anyllm/code-agent-manager/internal/providers"
 	"github.com/chat2anyllm/code-agent-manager/internal/tools"
@@ -47,7 +46,7 @@ func (a *App) launchCommand(state *globalState) *cobra.Command {
 			}
 
 			// Validate the positional tool name BEFORE touching
-			// providers.json so an unknown name surfaces the right
+			// the provider store so an unknown name surfaces the right
 			// error even when no providers config exists.
 			pinned := launchSelection{
 				EndpointName: endpointName,
@@ -71,9 +70,9 @@ func (a *App) launchCommand(state *globalState) *cobra.Command {
 				return nil
 			}
 
-			// Load providers.json lazily — only when the wizard or
+			// Load the provider store lazily — only when the wizard or
 			// auto-resolve actually needs an endpoint.
-			file, perr := appapi.ProviderAPI{ProvidersPath: state.providersPath}.File(context.Background())
+			file, perr := makeProviderAPI(state).File(context.Background())
 			if perr != nil {
 				return perr
 			}
@@ -135,7 +134,7 @@ func lookupTool(registry *tools.Registry, name string) (tools.Tool, bool) {
 
 // resolveLaunchSelection produces the concrete tool/endpoint/model
 // triple by either invoking the interactive wizard (TTY + any field
-// unpinned) or by auto-resolving from providers.json (non-TTY).
+// unpinned) or by auto-resolving from the SQLite provider store (non-TTY).
 func resolveLaunchSelection(
 	out io.Writer,
 	stderr io.Writer,
@@ -172,7 +171,7 @@ func outIsTTY(out io.Writer) bool {
 	return isTerminal(file)
 }
 
-// cacheTTLFromCommon reads providers.json common.cache_ttl_seconds.
+// cacheTTLFromCommon reads provider metadata cache_ttl_seconds from the store-backed file shape.
 // Default: 24h.
 func cacheTTLFromCommon(common map[string]any) time.Duration {
 	const defaultSeconds = int64(86400)

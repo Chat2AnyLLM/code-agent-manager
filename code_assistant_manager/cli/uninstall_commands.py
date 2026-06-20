@@ -76,7 +76,7 @@ def get_config_manager(ctx: Context) -> ConfigManager:
         config_path = None
         if ctx and ctx.obj and hasattr(ctx.obj, "get"):
             config_path = ctx.obj.get("config_path")
-        return ConfigManager(config_path) if config_path else ConfigManager()
+        return ConfigManager() if config_path else ConfigManager()
     except Exception:
         return ConfigManager()
 

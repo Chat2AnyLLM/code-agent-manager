@@ -17,8 +17,8 @@ After Sub-project #1 ships, the following commands behave equivalently to Python
 - `cam version` (already done)
 - `cam completion {bash|zsh|fish|powershell|pwsh}` — replace hand-rolled scripts with Cobra-native generation
 - `cam --endpoints {all|<tool>}` and `--debug/-d` global flags
-- `cam config list` — list providers.json, config.yaml, .env, and the 13 editor config locations
-- `cam config validate` — validate providers.json and config.yaml
+- `cam config list` — list cam.db, config.yaml, .env, and the editor config locations
+- `cam config validate` — validate config.yaml (provider state lives in SQLite)
 - `cam config show [KEY] --app <tool> --scope {user|project}` — show editor config
 - `cam config set KEY VALUE --app <tool> --scope {user|project}` — set editor config
 - `cam config unset KEY --app <tool> --scope {user|project}` — unset editor config
@@ -63,7 +63,7 @@ internal/
 │   ├── management.go            # MOVED from config.go (placeholder, unchanged)
 │   ├── mcp.go                   # unchanged placeholder
 │   └── tool_menu.go             # unchanged
-├── providers/                   # providers.json domain
+├── providers/                   # provider data domain (historically providers.json, now SQLite app state)
 │   ├── providers.go
 │   ├── loader.go
 │   ├── resolver.go
@@ -130,7 +130,7 @@ type Endpoint struct {
 }
 
 func Load(path string) (File, error)
-func DefaultPath() string            // ~/.config/code-agent-manager/providers.json
+func LegacyDefaultPath() string      // deprecated ~/.config/code-agent-manager/providers.json
 func DiscoverPath() string           // first existing of DefaultPath / cwd / home
 func (e Endpoint) IsEnabled() bool
 func (e Endpoint) Clients() []string
@@ -274,7 +274,7 @@ Checks (one struct each):
 | Check | Verifies |
 |---|---|
 | `InstallationCheck`  | binary version present, Go runtime version |
-| `ConfigCheck`        | providers.json exists and parses, perms ≤ 0o600 |
+| `ConfigCheck`        | SQLite store exists and can be queried |
 | `EnvCheck`           | locate `.env` via `envfile.Find`, perms ≤ 0o600 |
 | `EndpointFormatCheck`| every endpoint has `http(s)://` URL |
 | `CacheCheck`         | `~/.cache/code-agent-manager/repos` size + file count + newest/oldest mtime |
@@ -327,7 +327,7 @@ Config command tree:
 | Sub-command | Args / flags | Behavior |
 |---|---|---|
 | `config list` | none | Print CAM config files (providers/config.yaml/env) + all editor config locations from the registry, marking existence with `✓`. |
-| `config validate` | `--verbose/-v`, inherits `--config` | Load `providers.json` from `--providers` (or default chain); load `config.yaml` from `--config` (or default+bundled). Print `Configuration is valid` on success, errors with non-zero exit on failure. |
+| `config validate` | `--verbose/-v`, inherits `--config` | Validate SQLite store selection via `--store`; load `config.yaml` from `--config` (or default+bundled). Print `Configuration is valid` on success, errors with non-zero exit on failure. |
 | `config show [KEY]` | `--app/-a` (default `claude`), `--scope/-s` (default unset = both) | Load editor config via registry. Print flattened key=value lines for all keys, or just one when `KEY` provided. |
 | `config set KEY[=VALUE] [VALUE]` | `--app/-a` (required if no dotted prefix), `--scope/-s` (default `user`) | Accept `KEY=VALUE` single-arg or `KEY VALUE` two-arg form (Python takes two args). `ParseScalar` coerces. Print `Set <key> = <value> (<scope> scope)` and config path. |
 | `config unset KEY` | `--app/-a` (required if no dotted prefix), `--scope/-s` (default `user`) | Remove key. Print `Unset <key> from <scope> scope` or warning if missing. |
@@ -375,7 +375,7 @@ cli.App.Run
                       └── ui.Printer.Info(value)
 ```
 
-### 6.2 `cam doctor --providers ~/providers.json`
+### 6.2 Historical `cam doctor --providers ~/providers.json` (deprecated)
 
 ```
 cli.App.Run
@@ -430,7 +430,7 @@ CLAUDE.md mandates this reinstall sequence after any change:
 rm -rf dist/*
 ./install.sh uninstall
 ./install.sh
-cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json
+# providers.json is deprecated; no restore step is needed
 ```
 
 This sub-project does not alter that contract.

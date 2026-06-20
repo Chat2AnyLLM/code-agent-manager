@@ -8,7 +8,7 @@ import (
 	"github.com/chat2anyllm/code-agent-manager/internal/entities"
 )
 
-// DiscoveredResource is one resource (skill/agent/prompt/plugin) found inside a
+// DiscoveredResource is one resource (skill/agent/instruction/plugin) found inside a
 // repository tree, with metadata parsed from its manifest file.
 type DiscoveredResource struct {
 	Name           string
@@ -34,7 +34,7 @@ type DiscoveredResource struct {
 // Conventions, matching the existing CLI fetch behavior:
 //   - skill:  directories containing a SKILL.md file
 //   - agent:  *.md files (each file is one agent), excluding README/LICENSE
-//   - prompt: *.md files (each file is one prompt), excluding README/LICENSE
+//   - instruction: *.md files (each file is one instruction), excluding README/LICENSE
 //   - plugin: directories containing a plugin.json or .claude-plugin/plugin.json
 func DiscoverResources(root, subPath string, kind entities.Kind) []DiscoveredResource {
 	scanRoots := resolveScanRoots(root, subPath)
@@ -152,7 +152,7 @@ func resourceFromFile(root, p, base string, kind entities.Kind) (DiscoveredResou
 			ManifestRel: relPath(root, p),
 		}, true
 
-	case entities.KindAgent, entities.KindPrompt:
+	case entities.KindAgent, entities.KindPrompt, entities.KindInstruction:
 		if !strings.HasSuffix(strings.ToLower(base), ".md") {
 			return DiscoveredResource{}, false
 		}

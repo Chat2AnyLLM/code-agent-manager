@@ -29,16 +29,18 @@ func NewStore(path string) *Store {
 	return &Store{path: path}
 }
 
-// Init creates metadata tables if they do not exist.
+// Init creates metadata tables if they do not exist and runs idempotent migrations.
 func (s *Store) Init(ctx context.Context) error {
 	db, err := s.open()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	_, err = db.ExecContext(ctx, schemaSQL)
-	if err != nil {
+	if _, err = db.ExecContext(ctx, schemaSQL); err != nil {
 		return fmt.Errorf("metadata: init schema: %w", err)
+	}
+	if err := s.runMigrations(ctx, db); err != nil {
+		return fmt.Errorf("metadata: migrations: %w", err)
 	}
 	return nil
 }
@@ -167,13 +169,22 @@ const canonicalOrder = `CASE WHEN repo_name LIKE 'awesome-%' THEN 1 ELSE 0 END,
 				repo_owner, repo_name`
 
 // matchPredicate builds the WHERE clause (without the leading "WHERE") for a
-// search, optionally narrowed by kind.
-func matchPredicate(withKind bool) string {
+// search, optionally narrowed by kind. Pass the raw kind string ("" = any kind).
+func matchPredicate(kind string) string {
 	pred := "(name LIKE ? OR description LIKE ? OR repo_owner LIKE ? OR repo_name LIKE ? OR install_key LIKE ?)"
-	if withKind {
-		return "kind = ? AND " + pred
+	lead := ""
+	if kind != "" {
+		lead = "kind = ? AND "
 	}
-	return pred
+	// A subagent is a markdown file beneath an `agents/` folder. Rows whose
+	// in-repo path has no `agents` segment (commands/, docs/, README, …) are
+	// not subagents and must never appear on the SubAgents page. This mirrors
+	// DiscoverResources' underAgentsFolder at query time, so index entries left
+	// by an older binary (before that filter existed) can't leak through.
+	if kind == "agent" {
+		lead += "(item_path LIKE 'agents/%' OR item_path LIKE '%/agents/%') AND "
+	}
+	return lead + pred
 }
 
 // Search queries the metadata_items table with LIKE matching. Results are
@@ -197,9 +208,8 @@ func (s *Store) Search(ctx context.Context, q SearchQuery) ([]Item, error) {
 	}
 	pattern := "%" + q.Query + "%"
 
-	withKind := q.Kind != ""
 	args := []any{pattern, pattern, pattern, pattern, pattern}
-	if withKind {
+	if q.Kind != "" {
 		args = append([]any{q.Kind}, args...)
 	}
 	args = append(args, limit, q.Offset)
@@ -209,7 +219,7 @@ func (s *Store) Search(ctx context.Context, q SearchQuery) ([]Item, error) {
 			SELECT `+itemColumns+`,
 			       ROW_NUMBER() OVER (PARTITION BY lower(name) ORDER BY `+canonicalOrder+`) AS rn
 			FROM metadata_items
-			WHERE `+matchPredicate(withKind)+`
+			WHERE `+matchPredicate(q.Kind)+`
 		)
 		SELECT `+itemColumns+` FROM ranked WHERE rn = 1
 		ORDER BY name LIMIT ? OFFSET ?`,
@@ -234,16 +244,15 @@ func (s *Store) Count(ctx context.Context, q SearchQuery) (int, error) {
 	defer db.Close()
 
 	pattern := "%" + q.Query + "%"
-	withKind := q.Kind != ""
 	args := []any{pattern, pattern, pattern, pattern, pattern}
-	if withKind {
+	if q.Kind != "" {
 		args = append([]any{q.Kind}, args...)
 	}
 
 	var count int
 	err = db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM (
-			SELECT DISTINCT lower(name) FROM metadata_items WHERE `+matchPredicate(withKind)+`
+			SELECT DISTINCT lower(name) FROM metadata_items WHERE `+matchPredicate(q.Kind)+`
 		)`,
 		args...).Scan(&count)
 	if err != nil {
@@ -346,6 +355,51 @@ func boolToInt(b bool) int {
 	}
 	return 0
 }
+
+// runMigrations applies idempotent data migrations after the schema exists.
+func (s *Store) runMigrations(ctx context.Context, db *sql.DB) error {
+	if _, err := db.ExecContext(ctx, migrationMetaSQL); err != nil {
+		return fmt.Errorf("migration meta: %w", err)
+	}
+	migrations := []struct {
+		id  string
+		run func(context.Context, *sql.DB) error
+	}{
+		{id: "prompt_to_instruction", run: s.migratePromptToInstruction},
+	}
+	for _, migration := range migrations {
+		var applied int
+		if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM migration_meta WHERE id = ?`, migration.id).Scan(&applied); err != nil {
+			return fmt.Errorf("migration check %s: %w", migration.id, err)
+		}
+		if applied > 0 {
+			continue
+		}
+		if err := migration.run(ctx, db); err != nil {
+			return fmt.Errorf("migration %s: %w", migration.id, err)
+		}
+		if _, err := db.ExecContext(ctx, `INSERT INTO migration_meta(id, applied_at) VALUES(?, ?)`, migration.id, timeNow()); err != nil {
+			return fmt.Errorf("migration record %s: %w", migration.id, err)
+		}
+	}
+	return nil
+}
+
+func (s *Store) migratePromptToInstruction(ctx context.Context, db *sql.DB) error {
+	for _, table := range []string{"metadata_items", "metadata_sources"} {
+		if _, err := db.ExecContext(ctx, `UPDATE `+table+` SET kind = 'instruction' WHERE kind = 'prompt'`); err != nil {
+			return fmt.Errorf("migrate %s: %w", table, err)
+		}
+	}
+	return nil
+}
+
+const migrationMetaSQL = `
+CREATE TABLE IF NOT EXISTS migration_meta (
+  id TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL DEFAULT ''
+);
+`
 
 const schemaSQL = `
 PRAGMA journal_mode = WAL;

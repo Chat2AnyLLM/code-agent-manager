@@ -11,15 +11,19 @@ import (
 )
 
 type LaunchService struct {
-	providersPath string
+	dbPath string
 }
 
-func NewLaunchService(providersPath string) *LaunchService {
-	return &LaunchService{providersPath: providersPath}
+func NewLaunchService(dbPath string) *LaunchService {
+	return &LaunchService{dbPath: dbPath}
 }
 
 func (s *LaunchService) ListTools() ([]ToolDTO, error) {
 	return NewToolService().List()
+}
+
+func (s *LaunchService) providerAPI() appapi.ProviderAPI {
+	return appapi.ProviderAPI{DBPath: s.dbPath}
 }
 
 func (s *LaunchService) ListProvidersForTool(toolName string) ([]ProviderDTO, error) {
@@ -27,7 +31,7 @@ func (s *LaunchService) ListProvidersForTool(toolName string) ([]ProviderDTO, er
 	if err != nil {
 		return nil, err
 	}
-	file, err := appapi.ProviderAPI{ProvidersPath: s.providersPath}.File(context.Background())
+	file, err := s.providerAPI().File(context.Background())
 	if err != nil {
 		return nil, wrapError("PROVIDER_LOAD_FAILED", err)
 	}
@@ -45,7 +49,7 @@ func (s *LaunchService) ListProvidersForTool(toolName string) ([]ProviderDTO, er
 }
 
 func (s *LaunchService) ListModelsForProvider(providerName string) ([]string, error) {
-	file, err := appapi.ProviderAPI{ProvidersPath: s.providersPath}.File(context.Background())
+	file, err := s.providerAPI().File(context.Background())
 	if err != nil {
 		return nil, wrapError("PROVIDER_LOAD_FAILED", err)
 	}
@@ -65,7 +69,7 @@ func (s *LaunchService) DryRun(toolName, providerName, model string, extraArgs [
 	if err != nil {
 		return LaunchPlanDTO{}, err
 	}
-	file, err := appapi.ProviderAPI{ProvidersPath: s.providersPath}.File(context.Background())
+	file, err := s.providerAPI().File(context.Background())
 	if err != nil {
 		return LaunchPlanDTO{}, wrapError("PROVIDER_LOAD_FAILED", err)
 	}
@@ -93,7 +97,7 @@ func (s *LaunchService) ApplyConfig(toolName, providerName, model string) (Apply
 	if err != nil {
 		return ApplyResultDTO{}, err
 	}
-	file, err := appapi.ProviderAPI{ProvidersPath: s.providersPath}.File(context.Background())
+	file, err := s.providerAPI().File(context.Background())
 	if err != nil {
 		return ApplyResultDTO{}, wrapError("PROVIDER_LOAD_FAILED", err)
 	}

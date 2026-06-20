@@ -2,14 +2,11 @@ package desktop
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 )
 
 func TestDoctorServiceRunChecks(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "providers.json")
-	_, _ = NewProviderService(path).Init()
-	service := NewDoctorService("test", path)
+	service := NewDoctorService("test", t.TempDir()+"/cam.db")
 
 	checks, err := service.RunChecks(context.Background())
 	if err != nil {

@@ -24,7 +24,7 @@ func writeProviders(t *testing.T, payload any) string {
 	return path
 }
 
-func TestLoadHappyPath(t *testing.T) {
+func TestLegacyTestHelperLoadsHappyPath(t *testing.T) {
 	path := writeProviders(t, map[string]any{
 		"common": map[string]any{"http_proxy": ""},
 		"endpoints": map[string]any{
@@ -42,7 +42,7 @@ func TestLoadHappyPath(t *testing.T) {
 		},
 	})
 
-	got, err := providers.Load(path)
+	got, err := loadLegacyFileForTest(path)
 	if err != nil {
 		t.Fatalf("Load err = %v", err)
 	}
@@ -62,19 +62,19 @@ func TestLoadHappyPath(t *testing.T) {
 	}
 }
 
-func TestLoadMissingFile(t *testing.T) {
-	if _, err := providers.Load(filepath.Join(t.TempDir(), "missing.json")); err == nil {
+func TestLegacyTestHelperMissingFile(t *testing.T) {
+	if _, err := loadLegacyFileForTest(filepath.Join(t.TempDir(), "missing.json")); err == nil {
 		t.Fatal("expected error on missing file")
 	}
 }
 
-func TestLoadMalformedJSON(t *testing.T) {
+func TestLegacyTestHelperMalformedJSON(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "providers.json")
 	if err := os.WriteFile(path, []byte("not-json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := providers.Load(path); err == nil {
+	if _, err := loadLegacyFileForTest(path); err == nil {
 		t.Fatal("expected error on malformed JSON")
 	}
 }
@@ -148,19 +148,17 @@ func TestMaskedAPIKey(t *testing.T) {
 	}
 }
 
-func TestDiscoverPathFallsThroughToDefault(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("CAM_CONFIG_DIR", filepath.Join(home, "cfg"))
-	other := t.TempDir()
-	wd, _ := os.Getwd()
-	if err := os.Chdir(other); err != nil {
-		t.Fatal(err)
+func loadLegacyFileForTest(path string) (providers.File, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return providers.File{}, err
 	}
-	t.Cleanup(func() { _ = os.Chdir(wd) })
-
-	got := providers.DiscoverPath()
-	if got != providers.DefaultPath() {
-		t.Fatalf("DiscoverPath = %q, want DefaultPath %q", got, providers.DefaultPath())
+	var file providers.File
+	if err := json.Unmarshal(data, &file); err != nil {
+		return providers.File{}, err
 	}
+	if file.Endpoints == nil {
+		file.Endpoints = map[string]providers.Endpoint{}
+	}
+	return file, nil
 }

@@ -309,10 +309,81 @@ func TestRepoConfigKey(t *testing.T) {
 		{entities.KindSkill, "skills"},
 		{entities.KindAgent, "agents"},
 		{entities.KindPlugin, "plugins"},
+		{entities.KindInstruction, "instructions"},
 	}
 	for _, tt := range tests {
 		if got := repoConfigKey(tt.kind); got != tt.expected {
 			t.Errorf("repoConfigKey(%s) = %q, want %q", tt.kind, got, tt.expected)
 		}
+	}
+}
+
+func TestBundledInstructionRepos(t *testing.T) {
+	repos, err := loadBundled(entities.KindInstruction)
+	if err != nil {
+		t.Fatalf("loadBundled(instruction): %v", err)
+	}
+	if len(repos) == 0 {
+		t.Fatal("expected bundled instruction repos")
+	}
+	if _, ok := repos["anthropics/claude-code"]; !ok {
+		t.Fatal("expected anthropics/claude-code in bundled instruction repos")
+	}
+}
+
+func TestMigrateRepoConfigFilesCreatesInstructionFile(t *testing.T) {
+	dir := t.TempDir()
+	promptData := `{"test/repo": {"owner": "test", "name": "repo", "enabled": true}}`
+	if err := os.WriteFile(filepath.Join(dir, "prompt_repos.json"), []byte(promptData), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := MigrateRepoConfigFiles(dir)
+	if err != nil {
+		t.Fatalf("MigrateRepoConfigFiles: %v", err)
+	}
+	if !updated {
+		t.Fatal("expected updated=true")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "instruction_repos.json")); err != nil {
+		t.Fatalf("instruction_repos.json should exist: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "prompt_repos.json")); err != nil {
+		t.Fatalf("prompt_repos.json should remain: %v", err)
+	}
+}
+
+func TestMigrateRepoConfigFilesPrefersExistingInstructionFile(t *testing.T) {
+	dir := t.TempDir()
+	instructionData := `{"new/repo": {"owner": "new", "name": "repo"}}`
+	promptData := `{"old/repo": {"owner": "old", "name": "repo"}}`
+	if err := os.WriteFile(filepath.Join(dir, "instruction_repos.json"), []byte(instructionData), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "prompt_repos.json"), []byte(promptData), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := MigrateRepoConfigFiles(dir)
+	if err != nil {
+		t.Fatalf("MigrateRepoConfigFiles: %v", err)
+	}
+	if updated {
+		t.Fatal("expected updated=false when instruction file exists")
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "instruction_repos.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != instructionData {
+		t.Fatalf("instruction_repos.json changed: got %q, want %q", data, instructionData)
+	}
+}
+
+func TestMigrateRepoConfigFilesNoFileDoesNothing(t *testing.T) {
+	updated, err := MigrateRepoConfigFiles(t.TempDir())
+	if err != nil {
+		t.Fatalf("MigrateRepoConfigFiles: %v", err)
+	}
+	if updated {
+		t.Fatal("expected updated=false when no files exist")
 	}
 }

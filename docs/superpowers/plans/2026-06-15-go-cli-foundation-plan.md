@@ -207,7 +207,7 @@ Then per CLAUDE.md:
 rm -rf dist/*
 ./install.sh uninstall
 ./install.sh
-cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json   # only if backup exists
+# providers.json is deprecated; no restore step is needed   # only if backup exists
 ```
 
 ## Phase 10 — Wrap-up

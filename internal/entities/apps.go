@@ -121,13 +121,13 @@ var promptApps = map[string]string{
 // skillApps matches the cli/cli registry UserDir for skills — all 45 agents.
 var skillApps = map[string]string{
 	// Tier 1: major agents
-	"claude":       "~/.claude/skills",
-	"copilot":      "~/.copilot/skills",
-	"cursor":       "~/.cursor/skills",
-	"codex":        "~/.codex/skills",
-	"gemini":       "~/.gemini/skills",
-	"opencode":     "~/.config/opencode/skills",
-	"windsurf":     "~/.codeium/windsurf/skills",
+	"claude":   "~/.claude/skills",
+	"copilot":  "~/.copilot/skills",
+	"cursor":   "~/.cursor/skills",
+	"codex":    "~/.codex/skills",
+	"gemini":   "~/.gemini/skills",
+	"opencode": "~/.config/opencode/skills",
+	"windsurf": "~/.codeium/windsurf/skills",
 
 	// Tier 2: well-known agents
 	"adal":         "~/.adal/skills",
@@ -199,7 +199,7 @@ var pluginApps = map[string]string{
 // AppPathsFor returns the destinations for a Kind keyed by app name.
 func AppPathsFor(kind Kind) map[string]string {
 	switch kind {
-	case KindPrompt:
+	case KindPrompt, KindInstruction:
 		return promptApps
 	case KindSkill:
 		return skillApps
@@ -209,6 +209,171 @@ func AppPathsFor(kind Kind) map[string]string {
 		return pluginApps
 	}
 	return nil
+}
+
+// InstallLevel identifies the scope of an instruction install.
+type InstallLevel string
+
+const (
+	InstallLevelUser    InstallLevel = "user"
+	InstallLevelProject InstallLevel = "project"
+)
+
+// InstructionInstallPaths holds the known install locations for an
+// instruction entity on a per-app basis.
+type InstructionInstallPaths struct {
+	UserPath    string // user-level path with ~ placeholder (e.g. "~/.claude/CLAUDE.md")
+	ProjectPath string // project-level path with <project> placeholder (e.g. "<project>/CLAUDE.md")
+}
+
+// instructionApps maps app IDs to their instruction install paths.
+// AGENTS.md-compatible tools use UserPath from promptApps for consistency;
+// tools with known project-level paths include ProjectPath.
+// Copilot user-level is not supported in v1 (no official user file path verified).
+var instructionApps = map[string]InstructionInstallPaths{
+	"claude": {
+		UserPath:    "~/.claude/CLAUDE.md",
+		ProjectPath: "<project>/CLAUDE.md",
+	},
+	"gemini": {
+		UserPath:    "~/.gemini/GEMINI.md",
+		ProjectPath: "<project>/GEMINI.md",
+	},
+	"copilot": {
+		ProjectPath: "<project>/.github/copilot-instructions.md",
+	},
+	// AGENTS.md-compatible tools: keep known user paths, add project-level AGENTS.md
+	"codex": {
+		UserPath:    "~/.codex/AGENTS.md",
+		ProjectPath: "<project>/AGENTS.md",
+	},
+	"opencode": {
+		UserPath:    "~/.config/opencode/AGENTS.md",
+		ProjectPath: "<project>/AGENTS.md",
+	},
+	"cursor": {
+		UserPath:    "~/.cursor/AGENTS.md",
+		ProjectPath: "<project>/AGENTS.md",
+	},
+	"windsurf": {
+		UserPath:    "~/.codeium/windsurf/AGENTS.md",
+		ProjectPath: "<project>/AGENTS.md",
+	},
+	"amp": {
+		UserPath:    "~/.config/agents/AGENTS.md",
+		ProjectPath: "<project>/AGENTS.md",
+	},
+	"roo": {
+		UserPath:    "~/.roo/AGENTS.md",
+		ProjectPath: "<project>/AGENTS.md",
+	},
+	"codebuddy": {
+		UserPath:    "~/.codebuddy/CODEBUDDY.md",
+		ProjectPath: "<project>/AGENTS.md",
+	},
+}
+
+// InstructionPath returns the concrete install path for an instruction
+// identified by app and level.  For user-level installs the returned path
+// has ~ expanded via pathutil.Expand.  For project-level installs the
+// projectDir must be a non-empty existing directory; the returned path
+// substitutes <project> with the project dir.
+func InstructionPath(app string, level InstallLevel, projectDir string) (string, error) {
+	paths, ok := instructionApps[app]
+	if !ok {
+		return "", fmt.Errorf("entities: app %q does not support instructions", app)
+	}
+	switch level {
+	case InstallLevelUser:
+		if paths.UserPath == "" {
+			return "", fmt.Errorf("entities: app %q has no user-level instruction path", app)
+		}
+		return pathutil.Expand(paths.UserPath), nil
+	case InstallLevelProject:
+		if paths.ProjectPath == "" {
+			return "", fmt.Errorf("entities: app %q has no project-level instruction path", app)
+		}
+		if projectDir == "" {
+			return "", fmt.Errorf("entities: project directory is required for project-level install")
+		}
+		projectDir = pathutil.Expand(projectDir)
+		info, err := os.Stat(projectDir)
+		if err != nil {
+			return "", fmt.Errorf("entities: project directory %q: %w", projectDir, err)
+		}
+		if !info.IsDir() {
+			return "", fmt.Errorf("entities: %q is not a directory", projectDir)
+		}
+		absDir, err := filepath.Abs(projectDir)
+		if err != nil {
+			return "", fmt.Errorf("entities: cannot resolve %q: %w", projectDir, err)
+		}
+		return strings.Replace(paths.ProjectPath, "<project>", absDir, 1), nil
+	default:
+		return "", fmt.Errorf("entities: unsupported install level %q", level)
+	}
+}
+
+// InstallInstruction writes the instruction entity's content to the target
+// path determined by app and level.  For user-level installs the path is
+// resolved under the user's home directory.  For project-level installs the
+// projectDir must point to an existing directory; the path is resolved
+// relative to it.
+func InstallInstruction(entity Entity, app string, level InstallLevel, projectDir string) (string, error) {
+	dest, err := InstructionPath(app, level, projectDir)
+	if err != nil {
+		return "", err
+	}
+	if err := writeFile(dest, []byte(entity.Content), 0o600); err != nil {
+		return "", err
+	}
+	return dest, nil
+}
+
+// UninstallInstruction resolves the instruction file for the given app and
+// level and reports whether it exists. Instruction files are app-wide guidance
+// files, so this function does not remove them unless a future managed marker
+// scheme can prove CAM owns the file. For project-level installs the projectDir
+// must be provided.
+func UninstallInstruction(entityName string, app string, level InstallLevel, projectDir string) (string, bool, error) {
+	dest, err := InstructionPath(app, level, projectDir)
+	if err != nil {
+		return "", false, err
+	}
+	if !pathutil.Exists(dest) {
+		return dest, false, nil
+	}
+	// Instructions are app-wide files; removing the file is opt-in only when
+	// the file matches the entity's content marker.  We don't truncate
+	// arbitrary user data — instead report "found" if the file exists.
+	return dest, false, nil
+}
+
+// InstructionApps returns the list of app names that support instructions
+// (those with at least one install path defined).
+func InstructionApps() []string {
+	out := make([]string, 0, len(instructionApps))
+	for a := range instructionApps {
+		out = append(out, a)
+	}
+	sortStrings(out)
+	return out
+}
+
+// InstructionAppLevels returns the supported install levels for an app.
+func InstructionAppLevels(app string) []InstallLevel {
+	paths, ok := instructionApps[app]
+	if !ok {
+		return nil
+	}
+	var levels []InstallLevel
+	if paths.UserPath != "" {
+		levels = append(levels, InstallLevelUser)
+	}
+	if paths.ProjectPath != "" {
+		levels = append(levels, InstallLevelProject)
+	}
+	return levels
 }
 
 // SupportedApps returns the supported app names for the kind, sorted.
@@ -238,7 +403,7 @@ func InstalledApps(kind Kind) []string {
 }
 
 // InstallToApp writes the entity's content to the resolved location for app.
-// For prompts: writes Content as a single file.  For skills/agents/plugins:
+// For prompts/instructions: writes Content as a single file.  For skills/agents/plugins:
 // creates a directory named entity.Name containing a SKILL.md/AGENT.md/manifest.json
 // — minimal but matches the Python tree shape.
 func InstallToApp(entity Entity, kind Kind, app string) (string, error) {
@@ -252,7 +417,7 @@ func InstallToApp(entity Entity, kind Kind, app string) (string, error) {
 		return "", err
 	}
 	switch kind {
-	case KindPrompt:
+	case KindPrompt, KindInstruction:
 		return resolved, writeFile(resolved, []byte(entity.Content), 0o600)
 	default:
 		dir := filepath.Join(resolved, entity.Name)
@@ -288,11 +453,11 @@ func UninstallFromApp(entityName string, kind Kind, app string) (string, bool, e
 	}
 	resolved := pathutil.Expand(dest)
 	switch kind {
-	case KindPrompt:
+	case KindPrompt, KindInstruction:
 		if !pathutil.Exists(resolved) {
 			return resolved, false, nil
 		}
-		// Prompts are app-wide files; removing the file is opt-in only when
+		// Prompts/instructions are app-wide files; removing the file is opt-in only when
 		// the file matches the entity's content marker.  We don't truncate
 		// arbitrary user data — instead report "found" if the file exists.
 		return resolved, false, nil

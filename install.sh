@@ -102,21 +102,14 @@ setup_config() {
     print_header "Setting up configuration"
     mkdir -p "$CONFIG_DIR"
 
-    if [ -f providers.json ]; then
-        if [ ! -f "$CONFIG_DIR/providers.json" ]; then
-            cp providers.json "$CONFIG_DIR/providers.json"
-            print_success "Created $CONFIG_DIR/providers.json"
-        else
-            print_info "providers.json already exists, skipping"
-        fi
-    elif [ -f providers.json.example ] && [ ! -f "$CONFIG_DIR/providers.json" ]; then
-        cp providers.json.example "$CONFIG_DIR/providers.json"
-        print_success "Created $CONFIG_DIR/providers.json from providers.json.example"
-    fi
-
     if [ -f code_assistant_manager/config.yaml ] && [ ! -f "$CONFIG_DIR/config.yaml" ]; then
         cp code_assistant_manager/config.yaml "$CONFIG_DIR/config.yaml"
         print_success "Created $CONFIG_DIR/config.yaml"
+    fi
+
+    if [ -f "$CONFIG_DIR/providers.json" ]; then
+        rm -f "$CONFIG_DIR/providers.json"
+        print_success "Removed deprecated $CONFIG_DIR/providers.json"
     fi
 
     if [ ! -f "$HOME/.env" ]; then

@@ -36,19 +36,19 @@ export const mockConfigFiles: ConfigFile[] = [
 
 export const mockDoctorChecks: DoctorCheck[] = [
   { name: 'Installation Check', issues: 0, messages: [{ level: 'pass', text: 'Code Assistant Manager installed' }] },
-  { name: 'Configuration Check', issues: 0, messages: [{ level: 'pass', text: 'providers.json is valid' }] },
+  { name: 'Configuration Check', issues: 0, messages: [{ level: 'pass', text: 'SQLite provider store is configured' }] },
 ]
 
 export const mockMetadataItems: MetadataItem[] = [
-  { kind: 'skill', name: 'golang-testing', description: 'Go testing guidance', install_key: 'obra/superpowers:golang-testing', repo_owner: 'obra', repo_name: 'superpowers', repo_branch: 'main', target_apps: 'claude,codex', installed_apps: ['claude'], installed: true },
-  { kind: 'agent', name: 'code-reviewer', description: 'Review code changes', install_key: 'iannuttall/claude-agents:code-reviewer', repo_owner: 'iannuttall', repo_name: 'claude-agents', repo_branch: 'main', target_apps: 'claude', installed_apps: [], installed: false },
-  { kind: 'prompt', name: 'summarize', description: 'Summarize long text', install_key: 'anthropics/prompts:summarize', repo_owner: 'anthropics', repo_name: 'prompts', repo_branch: 'main', target_apps: 'claude,codex', installed_apps: [], installed: false },
-  { kind: 'plugin', name: 'superpowers-marketplace', description: 'Curated Claude Code plugins', install_key: 'obra/superpowers-marketplace:superpowers-marketplace', repo_owner: 'obra', repo_name: 'superpowers-marketplace', repo_branch: 'main', target_apps: 'claude', installed_apps: [], installed: false },
+  { kind: 'skill', name: 'golang-testing', description: 'Go testing guidance', install_key: 'obra/superpowers:golang-testing', repo_owner: 'obra', repo_name: 'superpowers', repo_branch: 'main', item_path: 'skills/golang-testing', target_apps: 'claude,codex', installed_apps: ['claude'], installed: true },
+  { kind: 'agent', name: 'code-reviewer', description: 'Review code changes', install_key: 'iannuttall/claude-agents:code-reviewer', repo_owner: 'iannuttall', repo_name: 'claude-agents', repo_branch: 'main', item_path: 'agents/code-reviewer.md', target_apps: 'claude', installed_apps: [], installed: false },
+  { kind: 'instruction', name: 'summarize', description: 'Summarize long text', install_key: 'anthropics/prompts:summarize', repo_owner: 'anthropics', repo_name: 'prompts', repo_branch: 'main', item_path: 'prompts/summarize.md', target_apps: 'claude,codex', installed_apps: [], installed: false },
+  { kind: 'plugin', name: 'superpowers-marketplace', description: 'Curated Claude Code plugins', install_key: 'obra/superpowers-marketplace:superpowers-marketplace', repo_owner: 'obra', repo_name: 'superpowers-marketplace', repo_branch: 'main', item_path: 'superpowers-marketplace', target_apps: 'claude', installed_apps: [], installed: false },
 ]
 
 export const mockTargets: Record<string, string[]> = {
   skill: ['claude', 'codex', 'copilot', 'cursor', 'gemini'],
   agent: ['claude', 'codex', 'copilot', 'cursor', 'gemini'],
-  prompt: ['claude', 'codex', 'copilot', 'gemini'],
+  instruction: ['claude', 'codex', 'copilot', 'gemini'],
   plugin: ['claude', 'codebuddy'],
 }

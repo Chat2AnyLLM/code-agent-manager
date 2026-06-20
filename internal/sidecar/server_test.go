@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
+
+	"github.com/chat2anyllm/code-agent-manager/internal/desktop"
 )
 
 func TestSidecarRequiresToken(t *testing.T) {
 	server := New(Options{Version: "test", Token: "secret"})
+	server.services = desktop.NewServices("test", t.TempDir()+"/cam.db")
 	req := httptest.NewRequest(http.MethodGet, "/api/app/version", nil)
 	rec := httptest.NewRecorder()
 
@@ -23,6 +25,7 @@ func TestSidecarRequiresToken(t *testing.T) {
 
 func TestSidecarVersion(t *testing.T) {
 	server := New(Options{Version: "test-version", Token: "secret"})
+	server.services = desktop.NewServices("test-version", t.TempDir()+"/cam.db")
 	req := httptest.NewRequest(http.MethodGet, "/api/app/version", nil)
 	req.Header.Set("Authorization", "Bearer secret")
 	rec := httptest.NewRecorder()
@@ -42,8 +45,8 @@ func TestSidecarVersion(t *testing.T) {
 }
 
 func TestSidecarProviderLifecycle(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "providers.json")
-	server := New(Options{Version: "test", ProvidersPath: path, Token: "secret"})
+	server := New(Options{Version: "test", Token: "secret"})
+	server.services = desktop.NewServices("test", t.TempDir()+"/cam.db")
 	handler := server.Handler()
 
 	body := bytes.NewBufferString(`{"name":"local","endpoint":"http://localhost:4000/v1","supportedClient":"claude","models":["m1"],"enabled":true}`)
@@ -84,6 +87,19 @@ func TestSidecarProviderLifecycle(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("delete status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestSidecarUsesDefaultStorePath(t *testing.T) {
+	server := New(Options{Version: "test", Token: "secret"})
+	req := httptest.NewRequest(http.MethodGet, "/api/providers", nil)
+	req.Header.Set("Authorization", "Bearer secret")
+	rec := httptest.NewRecorder()
+
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
 	}
 }
 

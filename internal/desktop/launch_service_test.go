@@ -8,8 +8,8 @@ import (
 )
 
 func TestLaunchServiceDryRun(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "providers.json")
-	providerService := NewProviderService(path)
+	dbPath := filepath.Join(t.TempDir(), "cam.db")
+	providerService := NewProviderService(dbPath)
 	_, _ = providerService.Init()
 	enabled := true
 	_, err := providerService.Add(ProviderInput{
@@ -19,7 +19,7 @@ func TestLaunchServiceDryRun(t *testing.T) {
 		t.Fatalf("add provider: %v", err)
 	}
 
-	launch := NewLaunchService(path)
+	launch := NewLaunchService(dbPath)
 	providers, err := launch.ListProvidersForTool("claude")
 	if err != nil {
 		t.Fatalf("providers for tool: %v", err)
@@ -43,8 +43,8 @@ func TestLaunchServiceDryRun(t *testing.T) {
 func TestLaunchServiceApplyConfig(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	path := filepath.Join(t.TempDir(), "providers.json")
-	providerService := NewProviderService(path)
+	dbPath := filepath.Join(t.TempDir(), "cam.db")
+	providerService := NewProviderService(dbPath)
 	_, _ = providerService.Init()
 	enabled := true
 	_, err := providerService.Add(ProviderInput{
@@ -54,7 +54,7 @@ func TestLaunchServiceApplyConfig(t *testing.T) {
 		t.Fatalf("add provider: %v", err)
 	}
 
-	launch := NewLaunchService(path)
+	launch := NewLaunchService(dbPath)
 	result, err := launch.ApplyConfig("claude", "local", "demo-model")
 	if err != nil {
 		t.Fatalf("apply config: %v", err)
@@ -89,8 +89,8 @@ func TestLaunchServiceApplyConfigWritesStoredAPIKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("USERPROFILE", t.TempDir())
 
-	path := filepath.Join(t.TempDir(), "providers.json")
-	providerService := NewProviderService(path)
+	dbPath := filepath.Join(t.TempDir(), "cam.db")
+	providerService := NewProviderService(dbPath)
 	_, _ = providerService.Init()
 	enabled := true
 	if _, err := providerService.Add(ProviderInput{
@@ -100,7 +100,7 @@ func TestLaunchServiceApplyConfigWritesStoredAPIKey(t *testing.T) {
 		t.Fatalf("add provider: %v", err)
 	}
 
-	launch := NewLaunchService(path)
+	launch := NewLaunchService(dbPath)
 	result, err := launch.ApplyConfig("claude", "local", "demo-model")
 	if err != nil {
 		t.Fatalf("apply config: %v", err)
@@ -120,8 +120,8 @@ func TestLaunchServiceApplyConfigSkipsEmptyAPIKey(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("USERPROFILE", t.TempDir())
 
-	path := filepath.Join(t.TempDir(), "providers.json")
-	providerService := NewProviderService(path)
+	dbPath := filepath.Join(t.TempDir(), "cam.db")
+	providerService := NewProviderService(dbPath)
 	_, _ = providerService.Init()
 	enabled := true
 	if _, err := providerService.Add(ProviderInput{
@@ -131,7 +131,7 @@ func TestLaunchServiceApplyConfigSkipsEmptyAPIKey(t *testing.T) {
 		t.Fatalf("add provider: %v", err)
 	}
 
-	launch := NewLaunchService(path)
+	launch := NewLaunchService(dbPath)
 	result, err := launch.ApplyConfig("claude", "local", "demo-model")
 	if err != nil {
 		t.Fatalf("apply config: %v", err)

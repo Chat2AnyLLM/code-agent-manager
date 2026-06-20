@@ -30,9 +30,13 @@ import (
 // four subcommands modeled after `gh skill`: search, list, update, install.
 func (a *App) managementCommand(group, alias string, state *globalState) *cobra.Command {
 	kind := groupKind(group)
+	aliases := []string{}
+	if alias != "" {
+		aliases = []string{alias}
+	}
 	cmd := &cobra.Command{
 		Use:     group,
-		Aliases: []string{alias},
+		Aliases: aliases,
 		Short:   "Manage " + group + " configurations",
 	}
 	cmd.AddCommand(entitySearchCommand(kind))
@@ -45,6 +49,8 @@ func (a *App) managementCommand(group, alias string, state *globalState) *cobra.
 
 func groupKind(group string) entities.Kind {
 	switch group {
+	case "instruction":
+		return entities.KindInstruction
 	case "prompt":
 		return entities.KindPrompt
 	case "skill":
@@ -1040,7 +1046,7 @@ Use --repos to also display configured repository sources.`,
 				}
 
 				switch kind {
-				case entities.KindPrompt:
+				case entities.KindPrompt, entities.KindInstruction:
 					if _, err := os.Stat(resolved); err == nil {
 						installed = append(installed, installedEntry{
 							name: filepath.Base(resolved),
@@ -2075,7 +2081,7 @@ func isAlreadyInstalled(name string, kind entities.Kind, app string) bool {
 	}
 	resolved := expandPath(dest)
 	switch kind {
-	case entities.KindPrompt:
+	case entities.KindPrompt, entities.KindInstruction:
 		_, err := os.Stat(resolved)
 		return err == nil
 	default:
@@ -2173,7 +2179,7 @@ func uninstallAllFromApp(kind entities.Kind, app string, out io.Writer) {
 	}
 	resolved := expandPath(dest)
 
-	if kind == entities.KindPrompt {
+	if kind == entities.KindPrompt || kind == entities.KindInstruction {
 		// Prompts are single files — don't remove the user's CLAUDE.md etc.
 		fmt.Fprintf(out, "  Skipping %s — prompt files are not bulk-removable\n", app)
 		return
@@ -2211,7 +2217,7 @@ func interactiveUninstall(kind entities.Kind, apps []string, out io.Writer) erro
 		}
 		resolved := expandPath(dest)
 
-		if kind == entities.KindPrompt {
+		if kind == entities.KindPrompt || kind == entities.KindInstruction {
 			fmt.Fprintf(out, "  %s — prompt uninstall not supported interactively\n", app)
 			continue
 		}

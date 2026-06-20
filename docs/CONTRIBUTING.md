@@ -232,7 +232,7 @@ This project welcomes AI-assisted contributions. Please follow these additional 
    rm -rf dist/*
    ./install.sh uninstall
    ./install.sh
-   cp ~/.config/code-agent-manager/providers.json.bak ~/.config/code-agent-manager/providers.json
+   # providers.json is deprecated; no restore step is needed
    ```
 
 ### Attribution

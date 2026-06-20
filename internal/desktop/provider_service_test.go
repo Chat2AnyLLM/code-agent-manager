@@ -7,8 +7,9 @@ import (
 )
 
 func TestProviderServiceLifecycle(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "providers.json")
-	service := NewProviderService(path)
+	dbPath := filepath.Join(t.TempDir(), "cam.db")
+	t.Setenv("CAM_DB_PATH", dbPath)
+	service := NewProviderService("")
 
 	if _, err := service.Init(); err != nil {
 		t.Fatalf("init: %v", err)
@@ -63,11 +64,25 @@ func TestProviderServiceLifecycle(t *testing.T) {
 }
 
 func TestProviderServiceNotFound(t *testing.T) {
-	service := NewProviderService(filepath.Join(t.TempDir(), "providers.json"))
+	dbPath := filepath.Join(t.TempDir(), "cam.db")
+	t.Setenv("CAM_DB_PATH", dbPath)
+	service := NewProviderService("")
 	_, _ = service.Init()
 	_, err := service.Show("missing")
 	var appErr AppError
 	if !errors.As(err, &appErr) || appErr.Code != "PROVIDER_NOT_FOUND" {
 		t.Fatalf("expected PROVIDER_NOT_FOUND, got %v", err)
+	}
+}
+
+func TestProviderServiceUsesExplicitSQLitePath(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "custom.db")
+	service := NewProviderService(dbPath)
+
+	if _, err := service.Init(); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	if _, err := service.List(); err != nil {
+		t.Fatalf("list: %v", err)
 	}
 }

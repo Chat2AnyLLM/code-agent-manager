@@ -63,26 +63,6 @@ func TestProviderCRUD(t *testing.T) {
 	}
 }
 
-func TestImportProvidersJSON(t *testing.T) {
-	ctx := context.Background()
-	dir := t.TempDir()
-	jsonPath := filepath.Join(dir, "providers.json")
-	if err := providers.Save(jsonPath, providers.File{Endpoints: map[string]providers.Endpoint{"local": {Endpoint: "http://localhost:4000/v1", Models: []string{"m1"}}}}); err != nil {
-		t.Fatalf("save providers json: %v", err)
-	}
-	store := New(filepath.Join(dir, "cam.db"))
-	if err := store.ImportProvidersJSON(ctx, jsonPath); err != nil {
-		t.Fatalf("ImportProvidersJSON: %v", err)
-	}
-	file, err := store.ListProviders(ctx)
-	if err != nil {
-		t.Fatalf("ListProviders: %v", err)
-	}
-	if got := file.Endpoints["local"].Endpoint; got != "http://localhost:4000/v1" {
-		t.Fatalf("imported endpoint = %q", got)
-	}
-}
-
 func TestAppStateKeyValue(t *testing.T) {
 	ctx := context.Background()
 	store := New(filepath.Join(t.TempDir(), "cam.db"))

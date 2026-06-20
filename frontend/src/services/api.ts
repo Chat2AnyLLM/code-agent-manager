@@ -131,8 +131,13 @@ export const api = {
   async refreshMetadata(): Promise<MetadataRefreshSummary> {
     return (await request<MetadataRefreshSummary>('/api/metadata/refresh', { method: 'POST' })) ?? { sources_scanned: 3, items_added: mockMetadataItems.length, items_updated: 0, items_stale: 0, failed_sources: [] }
   },
-  async installMetadata(kind: string, installKey: string, targetApps: string[]): Promise<{ status: string }> {
-    return (await request<{ status: string }>('/api/metadata/install', { method: 'POST', body: JSON.stringify({ kind, install_key: installKey, target_apps: targetApps }) })) ?? { status: 'installed' }
+  async installMetadata(kind: string, installKey: string, targetApps: string[], level?: string, projectDir?: string): Promise<{ status: string }> {
+    const body: Record<string, unknown> = { kind, install_key: installKey, target_apps: targetApps }
+    if (kind === 'instruction') {
+      if (level) body.level = level
+      if (projectDir) body.project_dir = projectDir
+    }
+    return (await request<{ status: string }>('/api/metadata/install', { method: 'POST', body: JSON.stringify(body) })) ?? { status: 'installed' }
   },
   async metadataTargets(kind: string): Promise<string[]> {
     return (await request<string[]>(`/api/metadata/targets?kind=${encodeURIComponent(kind)}`)) ?? mockTargets[kind] ?? ['claude']

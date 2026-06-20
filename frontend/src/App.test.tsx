@@ -15,8 +15,8 @@ describe('App shell', () => {
     await user.click(screen.getByRole('button', { name: /mcp servers/i }))
     expect(await screen.findByRole('heading', { name: /mcp servers/i })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /prompts/i }))
-    expect(await screen.findByRole('heading', { name: /prompts/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /instructions/i }))
+    expect(await screen.findByRole('heading', { name: /instructions/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /skills/i }))
     expect(await screen.findByRole('heading', { name: /skills/i })).toBeInTheDocument()

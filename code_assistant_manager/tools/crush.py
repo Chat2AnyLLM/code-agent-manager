@@ -146,7 +146,7 @@ class CrushTool(CLITool):
 
     def _get_model_defaults(self, model_id: str) -> dict:
         """Get default cost and capability information for a model."""
-        # Common model configurations - can be overridden in providers.json
+        # Common model configurations for Crush; Python runtime no longer reads deprecated providers.json.
         model_defaults = {
             "gpt-4": {
                 "cost_per_1m_in": 30.0,
@@ -198,7 +198,7 @@ class CrushTool(CLITool):
             },
         }
 
-        # Check if user has custom model configurations in providers.json
+        # Optional explicit JSON config can still provide crush.model_configs.
         crush_config = self.config.config_data.get("crush", {})
         custom_models = crush_config.get("model_configs", {})
 
@@ -226,7 +226,7 @@ class CrushTool(CLITool):
         if not success:
             return None
 
-        # Check if we have configured models in providers.json
+        # Check if the explicit config file defines preconfigured models.
         configured_models = self._get_configured_models()
         if configured_models:
             # Use configured models instead of fetching
@@ -301,7 +301,7 @@ class CrushTool(CLITool):
         return config_file
 
     def _get_configured_models(self) -> Optional[List[str]]:
-        """Get configured models from providers.json for crush."""
+        """Get configured models from the explicit Crush config section, if present."""
         crush_config = self.config.config_data.get("crush", {})
         configured_models = crush_config.get("configured_models", [])
         return configured_models if configured_models else None

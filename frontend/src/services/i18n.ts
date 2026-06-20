@@ -41,7 +41,7 @@ const en: Record<string, string> = {
   'nav.agents': 'Agents',
   'nav.providers': 'Providers',
   'nav.mcp': 'MCP Servers',
-  'nav.prompts': 'Prompts',
+  'nav.instructions': 'Instructions',
   'nav.skills': 'Skills',
   'nav.subagents': 'Subagents',
   'nav.plugins': 'Plugins',
@@ -51,7 +51,7 @@ const en: Record<string, string> = {
 
   // Agents (runnable code agents) page
   'agents.title': 'Agents',
-  'agents.description': 'Coding agents CAM manages. Run each from your terminal with the command shown after configuring providers, MCP servers, prompts, skills, subagents, and plugins.',
+  'agents.description': 'Coding agents CAM manages. Run each from your terminal with the command shown after configuring providers, MCP servers, instructions, skills, subagents, and plugins.',
   'agents.detected': 'Detected: {version}',
   'agents.notDetected': 'Not detected on PATH',
   'agents.installedResources': 'Installed resources',
@@ -64,9 +64,9 @@ const en: Record<string, string> = {
   'agents.noConfigTarget': 'This agent has no config file to write.',
   'agents.pickProviderFirst': 'Pick a provider and model first.',
 
-  // Library (prompts/skills/subagents/plugins) pages
-  'library.prompts.title': 'Prompts',
-  'library.prompts.description': 'Search, install, and refresh reusable prompts from the metadata index.',
+  // Library (instructions/skills/subagents/plugins) pages
+  'library.instructions.title': 'Instructions',
+  'library.instructions.description': 'Search, install, and refresh coding-agent instruction files such as CLAUDE.md, AGENTS.md, GEMINI.md, and Copilot instruction files.',
   'library.skills.title': 'Skills',
   'library.skills.description': 'Search, install, and refresh Claude-style skills from the metadata index.',
   'library.agents.title': 'Subagents',
@@ -150,7 +150,7 @@ const zh: Record<string, string> = {
   'nav.agents': '智能体',
   'nav.providers': '服务商',
   'nav.mcp': 'MCP 服务器',
-  'nav.prompts': '提示词',
+  'nav.instructions': '指令',
   'nav.skills': '技能',
   'nav.subagents': '子智能体',
   'nav.plugins': '插件',
@@ -160,7 +160,7 @@ const zh: Record<string, string> = {
 
   // Agents page
   'agents.title': '智能体',
-  'agents.description': 'CAM 管理的编程智能体。配置好服务商、MCP 服务器、提示词、技能、子智能体和插件后，在终端使用下方命令运行各智能体。',
+  'agents.description': 'CAM 管理的编程智能体。配置好服务商、MCP 服务器、指令、技能、子智能体和插件后，在终端使用下方命令运行各智能体。',
   'agents.detected': '已检测：{version}',
   'agents.notDetected': '未在 PATH 中检测到',
   'agents.installedResources': '已安装资源',
@@ -174,8 +174,8 @@ const zh: Record<string, string> = {
   'agents.pickProviderFirst': '请先选择服务商和模型。',
 
   // Library pages
-  'library.prompts.title': '提示词',
-  'library.prompts.description': '从元数据索引中搜索、安装并刷新可复用的提示词。',
+  'library.instructions.title': '指令',
+  'library.instructions.description': '搜索、安装并刷新 CLAUDE.md、AGENTS.md、GEMINI.md 和 Copilot 指令文件等编程智能体指令文件。',
   'library.skills.title': '技能',
   'library.skills.description': '从元数据索引中搜索、安装并刷新 Claude 风格的技能。',
   'library.agents.title': '子智能体',

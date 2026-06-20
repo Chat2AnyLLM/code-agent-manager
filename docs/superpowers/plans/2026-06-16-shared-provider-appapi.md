@@ -32,7 +32,7 @@
 
 - [ ] **Step 1: Write failing tests for shared provider init/list/show**
 
-Create `internal/appapi/providers_test.go` with tests that call `ProviderAPI` directly using a temp `providers.json` path. Include these test cases:
+Create `internal/appapi/providers_test.go` with tests that call `ProviderAPI` directly using a temp SQLite store path. Include these test cases:
 
 ```go
 package appapi

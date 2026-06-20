@@ -156,7 +156,7 @@ config_target:
 | Placeholder        | Expansion                              |
 |--------------------|----------------------------------------|
 | `{endpoint}`       | `endpoint.Endpoint` (URL)              |
-| `{endpoint_name}`  | providers.json key (e.g. `litellm`)    |
+| `{endpoint_name}`  | provider name (e.g. `litellm`)    |
 | `{api_key}`        | resolved API key                       |
 | `{selected_model}` | chosen model                           |
 | `{model_2}`        | secondary model, empty when N/A        |

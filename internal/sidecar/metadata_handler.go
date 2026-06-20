@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/chat2anyllm/code-agent-manager/internal/entities"
 	"github.com/chat2anyllm/code-agent-manager/internal/metadata"
 )
 
@@ -27,6 +28,10 @@ func (s *Server) handleMetadataSearch(w http.ResponseWriter, r *http.Request) {
 	svc := metadata.NewService(store)
 	q := r.URL.Query().Get("q")
 	kind := r.URL.Query().Get("type")
+	if kind == "prompt" {
+		writeError(w, http.StatusBadRequest, "kind 'prompt' has been renamed to 'instruction'; use type=instruction")
+		return
+	}
 	limit := atoiDefault(r.URL.Query().Get("limit"), 50)
 	offset := atoiDefault(r.URL.Query().Get("offset"), 0)
 
@@ -63,9 +68,15 @@ func (s *Server) handleMetadataInstall(w http.ResponseWriter, r *http.Request) {
 		InstallKey string   `json:"install_key"`
 		TargetApp  string   `json:"target_app"`
 		TargetApps []string `json:"target_apps"`
+		Level      string   `json:"level,omitempty"`
+		ProjectDir string   `json:"project_dir,omitempty"`
 	}
 	if err := decodeJSON(r, &input); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if input.Kind == "prompt" {
+		writeError(w, http.StatusBadRequest, "kind 'prompt' has been renamed to 'instruction'; use kind=instruction")
 		return
 	}
 	targets := input.TargetApps
@@ -78,6 +89,19 @@ func (s *Server) handleMetadataInstall(w http.ResponseWriter, r *http.Request) {
 	}
 	store := metadata.NewStore("")
 	svc := metadata.NewService(store)
+	if input.Kind == "instruction" {
+		level := entities.InstallLevel(input.Level)
+		if level == "" {
+			level = entities.InstallLevelUser
+		}
+		if level == entities.InstallLevelProject && input.ProjectDir == "" {
+			writeError(w, http.StatusBadRequest, "project_dir is required for project-level instruction install")
+			return
+		}
+		err := svc.InstallInstructionToTargets(context.Background(), input.InstallKey, targets, level, input.ProjectDir)
+		writeResult(w, map[string]any{"status": "installed", "install_key": input.InstallKey, "targets": targets, "level": level, "project_dir": input.ProjectDir}, err)
+		return
+	}
 	err := svc.InstallToTargets(context.Background(), input.Kind, input.InstallKey, targets)
 	writeResult(w, map[string]any{"status": "installed", "install_key": input.InstallKey, "targets": targets}, err)
 }
@@ -89,7 +113,11 @@ func (s *Server) handleMetadataTargets(w http.ResponseWriter, r *http.Request) {
 	}
 	kind := r.URL.Query().Get("kind")
 	if kind == "" {
-		kind = "skill"
+		kind = "instruction"
+	}
+	if kind == "prompt" {
+		writeError(w, http.StatusBadRequest, "kind 'prompt' has been renamed to 'instruction'; use kind=instruction")
+		return
 	}
 	writeJSON(w, metadata.AvailableTargets(kind))
 }
@@ -108,6 +136,10 @@ func (s *Server) handleMetadataDetail(w http.ResponseWriter, r *http.Request) {
 	installKey := r.URL.Query().Get("install_key")
 	if kind == "" || installKey == "" {
 		writeError(w, http.StatusBadRequest, "kind and install_key are required")
+		return
+	}
+	if kind == "prompt" {
+		writeError(w, http.StatusBadRequest, "kind 'prompt' has been renamed to 'instruction'; use kind=instruction")
 		return
 	}
 	store := metadata.NewStore("")

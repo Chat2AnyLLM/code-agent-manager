@@ -13,6 +13,10 @@ import { useLanguage } from '../services/i18n'
 // paginates server-side only because its metadata index is unbounded).
 const PAGE_SIZE = 20
 
+function registrySourceUrl(item: MCPRegistryItem): string | undefined {
+  return item.repoUrl || item.homepage
+}
+
 export function MCP() {
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
@@ -74,9 +78,16 @@ export function MCP() {
   const pagedItems = visibleItems.slice(offset, offset + PAGE_SIZE)
 
   const columns: Column<MCPRegistryItem>[] = [
-    { header: 'Name', cell: (item) => <h3 className="row-name">{item.displayName || item.name}</h3> },
+    { header: 'Name', cell: (item) => {
+      const href = registrySourceUrl(item)
+      const label = item.displayName || item.name
+      return <h3 className="row-name">{href
+        ? <a className="source-link" href={href} target="_blank" rel="noopener noreferrer" title={`Open ${label} source on GitHub`}>{label}</a>
+        : label}
+      </h3>
+    } },
     { header: 'Source', cell: (item) => {
-      const href = item.repoUrl || item.homepage
+      const href = registrySourceUrl(item)
       if (!href) return <span className="repo-link">{item.name}</span>
       return <a className="repo-link" href={href} target="_blank" rel="noopener noreferrer" title={`Open ${href}`}>{href.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>
     } },
