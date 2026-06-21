@@ -15,6 +15,10 @@ Tired of juggling multiple AI coding assistants? **CAM** is a unified Go CLI to 
 
 ## Installation
 
+### Prerequisites
+
+- Go 1.26.2 or newer
+
 ### Quick Install (Recommended)
 
 Since CAM is distributed from source, build and install the Go binaries locally:

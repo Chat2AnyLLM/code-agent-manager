@@ -191,16 +191,12 @@ export function Agents() {
       const status = applyStatus[tool.name]
       const busy = status?.state === 'applying'
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <div className="agent-apply-cell">
           <button onClick={() => void apply(tool.name)} disabled={busy}>
             {busy ? t('agents.applying') : t('agents.apply')}
           </button>
           {status && status.state !== 'idle' && (
-            <span style={{
-              color: status.state === 'error' ? 'var(--danger, #c33)' : status.state === 'done' ? 'var(--success, #363)' : undefined,
-              fontSize: '0.85em',
-              wordBreak: 'break-all',
-            }}>
+            <span className={`agent-apply-status ${status.state}`}>
               {status.message}
             </span>
           )}

@@ -518,6 +518,23 @@ func (svc *Service) SearchPaged(ctx context.Context, q SearchQuery) (SearchRespo
 	if err != nil {
 		return SearchResponse{}, err
 	}
+	if q.Kind == "skill" && strings.TrimSpace(q.Query) != "" && total == 0 {
+		limit := q.Limit
+		if limit <= 0 {
+			limit = 100
+		}
+		if _, err := svc.RefreshOnlineSkillSearch(ctx, q.Query, limit); err != nil {
+			return SearchResponse{}, err
+		}
+		items, err = svc.store.Search(ctx, q)
+		if err != nil {
+			return SearchResponse{}, err
+		}
+		total, err = svc.store.Count(ctx, q)
+		if err != nil {
+			return SearchResponse{}, err
+		}
+	}
 	for i := range items {
 		items[i].InstalledApps = InstalledAppsFor(items[i])
 	}
