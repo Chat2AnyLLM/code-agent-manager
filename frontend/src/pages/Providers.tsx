@@ -2,11 +2,82 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { useProviderActions } from '../hooks'
+import { useResolvedModelsQuery } from '../lib'
 import { Page } from './Page'
 import { ExpandableTable, type Column } from '../components/ExpandableTable'
+import { MultiSelect } from '../components/MultiSelect'
 import { providerSchema, type ProviderFormData } from '../lib/schemas'
+import { api } from '../services/api'
 
+function ModelManager({ name, currentModels }: { name: string; currentModels: string[] }) {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const [loadAttempted, setLoadAttempted] = useState(false)
+  const [selected, setSelected] = useState<string[]>(currentModels)
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState('')
+
+  const { data: discovered = [], isLoading } = useResolvedModelsQuery(name, loadAttempted)
+
+  async function saveModels() {
+    setSaving(true)
+    setStatus('')
+    try {
+      await api.updateProvider(name, { models: selected })
+      await queryClient.invalidateQueries({ queryKey: ['providers'] })
+      setStatus(t('providers.modelsSaved'))
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const allModels = loadAttempted ? discovered : currentModels
+
+  const availableModels = Array.from(new Set([...allModels, ...selected])).filter(Boolean)
+  const modelOptions = availableModels.map((model) => ({ value: model, label: model }))
+
+  return (
+    <div>
+      <div className="inline-form" style={{ marginBottom: '0.5rem' }}>
+        {!loadAttempted ? (
+          <button type="button" onClick={() => setLoadAttempted(true)} disabled={isLoading}>
+            {isLoading ? t('providers.modelsLoading') : t('providers.loadModels')}
+          </button>
+        ) : (
+          <button type="button" onClick={() => setLoadAttempted(false)}>
+            {t('providers.hideModels')}
+          </button>
+        )}
+      </div>
+      {loadAttempted && isLoading && <p style={{ fontSize: '0.85em', color: '#888' }}>{t('providers.modelsLoading')}</p>}
+      {loadAttempted && !isLoading && availableModels.length === 0 && (
+        <p style={{ fontSize: '0.85em', color: '#888' }}>{t('providers.noModelsFound')}</p>
+      )}
+      {loadAttempted && !isLoading && availableModels.length > 0 && (
+        <div style={{ marginBottom: '0.5rem' }}>
+          <MultiSelect
+            options={modelOptions}
+            value={selected}
+            onChange={setSelected}
+            placeholder={t('providers.selectModels')}
+            triggerAriaLabel={`${t('providers.selectModels')} ${name}`}
+            listboxAriaLabel={`${t('providers.models')} ${name}`}
+          />
+        </div>
+      )}
+      {loadAttempted && !isLoading && availableModels.length > 0 && (
+        <button type="button" onClick={saveModels} disabled={saving} style={{ fontSize: '0.85em' }}>
+          {saving ? t('providers.modelsSaving') : t('providers.saveModels')}
+        </button>
+      )}
+      {status && <p style={{ fontSize: '0.85em', marginTop: '0.25rem' }}>{status}</p>}
+    </div>
+  )
+}
 export function Providers() {
   const { t } = useTranslation()
   const { providers, isLoading, addProvider, updateApiKey, updateApiKeyEnv, toggle, remove, isPending } = useProviderActions()
@@ -125,6 +196,7 @@ export function Providers() {
             </dd>
           </div>
           <div><dt>{t('providers.clients')}</dt><dd>{p.clients.join(', ') || '—'}</dd></div>
+          <div><dt>{t('providers.models')}</dt><dd><ModelManager name={p.name} currentModels={p.models} /></dd></div>
         </dl>
       )}
     />

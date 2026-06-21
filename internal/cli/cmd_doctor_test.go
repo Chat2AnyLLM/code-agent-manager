@@ -29,8 +29,6 @@ func TestDoctorPrintsProviderSummaryAndAllSections(t *testing.T) {
 		"Environment File Check",
 		"Endpoint Format Check",
 		"Cache Check",
-		"Gemini / Vertex Authentication Check",
-		"GitHub Copilot Authentication Check",
 		"Tool Installation Check",
 	} {
 		if !strings.Contains(stdout, want) {

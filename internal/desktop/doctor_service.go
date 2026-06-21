@@ -40,8 +40,6 @@ func (s *DoctorService) checks() []doctor.Check {
 		doctor.EnvCheck{},
 		doctor.EndpointFormatCheck{File: file},
 		doctor.CacheCheck{},
-		doctor.GeminiAuthCheck{},
-		doctor.CopilotAuthCheck{},
 		doctor.ToolsAvailableCheck{},
 	}
 }

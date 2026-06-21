@@ -69,7 +69,7 @@ export const api = {
   // when no sidecar is available (browser-only/mock mode).
   async resolveModels(name: string): Promise<string[]> {
     const resolved = await request<string[]>(`/api/providers/${encodeURIComponent(name)}/models`)
-    if (resolved) return resolved
+    if (Array.isArray(resolved)) return resolved
     const provider = mockProviders.find((p) => p.name === name)
     return provider?.models ?? []
   },

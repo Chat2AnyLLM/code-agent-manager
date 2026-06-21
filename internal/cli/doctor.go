@@ -59,8 +59,6 @@ func (a *App) doctorCommand(state *globalState) *cobra.Command {
 				doctor.EnvCheck{},
 				doctor.EndpointFormatCheck{File: file},
 				doctor.CacheCheck{},
-				doctor.GeminiAuthCheck{},
-				doctor.CopilotAuthCheck{},
 				doctor.ToolsAvailableCheck{},
 			}
 			doctor.Run(context.Background(), printer, checks)

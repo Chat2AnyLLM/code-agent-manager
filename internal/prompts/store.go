@@ -7,20 +7,20 @@ import (
 	"time"
 
 	"github.com/chat2anyllm/code-agent-manager/internal/pathutil"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Prompt represents a single prompt from any source.
 type Prompt struct {
 	ID          int64     `json:"id"`
-	Source      string    `json:"source"`       // "claude", "prompts_chat", "promptingguide"
-	SourceURL   string    `json:"source_url"`   // original URL
-	Category    string    `json:"category"`     // e.g. "coding", "writing", "analysis"
-	Title       string    `json:"title"`        // display name
-	Description string    `json:"description"`  // short description
-	Content     string    `json:"content"`      // the prompt text
-	Author      string    `json:"author"`       // original author if known
-	Tags        string    `json:"tags"`         // comma-separated tags
+	Source      string    `json:"source"`      // "claude", "prompts_chat", "promptingguide"
+	SourceURL   string    `json:"source_url"`  // original URL
+	Category    string    `json:"category"`    // e.g. "coding", "writing", "analysis"
+	Title       string    `json:"title"`       // display name
+	Description string    `json:"description"` // short description
+	Content     string    `json:"content"`     // the prompt text
+	Author      string    `json:"author"`      // original author if known
+	Tags        string    `json:"tags"`        // comma-separated tags
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -40,7 +40,7 @@ func (s *Store) dbPath() string {
 }
 
 func (s *Store) open() (*sql.DB, error) {
-	return sql.Open("sqlite3", s.dbPath()+"?_journal_mode=WAL")
+	return sql.Open("sqlite", s.dbPath()+"?_pragma=journal_mode(WAL)")
 }
 
 // Init creates the database and tables if they don't exist.
@@ -132,7 +132,7 @@ func (s *Store) ListPrompts(ctx context.Context, source, category string) ([]Pro
 	var prompts []Prompt
 	for rows.Next() {
 		var p Prompt
-		if err := rows.Scan(&p.ID, &p.Source, &p.SourceURL, &p.Category, &p.Title, &p.Description, &p.Content, &p.Author, &p.Tags, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := scanPrompt(rows, &p); err != nil {
 			return nil, err
 		}
 		prompts = append(prompts, p)
@@ -166,12 +166,35 @@ func (s *Store) SearchPrompts(ctx context.Context, q string) ([]Prompt, error) {
 	var prompts []Prompt
 	for rows.Next() {
 		var p Prompt
-		if err := rows.Scan(&p.ID, &p.Source, &p.SourceURL, &p.Category, &p.Title, &p.Description, &p.Content, &p.Author, &p.Tags, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := scanPrompt(rows, &p); err != nil {
 			return nil, err
 		}
 		prompts = append(prompts, p)
 	}
 	return prompts, rows.Err()
+}
+
+type promptScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanPrompt(scanner promptScanner, p *Prompt) error {
+	var createdAt string
+	var updatedAt string
+	if err := scanner.Scan(&p.ID, &p.Source, &p.SourceURL, &p.Category, &p.Title, &p.Description, &p.Content, &p.Author, &p.Tags, &createdAt, &updatedAt); err != nil {
+		return err
+	}
+	p.CreatedAt = parsePromptTime(createdAt)
+	p.UpdatedAt = parsePromptTime(updatedAt)
+	return nil
+}
+
+func parsePromptTime(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return time.Time{}
+	}
+	return parsed
 }
 
 // CountPrompts returns the total number of prompts, optionally filtered.
