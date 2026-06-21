@@ -53,6 +53,7 @@
   "agents.installedResources": "Installed resources",
   "agents.provider": "Provider",
   "agents.model": "Model",
+  "agents.loadingModels": "Loading models…",
   "agents.apply": "Apply",
   "agents.applying": "Applying…",
   "agents.applied": "Applied → {{path}} ({{count}} keys)",

@@ -34,6 +34,52 @@ function savePrefs(prefs: AgentSelection) {
   try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)) } catch {}
 }
 
+function AgentModelPicker({ toolName, providerName, model, onChange }: {
+  toolName: string
+  providerName: string
+  model: string
+  onChange: (model: string) => void
+}) {
+  const { t } = useTranslation()
+  const { models, isLoading } = useResolvedModels(providerName, Boolean(providerName))
+
+  if (!providerName) {
+    return (
+      <input
+        aria-label={`${t('agents.model')} ${toolName}`}
+        type="text"
+        placeholder="model id"
+        value={model}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    )
+  }
+
+  if (isLoading || models.length > 0) {
+    return (
+      <select
+        aria-label={`${t('agents.model')} ${toolName}`}
+        value={models.includes(model) ? model : ''}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={isLoading}
+      >
+        <option value="">{isLoading ? t('agents.loadingModels') : '—'}</option>
+        {models.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+    )
+  }
+
+  return (
+    <input
+      aria-label={`${t('agents.model')} ${toolName}`}
+      type="text"
+      placeholder="model id"
+      value={model}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  )
+}
+
 export function Agents() {
   const { t } = useTranslation()
   const { tools, isLoading: toolsLoading, install, upgrade, isPending: toolsPending } = useTools()
@@ -120,27 +166,12 @@ export function Agents() {
     ) },
     { header: t('agents.model'), cell: (tool) => {
       const sel = prefs[tool.name]
-      const provider = sel?.provider ? providersByName.get(sel.provider) : undefined
-      const models = provider?.models ?? []
-      if (models.length > 0) {
-        return (
-          <select
-            aria-label={`${t('agents.model')} ${tool.name}`}
-            value={sel?.model ?? ''}
-            onChange={(event) => selectModel(tool.name, event.target.value)}
-          >
-            <option value="">—</option>
-            {models.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-        )
-      }
       return (
-        <input
-          aria-label={`${t('agents.model')} ${tool.name}`}
-          type="text"
-          placeholder="model id"
-          value={sel?.model ?? ''}
-          onChange={(event) => selectModel(tool.name, event.target.value)}
+        <AgentModelPicker
+          toolName={tool.name}
+          providerName={sel?.provider ?? ''}
+          model={sel?.model ?? ''}
+          onChange={(model) => selectModel(tool.name, model)}
         />
       )
     } },

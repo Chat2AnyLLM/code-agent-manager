@@ -53,6 +53,7 @@
   "agents.installedResources": "已安装资源",
   "agents.provider": "服务商",
   "agents.model": "模型",
+  "agents.loadingModels": "正在加载模型…",
   "agents.apply": "应用",
   "agents.applying": "应用中…",
   "agents.applied": "已应用 → {{path}}（{{count}} 项）",

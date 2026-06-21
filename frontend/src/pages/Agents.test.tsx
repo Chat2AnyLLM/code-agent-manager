@@ -1,10 +1,18 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Agents } from './Agents'
 import { TestWrapper } from '../test/TestWrapper'
+import { api } from '../services/api'
+import type { Provider, Tool } from '../services/types'
 
 describe('Agents page', () => {
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+    try { localStorage.removeItem('cam.agentSelection') } catch {}
+  })
+
   it('shows coding agent run commands and detection status, no launch buttons', async () => {
     render(<Agents />, { wrapper: TestWrapper })
 
@@ -28,5 +36,42 @@ describe('Agents page', () => {
     await user.click(install)
 
     expect(await screen.findByText('Installed codex')).toBeInTheDocument()
+  })
+
+  it('loads resolved provider models into the model dropdown', async () => {
+    const user = userEvent.setup()
+    const tools: Tool[] = [
+      { name: 'claude-code', command: 'claude', description: 'Claude Code CLI', enabled: true, installed: true, version: 'mock' },
+    ]
+    const providers: Provider[] = [
+      {
+        name: 'omnillm',
+        endpoint: 'http://localhost:4000/v1',
+        apiKeyEnv: '',
+        supportedClient: 'claude',
+        clients: ['claude'],
+        models: [],
+        keepProxyConfig: false,
+        useProxy: false,
+        enabled: true,
+        description: '',
+      },
+    ]
+
+    vi.spyOn(api, 'listTools').mockResolvedValue(tools)
+    vi.spyOn(api, 'listProviders').mockResolvedValue(providers)
+    const resolveSpy = vi.spyOn(api, 'resolveModels').mockResolvedValue(['resolved-a', 'resolved-b'])
+
+    render(<Agents />, { wrapper: TestWrapper })
+
+    await user.selectOptions(await screen.findByLabelText('Provider claude-code'), 'omnillm')
+
+    expect(resolveSpy).toHaveBeenCalledWith('omnillm')
+    expect(await screen.findByRole('option', { name: 'resolved-a' })).toBeInTheDocument()
+
+    const modelSelect = screen.getByLabelText('Model claude-code') as HTMLSelectElement
+    await user.selectOptions(modelSelect, 'resolved-b')
+
+    expect(modelSelect.value).toBe('resolved-b')
   })
 })
