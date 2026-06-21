@@ -2,11 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import App from './App'
+import { TestWrapper } from './test/TestWrapper'
 
 describe('App shell', () => {
   it('renders agents dashboard and navigates to all primary pages', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(<App />, { wrapper: TestWrapper })
     expect(await screen.findByRole('heading', { name: /^agents$/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /providers/i }))
@@ -39,7 +40,7 @@ describe('App shell', () => {
 
   it('toggles between dark and light themes (wintoolbox-style)', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(<App />, { wrapper: TestWrapper })
     // Defaults to dark.
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
     const toggle = await screen.findByRole('button', { name: /toggle theme/i })
@@ -52,7 +53,7 @@ describe('App shell', () => {
   it('switches the UI language between English and Chinese', async () => {
     try { localStorage.removeItem('cam.lang') } catch { /* ignore */ }
     const user = userEvent.setup()
-    render(<App />)
+    render(<App />, { wrapper: TestWrapper })
     // Defaults to English: the agents nav button reads "Agents".
     expect(await screen.findByRole('button', { name: /^agents$/i })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /toggle language/i }))

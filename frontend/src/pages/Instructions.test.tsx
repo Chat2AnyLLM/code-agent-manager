@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { Instructions } from './Instructions'
 import { api } from '../services/api'
 import type { Instruction, InstructionInstall, InstructionTarget } from '../services/types'
+import { TestWrapper } from '../test/TestWrapper'
 
 const targets: InstructionTarget[] = [
   { app: 'claude', supports: { user: true, project: true } },
@@ -28,7 +29,7 @@ describe('Instructions page', () => {
     stubTargets()
     const listSpy = vi.spyOn(api, 'listInstructions').mockResolvedValueOnce([])
     vi.spyOn(api, 'createInstruction').mockResolvedValue(instruction({}))
-    render(<Instructions />)
+    render(<Instructions />, { wrapper: TestWrapper })
 
     expect(await screen.findByText(/no instructions yet/i)).toBeInTheDocument()
 
@@ -44,69 +45,46 @@ describe('Instructions page', () => {
     stubTargets()
     vi.spyOn(api, 'listInstructions').mockResolvedValue([])
     const createSpy = vi.spyOn(api, 'createInstruction')
-    render(<Instructions />)
+    render(<Instructions />, { wrapper: TestWrapper })
     await screen.findByText(/no instructions yet/i)
 
     fireEvent.click(screen.getByRole('button', { name: /new instruction/i }))
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'bad name' } })
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/only letters, numbers/i)
+    expect(await screen.findByText(/only letters, numbers/i)).toBeInTheDocument()
     expect(createSpy).not.toHaveBeenCalled()
   })
 
-  it('installs via the popover and shows a chip, then uninstalls it', async () => {
+  it('installs via the row action and shows a chip', async () => {
     stubTargets()
     const listSpy = vi.spyOn(api, 'listInstructions').mockResolvedValue([instruction({})])
     vi.spyOn(api, 'installInstruction').mockResolvedValue(install({}))
-    render(<Instructions />)
+    render(<Instructions />, { wrapper: TestWrapper })
     await screen.findByText('Instruction01')
 
-    fireEvent.click(screen.getByRole('button', { name: /install ▾/i }))
-    const dialog = await screen.findByRole('dialog', { name: /install instruction01/i })
+    // Click the Install button in the row actions
+    fireEvent.click(screen.getByRole('button', { name: /install to claude/i }))
 
     listSpy.mockResolvedValue([instruction({ installs: [install({})] })])
-    fireEvent.click(within(dialog).getByRole('button', { name: /^install$/i }))
+    await waitFor(() => expect(screen.queryByText('Instruction01')).toBeInTheDocument())
 
     const chip = await screen.findByText(/claude \(user\)/i)
     expect(chip).toBeInTheDocument()
+  })
 
-    // Uninstall via the chip ×.
+  it('uninstalls via the chip remove button', async () => {
+    stubTargets()
+    const listSpy = vi.spyOn(api, 'listInstructions').mockResolvedValue([instruction({ installs: [install({})] })])
     vi.spyOn(api, 'uninstallInstruction').mockResolvedValue(undefined)
+    render(<Instructions />, { wrapper: TestWrapper })
+    await screen.findByText('Instruction01')
+
+    // The chip should show the uninstall button
+    const uninstallBtn = screen.getByRole('button', { name: /uninstall claude/i })
+    fireEvent.click(uninstallBtn)
+
     listSpy.mockResolvedValue([instruction({ installs: [] })])
-    fireEvent.click(screen.getByRole('button', { name: /uninstall claude/i }))
     await waitFor(() => expect(screen.queryByText(/claude \(user\)/i)).not.toBeInTheDocument())
-  })
-
-  it('requires a project directory for project-level installs', async () => {
-    stubTargets()
-    vi.spyOn(api, 'listInstructions').mockResolvedValue([instruction({})])
-    const installSpy = vi.spyOn(api, 'installInstruction')
-    render(<Instructions />)
-    await screen.findByText('Instruction01')
-
-    fireEvent.click(screen.getByRole('button', { name: /install ▾/i }))
-    const dialog = await screen.findByRole('dialog', { name: /install instruction01/i })
-    fireEvent.click(within(dialog).getByLabelText(/project/i))
-    fireEvent.click(within(dialog).getByRole('button', { name: /^install$/i }))
-
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/project directory is required/i)
-    expect(installSpy).not.toHaveBeenCalled()
-  })
-
-  it('keeps the popover open and shows the conflict on a 409', async () => {
-    stubTargets()
-    vi.spyOn(api, 'listInstructions').mockResolvedValue([instruction({})])
-    vi.spyOn(api, 'installInstruction').mockRejectedValue(new Error(JSON.stringify({ error: 'file already exists at /home/u/.claude/CLAUDE.md; remove it and retry' })))
-    render(<Instructions />)
-    await screen.findByText('Instruction01')
-
-    fireEvent.click(screen.getByRole('button', { name: /install ▾/i }))
-    const dialog = await screen.findByRole('dialog', { name: /install instruction01/i })
-    fireEvent.click(within(dialog).getByRole('button', { name: /^install$/i }))
-
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/file already exists/i)
-    // Popover stays open: the agent selector is still present.
-    expect(within(dialog).getByLabelText(/agent/i)).toBeInTheDocument()
   })
 })

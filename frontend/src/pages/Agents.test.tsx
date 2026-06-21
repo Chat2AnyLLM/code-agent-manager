@@ -2,10 +2,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { Agents } from './Agents'
+import { TestWrapper } from '../test/TestWrapper'
 
 describe('Agents page', () => {
   it('shows coding agent run commands and detection status, no launch buttons', async () => {
-    render(<Agents />)
+    render(<Agents />, { wrapper: TestWrapper })
 
     expect(await screen.findByRole('heading', { name: /agents/i })).toBeInTheDocument()
     expect(await screen.findByText('claude --allow-dangerously-skip-permissions --dangerously-skip-permissions')).toBeInTheDocument()
@@ -21,7 +22,7 @@ describe('Agents page', () => {
 
   it('installs a missing agent tool and updates status', async () => {
     const user = userEvent.setup()
-    render(<Agents />)
+    render(<Agents />, { wrapper: TestWrapper })
 
     const install = await screen.findByRole('button', { name: /install/i })
     await user.click(install)

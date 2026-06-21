@@ -4,7 +4,7 @@ import type { MCPRegistryItem } from '../services/types'
 import { Page } from './Page'
 import { ExpandableTable, type Column } from '../components/ExpandableTable'
 import { MultiSelect } from '../components/MultiSelect'
-import { useLanguage } from '../services/i18n'
+import { useTranslation } from 'react-i18next'
 
 // MCP mirrors the Library (skill/plugin) pages: it lists every *discovered* MCP
 // server from the bundled registry in a table, with a per-row dropdown of code
@@ -18,7 +18,7 @@ function registrySourceUrl(item: MCPRegistryItem): string | undefined {
 }
 
 export function MCP() {
-  const { t } = useLanguage()
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [items, setItems] = useState<MCPRegistryItem[]>([])
   const [offset, setOffset] = useState(0)
@@ -121,6 +121,7 @@ export function MCP() {
     <div className="inline-form">
       <input aria-label={t('mcp.searchPlaceholder')} value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0) }} placeholder={t('mcp.searchPlaceholder')} />
       <button onClick={() => { setOffset(0); load(query) }} disabled={loading}>{t('mcp.search')}</button>
+      {(query || installedOnly) && <button onClick={() => { setQuery(''); setInstalledOnly(false); setOffset(0) }}>{t('library.reset')}</button>}
       <button onClick={reload} disabled={reloading}>{reloading ? t('mcp.reloading') : t('mcp.reload')}</button>
       <label className="filter-toggle">
         <input type="checkbox" checked={installedOnly} onChange={(event) => { setInstalledOnly(event.target.checked); setOffset(0) }} />
@@ -166,7 +167,7 @@ type MCPActionsProps = {
 // MCPActions renders the install-target picker and install/uninstall buttons
 // inside a row's Actions cell, mirroring Library's ResourceActions.
 function MCPActions({ item, targets, onInstall, onUninstall }: MCPActionsProps) {
-  const { t } = useLanguage()
+  const { t } = useTranslation()
   const installedClients = item.installedClients ?? []
   const [selected, setSelected] = useState<string[]>([])
   const [installing, setInstalling] = useState(false)

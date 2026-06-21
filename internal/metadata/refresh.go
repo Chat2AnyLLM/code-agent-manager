@@ -271,12 +271,8 @@ func (svc *Service) fetchAndDiscover(ctx context.Context, kind string, entityKin
 					}
 				}
 				items := make([]Item, 0, len(resources))
+				cachedAt := timeNow()
 				for _, res := range resources {
-					// Catalog rows that link to a real source repo are attributed to
-					// that repo (not the catalog/awesome-list repo). This is what stops
-					// awesome-list "pointer" catalogs from duplicating skills already
-					// indexed by a direct scan: both produce the same install key
-					// (sourceOwner/sourceRepo:name) and merge on the unique constraint.
 					owner, repo, branch, itemPath := job.owner, job.repo, job.branch, res.RelPath
 					if res.SourceOwner != "" && res.SourceRepo != "" {
 						owner, repo = res.SourceOwner, res.SourceRepo
@@ -287,16 +283,26 @@ func (svc *Service) fetchAndDiscover(ctx context.Context, kind string, entityKin
 							itemPath = res.SourcePath
 						}
 					}
+					content := ""
+					if res.ManifestRel != "" {
+						manifestPath := filepath.Join(root, filepath.FromSlash(res.ManifestRel))
+						if data, err := os.ReadFile(manifestPath); err == nil {
+							content = string(data)
+						}
+					}
 					items = append(items, Item{
-						Kind:        kind,
-						Name:        res.Name,
-						Description: res.Description,
-						RepoOwner:   owner,
-						RepoName:    repo,
-						RepoBranch:  branch,
-						ItemPath:    itemPath,
-						InstallKey:  fmt.Sprintf("%s/%s:%s", owner, repo, res.Name),
-						TargetApps:  targetApps,
+						Kind:           kind,
+						Name:           res.Name,
+						Description:    res.Description,
+						RepoOwner:      owner,
+						RepoName:       repo,
+						RepoBranch:     branch,
+						ItemPath:       itemPath,
+						InstallKey:     fmt.Sprintf("%s/%s:%s", owner, repo, res.Name),
+						TargetApps:     targetApps,
+						Content:        content,
+						ContentCachedAt: cachedAt,
+						ManifestPath:   res.ManifestRel,
 					})
 				}
 				out <- repoResult{items: items}
@@ -376,12 +382,14 @@ func (svc *Service) InstallToTargets(ctx context.Context, kind, installKey strin
 
 	entityKind := entities.Kind(item.Kind)
 	content := svc.fetchResourceContent(item)
+	extraFiles := svc.fetchResourceExtraFiles(item)
 
 	entity := entities.Entity{
 		Kind:        entityKind,
 		Name:        item.Name,
 		Description: item.Description,
 		Content:     content,
+		ExtraFiles:  extraFiles,
 		Repo: &entities.RepoRef{
 			Owner:  item.RepoOwner,
 			Name:   item.RepoName,
@@ -452,6 +460,69 @@ func (svc *Service) fetchResourceContent(item Item) string {
 	return content
 }
 
+// fetchResourceExtraFiles downloads the resource's source repo and reads all
+// files in the resource directory (excluding the manifest file itself). Returns
+// a map of relative path → content for extra files like references/.
+func (svc *Service) fetchResourceExtraFiles(item Item) map[string]string {
+	if item.RepoOwner == "" || item.RepoName == "" || item.ItemPath == "" {
+		return nil
+	}
+	// Only skills and agents have extra files
+	if item.Kind != "skill" && item.Kind != "agent" {
+		return nil
+	}
+
+	dest := filepath.Join(pathutil.CacheDir(), "metadata-install-extra", item.RepoOwner+"-"+item.RepoName+"-"+item.Name)
+	_ = os.RemoveAll(dest)
+	defer os.RemoveAll(dest)
+
+	root, err := svc.fetcher.Fetch(item.RepoOwner, item.RepoName, item.RepoBranch, dest)
+	if err != nil {
+		return nil
+	}
+
+	target := filepath.Join(root, filepath.FromSlash(item.ItemPath))
+	info, err := os.Stat(target)
+	if err != nil || !info.IsDir() {
+		return nil
+	}
+
+	manifestName := defaultManifest(item.Kind)
+	extraFiles := make(map[string]string)
+
+	err = filepath.Walk(target, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // skip errors
+		}
+		if info.IsDir() {
+			return nil
+		}
+		// Skip the manifest file itself
+		if info.Name() == manifestName {
+			return nil
+		}
+		// Read the file content
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil // skip unreadable files
+		}
+		// Compute relative path from the skill directory
+		relPath, err := filepath.Rel(target, path)
+		if err != nil {
+			return nil
+		}
+		// Use forward slashes for consistency
+		relPath = filepath.ToSlash(relPath)
+		extraFiles[relPath] = string(data)
+		return nil
+	})
+
+	if err != nil || len(extraFiles) == 0 {
+		return nil
+	}
+	return extraFiles
+}
+
 // fetchResourceManifest downloads the resource's source repo and reads its
 // manifest, returning both the content and the manifest path relative to the
 // repo root (e.g. "skills/foo/SKILL.md"). The relative path lets callers show
@@ -505,6 +576,16 @@ func defaultManifest(kind string) string {
 // kind, sorted. Used by the UI to populate the install-target picker.
 func AvailableTargets(kind string) []string {
 	return entities.SupportedApps(entities.Kind(kind))
+}
+
+// RefreshItem re-fetches a single item's manifest content from its source
+// repository, updates the description if it has changed, and saves the content
+// to the database cache. Returns the refreshed detail view.
+func (svc *Service) RefreshItem(ctx context.Context, kind, installKey string) (ItemDetail, error) {
+	if err := svc.store.Init(ctx); err != nil {
+		return ItemDetail{}, err
+	}
+	return svc.DetailForceRefresh(ctx, kind, installKey)
 }
 
 // SearchPaged runs a paginated search and decorates each item with the list of

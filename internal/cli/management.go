@@ -1559,7 +1559,7 @@ func installFromLocal(kind entities.Kind, dirPath, skillName string, all, force 
 		return err
 	}
 
-	for _, app := range apps {
+		for _, app := range apps {
 		fmt.Fprintf(out, "\n%s:\n", app)
 		installed := 0
 		for _, item := range items {
@@ -1572,9 +1572,10 @@ func installFromLocal(kind entities.Kind, dirPath, skillName string, all, force 
 				}
 			}
 			e := entities.Entity{
-				Name:    item.name,
-				Content: item.content,
-				Path:    item.path,
+				Name:       item.name,
+				Content:    item.content,
+				Path:       item.path,
+				ExtraFiles: item.extraFiles,
 			}
 			dest, err := entities.InstallToApp(e, kind, app)
 			if err != nil {
@@ -1640,10 +1641,11 @@ func installFromGitHub(kind entities.Kind, repoArg, skillName string, all, force
 				}
 			}
 			e := entities.Entity{
-				Name:    item.name,
-				Content: item.content,
-				Path:    item.path,
-				Repo:    &entities.RepoRef{Owner: ghOwner, Name: ghRepo, Branch: ghBranch},
+				Name:       item.name,
+				Content:    item.content,
+				Path:       item.path,
+				ExtraFiles: item.extraFiles,
+				Repo:       &entities.RepoRef{Owner: ghOwner, Name: ghRepo, Branch: ghBranch},
 			}
 			destPath, err := entities.InstallToApp(e, kind, app)
 			if err != nil {
@@ -1664,9 +1666,10 @@ func installFromGitHub(kind entities.Kind, repoArg, skillName string, all, force
 // --- shared discovery & selection ------------------------------------------
 
 type discoveredItem struct {
-	name    string
-	content string
-	path    string
+	name       string
+	content    string
+	path       string
+	extraFiles map[string]string // relpath → content for additional files
 }
 
 // discoverEntities walks a directory and finds entities using the same
@@ -1679,6 +1682,8 @@ type discoveredItem struct {
 //
 // Hidden directories (dot-prefixed like .claude/, .github/) are skipped.
 // Duplicates (same name) are deduplicated — first discovered wins.
+// For skills and agents, all files in the directory (excluding the manifest)
+// are read as extra files.
 func discoverEntities(kind entities.Kind, root string) []discoveredItem {
 	fileTarget := defaultManifestName(kind)
 	seen := make(map[string]bool)
@@ -1723,7 +1728,58 @@ func discoverEntities(kind entities.Kind, root string) []discoveredItem {
 		if readErr != nil {
 			return nil
 		}
-		items = append(items, discoveredItem{name: name, content: string(data), path: p})
+
+		// Read extra files in the skill directory (excluding the manifest)
+		extraFiles := make(map[string]string)
+		skillDir := filepath.Dir(p)
+		if kind == entities.KindSkill || kind == entities.KindAgent {
+			entries, err := os.ReadDir(skillDir)
+			if err == nil {
+				for _, entry := range entries {
+					if entry.IsDir() {
+						// Recursively read files in subdirectories
+						subDir := filepath.Join(skillDir, entry.Name())
+						_ = filepath.WalkDir(subDir, func(subPath string, subEntry os.DirEntry, subErr error) error {
+							if subErr != nil || subEntry.IsDir() {
+								return nil
+							}
+							// Skip hidden files
+							if strings.HasPrefix(subEntry.Name(), ".") {
+								return nil
+							}
+							subData, readErr := os.ReadFile(subPath)
+							if readErr != nil {
+								return nil
+							}
+							subRelPath, relErr := filepath.Rel(skillDir, subPath)
+							if relErr != nil {
+								return nil
+							}
+							subRelPath = filepath.ToSlash(subRelPath)
+							extraFiles[subRelPath] = string(subData)
+							return nil
+						})
+					} else {
+						// Skip the manifest file itself and hidden files
+						if entry.Name() == fileTarget || strings.HasPrefix(entry.Name(), ".") {
+							continue
+						}
+						filePath := filepath.Join(skillDir, entry.Name())
+						fileData, readErr := os.ReadFile(filePath)
+						if readErr != nil {
+							continue
+						}
+						fileRelPath := entry.Name()
+						extraFiles[fileRelPath] = string(fileData)
+					}
+				}
+			}
+		}
+
+		if len(extraFiles) == 0 {
+			extraFiles = nil
+		}
+		items = append(items, discoveredItem{name: name, content: string(data), path: p, extraFiles: extraFiles})
 		return nil
 	})
 	return items

@@ -57,18 +57,24 @@ func (s *Store) UpsertItem(ctx context.Context, item Item) error {
 	}
 	defer db.Close()
 	now := timeNow()
+	contentCachedAt := item.ContentCachedAt
+	if contentCachedAt == "" {
+		contentCachedAt = now
+	}
 	_, err = db.ExecContext(ctx, `
-		INSERT INTO metadata_items(kind, name, description, source_id, repo_owner, repo_name, repo_branch, item_path, install_key, target_apps, metadata_json, installed, installed_targets, last_seen_at, created_at, updated_at)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+		INSERT INTO metadata_items(kind, name, description, source_id, repo_owner, repo_name, repo_branch, item_path, install_key, target_apps, metadata_json, installed, installed_targets, content, content_cached_at, manifest_path, last_seen_at, created_at, updated_at)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(kind, install_key) DO UPDATE SET
 			name=excluded.name, description=excluded.description, source_id=excluded.source_id,
 			repo_owner=excluded.repo_owner, repo_name=excluded.repo_name, repo_branch=excluded.repo_branch,
 			item_path=excluded.item_path, target_apps=excluded.target_apps, metadata_json=excluded.metadata_json,
+			content=excluded.content, content_cached_at=excluded.content_cached_at, manifest_path=excluded.manifest_path,
 			last_seen_at=excluded.last_seen_at, updated_at=excluded.updated_at`,
 		item.Kind, item.Name, item.Description, item.SourceID,
 		item.RepoOwner, item.RepoName, item.RepoBranch, item.ItemPath,
 		item.InstallKey, item.TargetApps, coalesce(item.MetadataJSON, "{}"),
-		boolToInt(item.Installed), item.InstalledTargets, now, now, now)
+		boolToInt(item.Installed), item.InstalledTargets,
+		item.Content, contentCachedAt, item.ManifestPath, now, now, now)
 	if err != nil {
 		return fmt.Errorf("metadata: upsert item: %w", err)
 	}
@@ -97,12 +103,13 @@ func (s *Store) UpsertItems(ctx context.Context, items []Item) (int, error) {
 		return 0, fmt.Errorf("metadata: begin tx: %w", err)
 	}
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO metadata_items(kind, name, description, source_id, repo_owner, repo_name, repo_branch, item_path, install_key, target_apps, metadata_json, installed, installed_targets, last_seen_at, created_at, updated_at)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+		INSERT INTO metadata_items(kind, name, description, source_id, repo_owner, repo_name, repo_branch, item_path, install_key, target_apps, metadata_json, installed, installed_targets, content, content_cached_at, manifest_path, last_seen_at, created_at, updated_at)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(kind, install_key) DO UPDATE SET
 			name=excluded.name, description=excluded.description, source_id=excluded.source_id,
 			repo_owner=excluded.repo_owner, repo_name=excluded.repo_name, repo_branch=excluded.repo_branch,
 			item_path=excluded.item_path, target_apps=excluded.target_apps, metadata_json=excluded.metadata_json,
+			content=excluded.content, content_cached_at=excluded.content_cached_at, manifest_path=excluded.manifest_path,
 			last_seen_at=excluded.last_seen_at, updated_at=excluded.updated_at`)
 	if err != nil {
 		_ = tx.Rollback()
@@ -113,11 +120,16 @@ func (s *Store) UpsertItems(ctx context.Context, items []Item) (int, error) {
 	now := timeNow()
 	written := 0
 	for _, item := range items {
+		contentCachedAt := item.ContentCachedAt
+		if contentCachedAt == "" {
+			contentCachedAt = now
+		}
 		if _, err := stmt.ExecContext(ctx,
 			item.Kind, item.Name, item.Description, item.SourceID,
 			item.RepoOwner, item.RepoName, item.RepoBranch, item.ItemPath,
 			item.InstallKey, item.TargetApps, coalesce(item.MetadataJSON, "{}"),
-			boolToInt(item.Installed), item.InstalledTargets, now, now, now); err != nil {
+			boolToInt(item.Installed), item.InstalledTargets,
+			item.Content, contentCachedAt, item.ManifestPath, now, now, now); err != nil {
 			_ = tx.Rollback()
 			return 0, fmt.Errorf("metadata: batch upsert: %w", err)
 		}
@@ -153,7 +165,7 @@ func (s *Store) DeleteStale(ctx context.Context, kind, before string) (int, erro
 // itemColumns is the canonical column list selected from metadata_items.
 const itemColumns = `id, kind, name, description, source_id, repo_owner, repo_name, repo_branch,
        item_path, install_key, target_apps, metadata_json, installed, installed_targets,
-       last_seen_at, created_at, updated_at`
+       content, content_cached_at, manifest_path, last_seen_at, created_at, updated_at`
 
 // canonicalOrder ranks candidate rows that share a name so that the
 // ROW_NUMBER()=1 pick is a sensible "source of truth". Lower sorts first:
@@ -278,12 +290,12 @@ func (s *Store) GetItem(ctx context.Context, kind, installKey string) (Item, err
 	err = db.QueryRowContext(ctx, `
 		SELECT id, kind, name, description, source_id, repo_owner, repo_name, repo_branch,
 		       item_path, install_key, target_apps, metadata_json, installed, installed_targets,
-		       last_seen_at, created_at, updated_at
+		       content, content_cached_at, manifest_path, last_seen_at, created_at, updated_at
 		FROM metadata_items WHERE kind = ? AND install_key = ?`, kind, installKey).
 		Scan(&it.ID, &it.Kind, &it.Name, &it.Description, &it.SourceID,
 			&it.RepoOwner, &it.RepoName, &it.RepoBranch, &it.ItemPath, &it.InstallKey,
 			&it.TargetApps, &it.MetadataJSON, &installed, &it.InstalledTargets,
-			&it.LastSeenAt, &it.CreatedAt, &it.UpdatedAt)
+			&it.Content, &it.ContentCachedAt, &it.ManifestPath, &it.LastSeenAt, &it.CreatedAt, &it.UpdatedAt)
 	if err != nil {
 		return Item{}, fmt.Errorf("metadata: get item: %w", err)
 	}
@@ -378,7 +390,7 @@ func scanItems(rows *sql.Rows) ([]Item, error) {
 		if err := rows.Scan(&it.ID, &it.Kind, &it.Name, &it.Description, &it.SourceID,
 			&it.RepoOwner, &it.RepoName, &it.RepoBranch, &it.ItemPath, &it.InstallKey,
 			&it.TargetApps, &it.MetadataJSON, &installed, &it.InstalledTargets,
-			&it.LastSeenAt, &it.CreatedAt, &it.UpdatedAt); err != nil {
+			&it.Content, &it.ContentCachedAt, &it.ManifestPath, &it.LastSeenAt, &it.CreatedAt, &it.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("metadata: scan item: %w", err)
 		}
 		it.Installed = installed != 0
@@ -426,6 +438,8 @@ func (s *Store) runMigrations(ctx context.Context, db *sql.DB) error {
 		run func(context.Context, *sql.DB) error
 	}{
 		{id: "prompt_to_instruction", run: s.migratePromptToInstruction},
+		{id: "add_content_cache_columns", run: s.migrateAddContentCacheColumns},
+		{id: "add_manifest_path_column", run: s.migrateAddManifestPathColumn},
 	}
 	for _, migration := range migrations {
 		var applied int
@@ -450,6 +464,69 @@ func (s *Store) migratePromptToInstruction(ctx context.Context, db *sql.DB) erro
 		if _, err := db.ExecContext(ctx, `UPDATE `+table+` SET kind = 'instruction' WHERE kind = 'prompt'`); err != nil {
 			return fmt.Errorf("migrate %s: %w", table, err)
 		}
+	}
+	return nil
+}
+
+func (s *Store) migrateAddContentCacheColumns(ctx context.Context, db *sql.DB) error {
+	for _, stmt := range []string{
+		`ALTER TABLE metadata_items ADD COLUMN content TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE metadata_items ADD COLUMN content_cached_at TEXT NOT NULL DEFAULT ''`,
+	} {
+		_, err := db.ExecContext(ctx, stmt)
+		if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+			return fmt.Errorf("migrate add content cache columns: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *Store) migrateAddManifestPathColumn(ctx context.Context, db *sql.DB) error {
+	_, err := db.ExecContext(ctx, `ALTER TABLE metadata_items ADD COLUMN manifest_path TEXT NOT NULL DEFAULT ''`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return fmt.Errorf("migrate add manifest_path column: %w", err)
+	}
+	return nil
+}
+
+// SaveContent persists fetched manifest content and a timestamp for a single
+// metadata item. The content is the raw text of the manifest file (SKILL.md,
+// AGENT.md, etc.) and cachedAt is an RFC3339 timestamp of when it was fetched.
+func (s *Store) SaveContent(ctx context.Context, kind, installKey, content, cachedAt, manifestPath string) error {
+	if err := s.Init(ctx); err != nil {
+		return err
+	}
+	db, err := s.open()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.ExecContext(ctx, `
+		UPDATE metadata_items SET content = ?, content_cached_at = ?, manifest_path = ?, updated_at = ?
+		WHERE kind = ? AND install_key = ?`, content, cachedAt, manifestPath, cachedAt, kind, installKey)
+	if err != nil {
+		return fmt.Errorf("metadata: save content: %w", err)
+	}
+	return nil
+}
+
+// SaveItemContentAndDescription updates the content, content_cached_at,
+// manifest_path, and description for a single metadata item. Used by per-item
+// refresh to persist both the fresh manifest and any upstream description changes.
+func (s *Store) SaveItemContentAndDescription(ctx context.Context, kind, installKey, content, cachedAt, manifestPath, description string) error {
+	if err := s.Init(ctx); err != nil {
+		return err
+	}
+	db, err := s.open()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.ExecContext(ctx, `
+		UPDATE metadata_items SET content = ?, content_cached_at = ?, manifest_path = ?, description = ?, updated_at = ?
+		WHERE kind = ? AND install_key = ?`, content, cachedAt, manifestPath, description, cachedAt, kind, installKey)
+	if err != nil {
+		return fmt.Errorf("metadata: save content and description: %w", err)
 	}
 	return nil
 }
@@ -495,6 +572,9 @@ CREATE TABLE IF NOT EXISTS metadata_items (
   metadata_json TEXT NOT NULL DEFAULT '{}',
   installed INTEGER NOT NULL DEFAULT 0,
   installed_targets TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  content_cached_at TEXT NOT NULL DEFAULT '',
+  manifest_path TEXT NOT NULL DEFAULT '',
   last_seen_at TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL DEFAULT '',

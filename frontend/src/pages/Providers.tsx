@@ -1,98 +1,86 @@
-import { useEffect, useState } from 'react'
-import { api } from '../services/api'
-import type { Provider } from '../services/types'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useProviderActions } from '../hooks'
 import { Page } from './Page'
 import { ExpandableTable, type Column } from '../components/ExpandableTable'
-import { useLanguage } from '../services/i18n'
+import { providerSchema, type ProviderFormData } from '../lib/schemas'
 
 export function Providers() {
-  const { t } = useLanguage()
-  const [providers, setProviders] = useState<Provider[]>([])
-  const [name, setName] = useState('')
-  const [endpoint, setEndpoint] = useState('')
-  const [apiKey, setApiKey] = useState('')
-  const [apiKeyEnv, setApiKeyEnv] = useState('')
-  // Per-provider draft API key, used by the inline editor in the expanded row so
-  // users can set/replace the key on providers that predate the field.
+  const { t } = useTranslation()
+  const { providers, isLoading, addProvider, updateApiKey, updateApiKeyEnv, toggle, remove, isPending } = useProviderActions()
   const [keyDraft, setKeyDraft] = useState<Record<string, string>>({})
   const [keyStatus, setKeyStatus] = useState<Record<string, string>>({})
-  // Per-provider draft API-key env-var name (used by tools like codex that read
-  // the key from an env var named by env_key).
   const [envDraft, setEnvDraft] = useState<Record<string, string>>({})
   const [envStatus, setEnvStatus] = useState<Record<string, string>>({})
 
-  async function reload() { setProviders(await api.listProviders()) }
-  useEffect(() => { void reload() }, [])
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ProviderFormData>({
+    resolver: zodResolver(providerSchema),
+    defaultValues: { name: '', endpoint: '', apiKey: '', apiKeyEnv: '' },
+  })
 
-  async function addProvider() {
-    if (!name || !endpoint) return
-    const created = await api.addProvider({ name, endpoint, apiKey, apiKeyEnv, clients: ['claude'], models: [], enabled: true })
-    setProviders((items) => [...items.filter((item) => item.name !== created.name), created])
-    setName(''); setEndpoint(''); setApiKey(''); setApiKeyEnv('')
-  }
-
-  async function saveApiKey(provider: Provider) {
-    const value = keyDraft[provider.name] ?? ''
-    if (!value) return
-    setKeyStatus((s) => ({ ...s, [provider.name]: t('providers.apiKeySaving') }))
+  async function onSubmit(data: ProviderFormData) {
     try {
-      const updated = await api.updateProvider(provider.name, { apiKey: value })
-      setProviders((items) => items.map((item) => item.name === provider.name ? updated : item))
-      setKeyDraft((d) => ({ ...d, [provider.name]: '' }))
-      setKeyStatus((s) => ({ ...s, [provider.name]: t('providers.apiKeySaved') }))
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      setKeyStatus((s) => ({ ...s, [provider.name]: message }))
+      await addProvider({ ...data, clients: ['claude'], models: [], enabled: true })
+      reset()
+    } catch {
+      // Error handled by mutation
     }
   }
 
-  async function saveApiKeyEnv(provider: Provider) {
-    const value = envDraft[provider.name] ?? ''
+  async function saveApiKey(providerName: string) {
+    const value = keyDraft[providerName] ?? ''
     if (!value) return
-    setEnvStatus((s) => ({ ...s, [provider.name]: t('providers.apiKeySaving') }))
+    setKeyStatus((s) => ({ ...s, [providerName]: t('providers.apiKeySaving') }))
     try {
-      const updated = await api.updateProvider(provider.name, { apiKeyEnv: value })
-      setProviders((items) => items.map((item) => item.name === provider.name ? updated : item))
-      setEnvDraft((d) => ({ ...d, [provider.name]: '' }))
-      setEnvStatus((s) => ({ ...s, [provider.name]: t('providers.apiKeySaved') }))
+      await updateApiKey(providerName, value)
+      setKeyDraft((d) => ({ ...d, [providerName]: '' }))
+      setKeyStatus((s) => ({ ...s, [providerName]: t('providers.apiKeySaved') }))
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      setEnvStatus((s) => ({ ...s, [provider.name]: message }))
+      setKeyStatus((s) => ({ ...s, [providerName]: message }))
     }
   }
 
-  async function toggle(provider: Provider) {
-    const updated = await api.toggleProvider(provider.name, !provider.enabled)
-    setProviders((items) => items.map((item) => item.name === provider.name ? updated : item))
+  async function saveApiKeyEnv(providerName: string) {
+    const value = envDraft[providerName] ?? ''
+    if (!value) return
+    setEnvStatus((s) => ({ ...s, [providerName]: t('providers.apiKeySaving') }))
+    try {
+      await updateApiKeyEnv(providerName, value)
+      setEnvDraft((d) => ({ ...d, [providerName]: '' }))
+      setEnvStatus((s) => ({ ...s, [providerName]: t('providers.apiKeySaved') }))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setEnvStatus((s) => ({ ...s, [providerName]: message }))
+    }
   }
 
-  async function remove(provider: Provider) {
-    await api.removeProvider(provider.name)
-    setProviders((items) => items.filter((item) => item.name !== provider.name))
-  }
-
-  const columns: Column<Provider>[] = [
+  const columns: Column<{ name: string; endpoint: string; models: string[]; enabled: boolean; description: string; maskedApiKey?: string; apiKeyEnv: string; clients: string[] }>[] = [
     { header: 'Name', cell: (p) => <strong>{p.name}</strong> },
     { header: 'Endpoint', cell: (p) => <code>{p.endpoint}</code> },
     { header: 'Models', cell: (p) => p.models.join(', ') || '—' },
     { header: 'Status', cell: (p) => p.enabled ? 'Enabled' : 'Disabled' },
     { header: 'Actions', className: 'row-actions', cell: (p) => (
       <div className="row-actions">
-        <button onClick={() => toggle(p)}>{p.enabled ? 'Disable' : 'Enable'}</button>
-        <button onClick={() => remove(p)}>Remove</button>
+        <button onClick={() => toggle(p.name, !p.enabled)} disabled={isPending}>{p.enabled ? 'Disable' : 'Enable'}</button>
+        <button onClick={() => remove(p.name)} disabled={isPending}>Remove</button>
       </div>
     ) },
   ]
 
   return <Page title="Providers" description="Manage SQLite-backed provider entries, models, API key env vars, and enablement.">
     <section className="card"><h2>Add Provider</h2>
-      <div className="inline-form">
-        <input aria-label="Provider name" placeholder="name" value={name} onChange={(event) => setName(event.target.value)} />
-        <input aria-label="Provider endpoint" placeholder="https://host/v1" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} />
-        <input aria-label={t('providers.apiKey')} type="password" placeholder={t('providers.apiKeyPlaceholder')} value={apiKey} onChange={(event) => setApiKey(event.target.value)} title={t('providers.apiKeyHint')} />
-        <input aria-label={t('providers.apiKeyEnv')} placeholder="OPENAI_API_KEY" value={apiKeyEnv} onChange={(event) => setApiKeyEnv(event.target.value)} title={t('providers.apiKeyEnvHint')} />
-        <button onClick={addProvider}>Add provider</button>
-      </div>
+      <form className="inline-form" onSubmit={handleSubmit(onSubmit)}>
+        <input aria-label="Provider name" placeholder="name" {...register('name')} />
+        {errors.name && <span className="error-text">{errors.name.message}</span>}
+        <input aria-label="Provider endpoint" placeholder="https://host/v1" {...register('endpoint')} />
+        {errors.endpoint && <span className="error-text">{errors.endpoint.message}</span>}
+        <input aria-label={t('providers.apiKey')} type="password" placeholder={t('providers.apiKeyPlaceholder')} title={t('providers.apiKeyHint')} {...register('apiKey')} />
+        <input aria-label={t('providers.apiKeyEnv')} placeholder="OPENAI_API_KEY" title={t('providers.apiKeyEnvHint')} {...register('apiKeyEnv')} />
+        <button type="submit" disabled={isPending}>Add provider</button>
+      </form>
     </section>
     <ExpandableTable
       ariaLabel="Providers"
@@ -115,7 +103,7 @@ export function Providers() {
                   value={keyDraft[p.name] ?? ''}
                   onChange={(event) => setKeyDraft((d) => ({ ...d, [p.name]: event.target.value }))}
                 />
-                <button onClick={() => saveApiKey(p)} disabled={!(keyDraft[p.name] ?? '').length}>{t('providers.apiKeySave')}</button>
+                <button onClick={() => saveApiKey(p.name)} disabled={!(keyDraft[p.name] ?? '').length || isPending}>{t('providers.apiKeySave')}</button>
                 {keyStatus[p.name] && <span style={{ fontSize: '0.85em' }}>{keyStatus[p.name]}</span>}
               </div>
             </dd>
@@ -131,7 +119,7 @@ export function Providers() {
                   value={envDraft[p.name] ?? ''}
                   onChange={(event) => setEnvDraft((d) => ({ ...d, [p.name]: event.target.value }))}
                 />
-                <button onClick={() => saveApiKeyEnv(p)} disabled={!(envDraft[p.name] ?? '').length}>{t('providers.apiKeySave')}</button>
+                <button onClick={() => saveApiKeyEnv(p.name)} disabled={!(envDraft[p.name] ?? '').length || isPending}>{t('providers.apiKeySave')}</button>
                 {envStatus[p.name] && <span style={{ fontSize: '0.85em' }}>{envStatus[p.name]}</span>}
               </div>
             </dd>

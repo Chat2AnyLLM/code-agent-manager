@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { api } from '../services/api'
 import type { Entity, MetadataItem, MetadataDetail } from '../services/types'
 import { Page } from './Page'
 import { ExpandableTable, type Column } from '../components/ExpandableTable'
 import { MultiSelect } from '../components/MultiSelect'
-import { useLanguage } from '../services/i18n'
+import { useTranslation } from 'react-i18next'
 
 // Build the GitHub URL for an indexed resource. The metadata index stores only
 // owner/name/branch, so the source repo is reconstructed as a github.com link
@@ -54,7 +55,7 @@ type LibraryProps = {
 }
 
 export function Library({ kind }: LibraryProps) {
-  const { t } = useLanguage()
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [items, setItems] = useState<MetadataItem[]>([])
   const [total, setTotal] = useState(0)
@@ -153,6 +154,21 @@ export function Library({ kind }: LibraryProps) {
     }
   }
 
+  async function refreshItem(item: MetadataItem) {
+    setStatus('')
+    try {
+      const detail = await api.refreshMetadataItem(item.kind, item.install_key)
+      setItems((prev) => prev.map((it) =>
+        it.kind === item.kind && it.install_key === item.install_key
+          ? { ...it, description: detail.item.description ?? it.description, content: detail.item.content, content_cached_at: detail.item.content_cached_at }
+          : it
+      ))
+      setStatus(t('library.refreshItemDone', { name: item.name }))
+    } catch (err) {
+      setStatus(t('library.refreshItemFailed', { error: err instanceof Error ? err.message : String(err) }))
+    }
+  }
+
   const pageCount = Math.ceil(total / PAGE_SIZE)
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
   // "Installed only" filters the loaded page so users can see, at a glance, what
@@ -179,13 +195,14 @@ export function Library({ kind }: LibraryProps) {
         ? <div className="badges" aria-label={t('library.installedAgents')}>{installedApps.map((app) => <span key={app} className="badge badge-installed">{app}</span>)}</div>
         : <div className="badges"><span className="badge badge-not-installed">{t('library.notInstalled')}</span></div>
     } },
-    { header: 'Actions', cell: (item) => <ResourceActions item={item} targets={targets} onInstall={installTo} onUninstall={uninstallFrom} /> },
+    { header: 'Actions', cell: (item) => <ResourceActions item={item} targets={targets} onInstall={installTo} onUninstall={uninstallFrom} onRefresh={refreshItem} /> },
   ]
 
   return <Page title={title} description={t(descriptionKeys[kind])}>
     <div className="inline-form">
       <input aria-label={`${title} ${t('library.search')}`} value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0) }} placeholder={t('library.searchPlaceholder', { kind: kindLabel })} />
       <button onClick={() => load(query, offset)} disabled={loading}>{t('library.search')}</button>
+      {(query || installedOnly) && <button onClick={() => { setQuery(''); setInstalledOnly(false); setOffset(0) }}>{t('library.reset')}</button>}
       <button onClick={refresh} disabled={refreshing}>{refreshing ? t('library.refreshing') : t('library.refresh')}</button>
       <label className="filter-toggle">
         <input type="checkbox" checked={installedOnly} onChange={(event) => setInstalledOnly(event.target.checked)} />
@@ -221,17 +238,19 @@ type ResourceActionsProps = {
   targets: string[]
   onInstall: (item: MetadataItem, apps: string[]) => Promise<void>
   onUninstall: (item: MetadataItem, apps: string[]) => Promise<void>
+  onRefresh: (item: MetadataItem) => Promise<void>
 }
 
 // ResourceActions renders the install-target picker and install/uninstall buttons
 // inside a table row's Actions cell. The picker is a collapsed <details> so the
 // full agent list stays one click away (and in the DOM for accessibility) without
 // making the row tall.
-function ResourceActions({ item, targets, onInstall, onUninstall }: ResourceActionsProps) {
-  const { t } = useLanguage()
+function ResourceActions({ item, targets, onInstall, onUninstall, onRefresh }: ResourceActionsProps) {
+  const { t } = useTranslation()
   const installedApps = item.installed_apps ?? []
   const [selected, setSelected] = useState<string[]>([])
   const [installing, setInstalling] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   async function doInstall() {
     const apps = selected.length > 0 ? selected : ['claude']
@@ -260,6 +279,17 @@ function ResourceActions({ item, targets, onInstall, onUninstall }: ResourceActi
     }
   }
 
+  async function doRefresh() {
+    setRefreshing(true)
+    try {
+      await onRefresh(item)
+    } catch {
+      // status surfaced by parent
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const installLabel = installing
     ? t('library.installing')
     : selected.length > 1
@@ -280,6 +310,9 @@ function ResourceActions({ item, targets, onInstall, onUninstall }: ResourceActi
       {installedApps.length > 0 && (
         <button className="danger" onClick={doUninstall} disabled={installing}>{t('library.uninstall')}</button>
       )}
+      <button className="icon-btn" onClick={doRefresh} disabled={refreshing} title={t('library.refreshItem')}>
+        <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
+      </button>
     </div>
   )
 }
@@ -289,7 +322,7 @@ function ResourceActions({ item, targets, onInstall, onUninstall }: ResourceActi
 // plugin.json) below the indexed fields. Fetch is on-demand because it hits the
 // network for the source repo; collapsing and re-expanding reuses the result.
 function DetailPanel({ item }: { item: MetadataItem }) {
-  const { t } = useLanguage()
+  const { t } = useTranslation()
   const [detail, setDetail] = useState<MetadataDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
@@ -305,6 +338,8 @@ function DetailPanel({ item }: { item: MetadataItem }) {
     return () => { active = false }
   }, [item.kind, item.install_key])
 
+  const cachedAt = item.content_cached_at || detail?.item.content_cached_at
+
   return <section className="detail-panel" aria-label={`details for ${item.name}`}>
     <dl className="detail-meta">
       <div><dt>kind</dt><dd>{item.kind}</dd></div>
@@ -312,6 +347,7 @@ function DetailPanel({ item }: { item: MetadataItem }) {
       <div><dt>branch</dt><dd>{item.repo_branch || 'main'}</dd></div>
       <div><dt>install key</dt><dd><code>{item.install_key}</code></dd></div>
       <div><dt>targets</dt><dd>{item.target_apps}</dd></div>
+      {cachedAt && <div><dt>cached</dt><dd>{formatCachedAt(cachedAt)}</dd></div>}
     </dl>
     {loading && <p>{t('library.loadingDetail')}</p>}
     {failed && <p className="error-text">{t('library.detailFailed')}</p>}
@@ -322,4 +358,18 @@ function DetailPanel({ item }: { item: MetadataItem }) {
         : !failed && <p>{t('library.detailFailed')}</p>}
     </>}
   </section>
+}
+
+function formatCachedAt(iso: string): string {
+  try {
+    const date = new Date(iso)
+    const now = Date.now()
+    const diffMs = now - date.getTime()
+    if (diffMs < 60_000) return 'just now'
+    if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m ago`
+    if (diffMs < 86_400_000) return `${Math.floor(diffMs / 3_600_000)}h ago`
+    return `${Math.floor(diffMs / 86_400_000)}d ago`
+  } catch {
+    return iso
+  }
 }

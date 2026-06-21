@@ -129,6 +129,8 @@ export type MetadataItem = {
   target_apps: string
   installed_apps?: string[]
   installed: boolean
+  content?: string
+  content_cached_at?: string
 }
 
 export type MetadataSearchResponse = {
@@ -179,4 +181,28 @@ export type Instruction = {
 export type InstructionTarget = {
   app: string
   supports: { user: boolean; project: boolean }
+}
+
+// Prompt represents a single prompt from any source.
+export type Prompt = {
+  id: number
+  source: string
+  source_url: string
+  category: string
+  title: string
+  description: string
+  content: string
+  author: string
+  tags: string
+  created_at: string
+  updated_at: string
+}
+
+// PromptSource represents the status of a prompt source.
+export type PromptSource = {
+  source: string
+  name: string
+  last_sync: string
+  prompt_count: number
+  enabled: boolean
 }

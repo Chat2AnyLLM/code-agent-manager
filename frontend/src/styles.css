@@ -51,7 +51,7 @@
 }
 
 *{box-sizing:border-box}
-html,body,#root{margin:0;min-width:1600px}
+html,body,#root{margin:0}
 body{background:var(--bg);color:var(--text);min-height:100vh}
 button,input,select{font:inherit;color:inherit}
 
@@ -63,7 +63,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .danger{color:var(--error)!important;border-color:color-mix(in srgb,var(--error) 40%,var(--line))!important}
 .danger:hover{background:color-mix(in srgb,var(--error) 12%,var(--card))!important;border-color:var(--error)!important}
 
-.app-shell{display:flex;min-height:100vh;background:var(--bg);min-width:1600px}
+.app-shell{display:flex;min-height:100vh;background:var(--bg)}
 .sidebar{width:300px;flex:0 0 300px;background:var(--sidebar);color:var(--text);padding:.8rem .7rem;border-right:1px solid var(--line);box-sizing:border-box;display:flex;flex-direction:column}
 .brand{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.05rem;letter-spacing:-.01em;margin-bottom:1.4rem;padding:.2rem .3rem;color:var(--text)}
 .brand svg{color:var(--accent);width:20px;height:20px}
@@ -75,7 +75,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .sidebar-footer{margin-top:.4rem;border-top:1px solid var(--divider);padding-top:.5rem;display:grid;gap:.12rem}
 
 .content{flex:1;min-width:0;padding:2rem 2.8rem;color:var(--text);background:var(--bg-2);overflow:auto}
-.page{width:100%;min-width:1250px;margin:0}
+.page{width:100%;margin:0}
 .page header{margin-bottom:1.6rem}
 .page header h1{margin:.1rem 0;font-size:clamp(1.6rem,2.5vw,2.2rem);line-height:1.1;letter-spacing:-.025em;font-weight:700;color:var(--text)}
 .page header p{color:var(--muted);font-size:.95rem;margin-top:.45rem;max-width:700px;line-height:1.5}
@@ -102,10 +102,15 @@ input,select{border:1px solid var(--line);border-radius:8px;padding:.55rem .75re
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
 .actions{display:flex;gap:.6rem;margin:1rem 0}
 
-table{width:100%;min-width:1250px;border-collapse:separate;border-spacing:0;background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);table-layout:auto}
+/* Table wrapper: allows horizontal scroll when the viewport is narrower than
+   the table's natural width, while keeping the table at full container width
+   when space permits. */
+.table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);table-layout:auto}
 th,td{text-align:left;padding:.75rem .85rem;vertical-align:middle}
 th{background:var(--bg-2);color:var(--tertiary);text-transform:uppercase;font-size:.72rem;font-weight:600;letter-spacing:.07em;border-bottom:1px solid var(--line)}
-td{color:var(--text);border-bottom:1px solid var(--divider);white-space:nowrap}
+td{color:var(--text);border-bottom:1px solid var(--divider)}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover{background:color-mix(in srgb,var(--hover) 60%,var(--card))}
 
@@ -118,7 +123,8 @@ tbody tr:hover{background:color-mix(in srgb,var(--hover) 60%,var(--card))}
 .expanded-detail-row>td{background:var(--bg-2);border-bottom:1px solid var(--divider);padding:.9rem 1rem;white-space:normal}
 .expanded-detail-row .detail-panel{margin-top:0;border-top:none;padding-top:0}
 .expanded-detail-row dl.detail-meta{margin-top:0}
-.row-actions{display:flex;flex-wrap:nowrap;gap:.4rem;align-items:center;white-space:nowrap}
+.row-actions{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.row-actions select{font-size:.82rem;padding:.3rem .45rem;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .install-level-controls{display:flex;flex-wrap:nowrap;gap:.35rem;width:100%}
 .install-level-controls .level-label select{font-size:.8rem;padding:.2rem .35rem;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .install-level-controls .project-dir-label{display:flex;flex-wrap:nowrap;gap:.25rem;align-items:center;width:100%}
@@ -127,8 +133,8 @@ tbody tr:hover{background:color-mix(in srgb,var(--hover) 60%,var(--card))}
 .row-meta{display:grid;gap:.25rem;margin:0 0 .5rem}
 .row-meta dt{color:var(--tertiary);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}
 .row-meta dd{margin:0;color:var(--text);font-size:.88rem;overflow-wrap:anywhere}
-.row-name{margin:0;font-size:.95rem;font-weight:700;color:var(--text)}
-.source-link{color:inherit;text-decoration:none;overflow-wrap:anywhere}
+.row-name{margin:0;font-size:.95rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.source-link{color:inherit;text-decoration:none;overflow-wrap:anywhere;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:100%}
 .source-link:hover{color:var(--accent);text-decoration:underline}
 .agent-status-cell{display:flex;align-items:center;gap:.45rem;white-space:nowrap}
 .agent-row-actions{display:flex;align-items:center;gap:.4rem;white-space:nowrap}
@@ -226,3 +232,10 @@ code{background:var(--code-bg);color:var(--accent);padding:.1rem .3rem;border-ra
 .install-list li{margin:.15rem 0}
 
 @media(max-width:900px){.content{padding:1rem}.page header h1{font-size:1.8rem}}
+
+/* Icon-only button (e.g. per-row refresh). */
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--bg-2);color:var(--muted);cursor:pointer;transition:background .12s ease,border-color .12s ease}
+.icon-btn:hover{background:var(--hover);border-color:var(--accent);color:var(--text)}
+.icon-btn:disabled{opacity:.4;cursor:not-allowed}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.spin{animation:spin .8s linear infinite}

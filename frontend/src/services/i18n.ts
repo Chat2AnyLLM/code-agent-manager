@@ -82,6 +82,7 @@ const en: Record<string, string> = {
   'library.plugins.description': 'Search, install, and refresh assistant plugins from the metadata index.',
   'library.searchPlaceholder': 'Search {kind}',
   'library.search': 'Search',
+  'library.reset': 'Reset',
   'library.refresh': 'Refresh',
   'library.refreshing': 'Refreshing…',
   'library.installedOnly': 'Installed only',
@@ -106,6 +107,11 @@ const en: Record<string, string> = {
   'library.uninstall': 'Uninstall',
   'library.uninstalled': 'Uninstalled {name} from {targets}',
   'library.uninstallFailed': 'Uninstall failed: {error}',
+  'library.refreshItem': 'Refresh',
+  'library.refreshingItem': 'Refreshing\u2026',
+  'library.refreshItemDone': 'Refreshed {name}',
+  'library.refreshItemFailed': 'Refresh failed: {error}',
+  'library.cachedAt': 'Cached: {time}',
 
   // MCP Servers page (mirrors the Library layout: discovered registry servers
   // with a per-row install-target dropdown)
@@ -246,6 +252,7 @@ const zh: Record<string, string> = {
   'library.plugins.description': '从元数据索引中搜索、安装并刷新助手插件。',
   'library.searchPlaceholder': '搜索{kind}',
   'library.search': '搜索',
+  'library.reset': '重置',
   'library.refresh': '刷新',
   'library.refreshing': '刷新中…',
   'library.installedOnly': '仅显示已安装',
@@ -270,6 +277,11 @@ const zh: Record<string, string> = {
   'library.uninstall': '卸载',
   'library.uninstalled': '已从 {targets} 卸载 {name}',
   'library.uninstallFailed': '卸载失败：{error}',
+  'library.refreshItem': '刷新',
+  'library.refreshingItem': '刷新中\u2026',
+  'library.refreshItemDone': '已刷新 {name}',
+  'library.refreshItemFailed': '刷新失败：{error}',
+  'library.cachedAt': '缓存时间：{time}',
 
   // MCP 服务器页面（沿用 Library 的布局：已发现的注册表服务器 + 每行安装目标下拉框）
   'mcp.title': 'MCP 服务器',

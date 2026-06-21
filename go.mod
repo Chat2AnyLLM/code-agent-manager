@@ -7,9 +7,11 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/mattn/go-isatty v0.0.22
+	github.com/mattn/go-sqlite3 v1.14.46
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/spf13/cobra v1.10.1
 	gopkg.in/yaml.v3 v3.0.1
+	modernc.org/sqlite v1.52.0
 )
 
 require (
@@ -43,5 +45,4 @@ require (
 	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.52.0 // indirect
 )

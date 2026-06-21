@@ -69,10 +69,15 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/metadata/uninstall", s.handleMetadataUninstall)
 	mux.HandleFunc("/api/metadata/targets", s.handleMetadataTargets)
 	mux.HandleFunc("/api/metadata/detail", s.handleMetadataDetail)
+	mux.HandleFunc("/api/metadata/refresh-item", s.handleMetadataRefreshItem)
 	mux.HandleFunc("/api/config/files", s.handleConfigFiles)
 	mux.HandleFunc("/api/doctor/checks", s.handleDoctorChecks)
 	mux.HandleFunc("/api/launch/dry-run", s.handleLaunchDryRun)
 	mux.HandleFunc("/api/launch/apply", s.handleLaunchApply)
+	mux.HandleFunc("/api/prompts", s.handlePrompts)
+	mux.HandleFunc("/api/prompts/search", s.handlePromptsSearch)
+	mux.HandleFunc("/api/prompts/sync", s.handlePromptsSync)
+	mux.HandleFunc("/api/prompts/sources", s.handlePromptsSources)
 	return s.withMiddleware(mux)
 }
 

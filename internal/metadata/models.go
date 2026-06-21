@@ -17,9 +17,12 @@ type Item struct {
 	Installed        bool     `json:"installed"`
 	InstalledTargets string   `json:"installed_targets"`
 	InstalledApps    []string `json:"installed_apps,omitempty"`
-	LastSeenAt       string `json:"last_seen_at"`
-	CreatedAt        string `json:"created_at"`
-	UpdatedAt        string `json:"updated_at"`
+	Content          string   `json:"content"`
+	ContentCachedAt  string   `json:"content_cached_at"`
+	ManifestPath     string   `json:"manifest_path"`
+	LastSeenAt       string   `json:"last_seen_at"`
+	CreatedAt        string   `json:"created_at"`
+	UpdatedAt        string   `json:"updated_at"`
 }
 
 // Source represents a configured metadata repository source.

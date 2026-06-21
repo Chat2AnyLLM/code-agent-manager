@@ -48,6 +48,7 @@ type Entity struct {
 	Apps        []string       `json:"apps,omitempty"`
 	Tags        []string       `json:"tags,omitempty"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
+	ExtraFiles  map[string]string `json:"extra_files,omitempty"` // relpath → content for additional files (e.g. references/)
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
 

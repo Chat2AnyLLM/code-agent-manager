@@ -423,7 +423,7 @@ func InstalledApps(kind Kind) []string {
 // InstallToApp writes the entity's content to the resolved location for app.
 // For prompts/instructions: writes Content as a single file.  For skills/agents/plugins:
 // creates a directory named entity.Name containing a SKILL.md/AGENT.md/manifest.json
-// — minimal but matches the Python tree shape.
+// plus any extra files (e.g. references/ subdirectories).
 func InstallToApp(entity Entity, kind Kind, app string) (string, error) {
 	apps := AppPathsFor(kind)
 	dest, ok := apps[app]
@@ -445,10 +445,30 @@ func InstallToApp(entity Entity, kind Kind, app string) (string, error) {
 		switch kind {
 		case KindSkill:
 			path := filepath.Join(dir, "SKILL.md")
-			return dir, writeFile(path, []byte(entity.Content), 0o600)
+			if err := writeFile(path, []byte(entity.Content), 0o600); err != nil {
+				return "", err
+			}
+			// Write extra files (e.g. references/ subdirectory)
+			for relPath, content := range entity.ExtraFiles {
+				fullPath := filepath.Join(dir, relPath)
+				if err := writeFile(fullPath, []byte(content), 0o600); err != nil {
+					return "", err
+				}
+			}
+			return dir, nil
 		case KindAgent:
 			path := filepath.Join(dir, "AGENT.md")
-			return dir, writeFile(path, []byte(entity.Content), 0o600)
+			if err := writeFile(path, []byte(entity.Content), 0o600); err != nil {
+				return "", err
+			}
+			// Write extra files
+			for relPath, content := range entity.ExtraFiles {
+				fullPath := filepath.Join(dir, relPath)
+				if err := writeFile(fullPath, []byte(content), 0o600); err != nil {
+					return "", err
+				}
+			}
+			return dir, nil
 		case KindPlugin:
 			path := filepath.Join(dir, "manifest.json")
 			content := entity.Content

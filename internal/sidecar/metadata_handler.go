@@ -174,7 +174,8 @@ func (s *Server) handleMetadataTargets(w http.ResponseWriter, r *http.Request) {
 // on-demand manifest content) for a single item identified by kind and
 // install_key. The manifest fetch is a live network call, so this endpoint is
 // intentionally separate from search: the UI calls it lazily, only when the
-// user expands a card.
+// user expands a card. When the "force" query parameter is "true", the cache
+// is bypassed and the manifest is always re-fetched from source.
 func (s *Server) handleMetadataDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		methodNotAllowed(w)
@@ -192,6 +193,43 @@ func (s *Server) handleMetadataDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	store := metadata.NewStore("")
 	svc := metadata.NewService(store)
-	detail, err := svc.Detail(r.Context(), kind, installKey)
+	force := r.URL.Query().Get("force") == "true"
+	var detail metadata.ItemDetail
+	var err error
+	if force {
+		detail, err = svc.DetailForceRefresh(r.Context(), kind, installKey)
+	} else {
+		detail, err = svc.Detail(r.Context(), kind, installKey)
+	}
+	writeResult(w, detail, err)
+}
+
+// handleMetadataRefreshItem re-fetches a single item's manifest content from
+// its source repository, updates the description if it has changed, and saves
+// the content to the database cache. Returns the refreshed detail view.
+func (s *Server) handleMetadataRefreshItem(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	var input struct {
+		Kind       string `json:"kind"`
+		InstallKey string `json:"install_key"`
+	}
+	if err := decodeJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if input.Kind == "" || input.InstallKey == "" {
+		writeError(w, http.StatusBadRequest, "kind and install_key are required")
+		return
+	}
+	if input.Kind == "prompt" {
+		writeError(w, http.StatusBadRequest, "kind 'prompt' has been renamed to 'instruction'; use kind=instruction")
+		return
+	}
+	store := metadata.NewStore("")
+	svc := metadata.NewService(store)
+	detail, err := svc.RefreshItem(r.Context(), input.Kind, input.InstallKey)
 	writeResult(w, detail, err)
 }

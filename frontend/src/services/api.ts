@@ -1,5 +1,5 @@
 import { mockConfigFiles, mockDoctorChecks, mockEntities, mockMCPClients, mockMCPServers, mockMCPRegistry, mockMetadataItems, mockProviders, mockTargets, mockTools } from './mockData'
-import type { ApplyResult, ConfigFile, DoctorCheck, Entity, Instruction, InstructionInstall, InstructionTarget, LaunchPlan, MCPClient, MCPRegistryItem, MCPServer, MetadataDetail, MetadataRefreshSummary, MetadataSearchResponse, Provider, Tool, ToolOperation } from './types'
+import type { ApplyResult, ConfigFile, DoctorCheck, Entity, Instruction, InstructionInstall, InstructionTarget, LaunchPlan, MCPClient, MCPRegistryItem, MCPServer, MetadataDetail, MetadataRefreshSummary, MetadataSearchResponse, Prompt, PromptSource, Provider, Tool, ToolOperation } from './types'
 
 type SidecarConfig = {
   baseUrl: string
@@ -170,6 +170,10 @@ export const api = {
     return { item, content: `# ${item.name}\n\n${item.description}`, manifest_path: '' }
   },
 
+  async refreshMetadataItem(kind: string, installKey: string): Promise<MetadataDetail> {
+    return (await request<MetadataDetail>('/api/metadata/refresh-item', { method: 'POST', body: JSON.stringify({ kind, install_key: installKey }) })) ?? this.metadataDetail(kind, installKey)
+  },
+
   // Instructions: local CRUD + symlink install. These hit the sidecar's
   // /api/instructions/* endpoints. In browser-only/mock mode (no sidecar) the
   // mutating calls throw, and listInstructions returns an empty list so the
@@ -215,5 +219,20 @@ export const api = {
       { app: 'roo', supports: { user: true, project: true } },
       { app: 'aider', supports: { user: false, project: true } },
     ]
+  },
+
+  // Prompts
+  async listPrompts(source?: string): Promise<Prompt[]> {
+    const params = source ? `?source=${encodeURIComponent(source)}` : ''
+    return (await request<Prompt[]>(`/api/prompts${params}`)) ?? []
+  },
+  async searchPrompts(q: string): Promise<Prompt[]> {
+    return (await request<Prompt[]>(`/api/prompts/search?q=${encodeURIComponent(q)}`)) ?? []
+  },
+  async syncPrompts(source?: string): Promise<{ synced: number }> {
+    return (await request<{ synced: number }>('/api/prompts/sync', { method: 'POST', body: JSON.stringify({ source: source ?? '' }) })) ?? { synced: 0 }
+  },
+  async getPromptSources(): Promise<PromptSource[]> {
+    return (await request<PromptSource[]>('/api/prompts/sources')) ?? []
   },
 }
