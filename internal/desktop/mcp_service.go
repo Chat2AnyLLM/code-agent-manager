@@ -74,7 +74,7 @@ func (s *MCPService) Remove(clientName, scope, name string) (OperationResult, er
 }
 
 func (s *MCPService) SearchRegistry(query string) ([]mcp.ServerSchema, error) {
-	registry, err := mcp.LoadBundledRegistry()
+	registry, err := mcp.LoadRegistry()
 	if err != nil {
 		return nil, wrapError("MCP_REGISTRY_LOAD_FAILED", err)
 	}
@@ -82,7 +82,7 @@ func (s *MCPService) SearchRegistry(query string) ([]mcp.ServerSchema, error) {
 }
 
 func (s *MCPService) ShowServer(name string) (mcp.ServerSchema, error) {
-	registry, err := mcp.LoadBundledRegistry()
+	registry, err := mcp.LoadRegistry()
 	if err != nil {
 		return mcp.ServerSchema{}, wrapError("MCP_REGISTRY_LOAD_FAILED", err)
 	}
@@ -93,13 +93,13 @@ func (s *MCPService) ShowServer(name string) (mcp.ServerSchema, error) {
 	return schema, nil
 }
 
-// ListRegistry returns the discovered (bundled) MCP servers, optionally filtered
+// ListRegistry returns discovered MCP catalog servers, optionally filtered
 // by query, each enriched with the clients it is already installed into at scope.
 // Installed status is computed by reading each client's config once; clients that
 // cannot be read (e.g. TOML configs via the JSON path, or missing files) are
 // skipped rather than failing the whole listing.
 func (s *MCPService) ListRegistry(query string, scope mcp.Scope) ([]MCPRegistryItemDTO, error) {
-	registry, err := mcp.LoadBundledRegistry()
+	registry, err := mcp.LoadRegistry()
 	if err != nil {
 		return nil, wrapError("MCP_REGISTRY_LOAD_FAILED", err)
 	}
@@ -146,7 +146,7 @@ func (s *MCPService) InstallFromRegistry(clientName, scope, serverName string) (
 	if !ok {
 		return OperationResult{}, NewError("MCP_CLIENT_NOT_FOUND", "unsupported MCP client", map[string]string{"client": clientName})
 	}
-	registry, err := mcp.LoadBundledRegistry()
+	registry, err := mcp.LoadRegistry()
 	if err != nil {
 		return OperationResult{}, wrapError("MCP_REGISTRY_LOAD_FAILED", err)
 	}

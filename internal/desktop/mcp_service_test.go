@@ -1,8 +1,13 @@
 package desktop
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestMCPServiceClientsAndRegistry(t *testing.T) {
+	writeMCPServiceTestConfig(t)
 	service := NewMCPService()
 	clients := service.ListClients()
 	if len(clients) == 0 {
@@ -19,6 +24,7 @@ func TestMCPServiceClientsAndRegistry(t *testing.T) {
 }
 
 func TestMCPServiceListRegistry(t *testing.T) {
+	writeMCPServiceTestConfig(t)
 	service := NewMCPService()
 
 	// Empty query lists the whole catalog; each item carries its install type.
@@ -55,6 +61,7 @@ func TestMCPServiceListRegistry(t *testing.T) {
 }
 
 func TestMCPServiceInstallFromRegistry(t *testing.T) {
+	writeMCPServiceTestConfig(t)
 	service := NewMCPService()
 	// Installing an unknown server fails fast without touching config.
 	if _, err := service.InstallFromRegistry("claude", "user", "does-not-exist-mcp"); err == nil {
@@ -62,3 +69,41 @@ func TestMCPServiceInstallFromRegistry(t *testing.T) {
 	}
 }
 
+func writeMCPServiceTestConfig(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	cfgDir := filepath.Join(dir, "cfg")
+	t.Setenv("CAM_CONFIG_DIR", cfgDir)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	catalogPath := filepath.Join(cfgDir, "mcp_servers.json")
+	catalog := `[
+  {
+    "name": "github-test-mcp",
+    "display_name": "GitHub Test MCP",
+    "description": "GitHub test catalog MCP server",
+    "repository": {"type": "git", "url": "https://example.com/github-test-mcp"},
+    "tags": ["github"],
+    "installations": {
+      "npm": {"type": "npm", "command": "npx", "args": ["-y", "github-test-mcp"]}
+    }
+  },
+  {
+    "name": "memory-test-mcp",
+    "display_name": "Memory Test MCP",
+    "description": "Memory test catalog MCP server",
+    "installations": {
+      "npm": {"type": "npm", "command": "npx", "args": ["-y", "memory-test-mcp"]}
+    }
+  }
+]`
+	if err := os.WriteFile(catalogPath, []byte(catalog), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	config := "repositories:\n  mcpServers:\n    sources:\n      - type: local\n        path: " + filepath.ToSlash(catalogPath) + "\ncache:\n  enabled: false\n"
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}

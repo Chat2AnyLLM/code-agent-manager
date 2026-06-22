@@ -92,7 +92,7 @@ type MCPServerDTO struct {
 	Type    string            `json:"type,omitempty"`
 }
 
-// MCPRegistryItemDTO is one discovered MCP server from the bundled registry,
+// MCPRegistryItemDTO is one discovered MCP server from the catalog registry,
 // enriched with the clients it is already installed into (per scope). It mirrors
 // MetadataItem's shape so the MCP page can reuse the Library table layout.
 type MCPRegistryItemDTO struct {
