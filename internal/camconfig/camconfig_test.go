@@ -20,10 +20,17 @@ func TestLoadFallsBackToBundledWhenMissing(t *testing.T) {
 	if len(got.Repositories) == 0 {
 		t.Fatal("bundled config should expose repository sources")
 	}
-	for _, key := range []string{"skills", "agents", "plugins"} {
+	for _, key := range []string{"skills", "agents", "plugins", "mcpServers"} {
 		if _, ok := got.Repositories[key]; !ok {
 			t.Fatalf("bundled config missing repository key %q", key)
 		}
+	}
+	mcpSources := got.Repositories["mcpServers"].Sources
+	if len(mcpSources) != 2 {
+		t.Fatalf("mcpServers source count = %d, want 2", len(mcpSources))
+	}
+	if mcpSources[1].URL != "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/dist/servers.json" {
+		t.Fatalf("mcpServers remote URL = %q", mcpSources[1].URL)
 	}
 	if !got.Cache.Enabled {
 		t.Fatal("bundled cache should default to enabled")
