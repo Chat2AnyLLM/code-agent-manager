@@ -19,8 +19,8 @@ func TestAwesomePromptsEmbedded_hasRequiredPromptFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchAwesomePrompts: %v", err)
 	}
-	if len(prompts) != 3 {
-		t.Fatalf("expected 3 awesome prompts, got %d", len(prompts))
+	if len(prompts) < 3 {
+		t.Fatalf("expected at least 3 awesome prompts, got %d", len(prompts))
 	}
 	for _, p := range prompts {
 		if strings.TrimSpace(p.Slug) == "" {

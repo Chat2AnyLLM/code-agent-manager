@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -20,22 +21,44 @@ import (
 type Service struct {
 	store   *Store
 	fetcher RepoFetcher
+	browser RepoBrowser
 }
 
 // RepoFetcher downloads a repository and returns the local path to its extracted
 // root. The fetching package satisfies this via DownloadGitHubZip.
+//
+// Deprecated by RepoBrowser for metadata refresh and detail/install fetches.
+// Still required for the rare cases that need a full local checkout (currently
+// none — kept until all paths are migrated).
 type RepoFetcher interface {
 	Fetch(owner, repo, branch, dest string) (root string, err error)
 }
 
-// NewService constructs a metadata Service with the default GitHub fetcher.
+// NewService constructs a metadata Service with the default GitHub fetcher and
+// HTTP-based RepoBrowser. The browser is the primary I/O path; the fetcher is
+// retained for backward-compat tests until the legacy code is removed.
 func NewService(store *Store) *Service {
-	return &Service{store: store, fetcher: defaultFetcher{}}
+	return &Service{
+		store:   store,
+		fetcher: defaultFetcher{},
+		browser: NewHTTPRepoBrowser(),
+	}
 }
 
-// WithFetcher overrides the repository fetcher (used in tests).
+// WithFetcher overrides the repository fetcher (used in tests). The fetcher is
+// also wrapped as a RepoBrowser so the metadata pipeline — which now flows
+// through ListTree/FetchFile — stays driven by the same synthetic tree the
+// test prepared. Production never calls this.
 func (svc *Service) WithFetcher(f RepoFetcher) *Service {
 	svc.fetcher = f
+	svc.browser = newFetcherBackedBrowser(f)
+	return svc
+}
+
+// WithBrowser overrides the repository browser (used in tests to avoid live
+// network calls). Returns the service so it chains alongside WithFetcher.
+func (svc *Service) WithBrowser(b RepoBrowser) *Service {
+	svc.browser = b
 	return svc
 }
 
@@ -251,27 +274,37 @@ func (svc *Service) fetchAndDiscover(ctx context.Context, kind string, entityKin
 		go func() {
 			defer wg.Done()
 			for job := range jobCh {
-				dest := filepath.Join(cacheDir, kind, job.owner+"-"+job.repo)
-				_ = os.RemoveAll(dest)
-				root, err := svc.fetcher.Fetch(job.owner, job.repo, job.branch, dest)
+				// Metadata-only path: ask the browser for the repo tree and run
+				// the path-only discovery. No clone, no extracted directory, no
+				// per-resource file reads. The Item gets the directory/file
+				// basename as Name and an empty Description; UI Detail will
+				// lazily hydrate name/description by fetching the manifest on
+				// demand.
+				listing, err := svc.browser.ListTree(ctx, job.owner, job.repo, job.branch)
 				if err != nil {
 					out <- repoResult{err: fmt.Sprintf("%s/%s: %v", job.owner, job.repo, err)}
-					_ = os.RemoveAll(dest)
 					continue
 				}
+				paths := make([]string, 0, len(listing.Entries))
+				for _, e := range listing.Entries {
+					paths = append(paths, e.Path)
+				}
 
-				resources := DiscoverResources(root, job.subPath, entityKind)
+				resources := DiscoverFromTree(paths, job.subPath, entityKind)
 				if job.catalogFile != "" {
-					if catalogResources := DiscoverCatalogResources(root, job.catalogFile, entityKind); len(catalogResources) > 0 {
+					if catalogResources := svc.discoverCatalogFromTree(ctx, job, entityKind); len(catalogResources) > 0 {
 						resources = catalogResources
 					}
 				} else if len(resources) == 0 {
-					if catalogFile := inferCatalogFile(root, entityKind); catalogFile != "" {
-						resources = DiscoverCatalogResources(root, catalogFile, entityKind)
+					if catalogFile := inferCatalogFromPaths(paths, entityKind); catalogFile != "" {
+						job.catalogFile = catalogFile
+						if catalogResources := svc.discoverCatalogFromTree(ctx, job, entityKind); len(catalogResources) > 0 {
+							resources = catalogResources
+						}
 					}
 				}
+
 				items := make([]Item, 0, len(resources))
-				cachedAt := timeNow()
 				for _, res := range resources {
 					owner, repo, branch, itemPath := job.owner, job.repo, job.branch, res.RelPath
 					if res.SourceOwner != "" && res.SourceRepo != "" {
@@ -283,30 +316,25 @@ func (svc *Service) fetchAndDiscover(ctx context.Context, kind string, entityKin
 							itemPath = res.SourcePath
 						}
 					}
-					content := ""
-					if res.ManifestRel != "" {
-						manifestPath := filepath.Join(root, filepath.FromSlash(res.ManifestRel))
-						if data, err := os.ReadFile(manifestPath); err == nil {
-							content = string(data)
-						}
-					}
 					items = append(items, Item{
-						Kind:           kind,
-						Name:           res.Name,
-						Description:    res.Description,
-						RepoOwner:      owner,
-						RepoName:       repo,
-						RepoBranch:     branch,
-						ItemPath:       itemPath,
-						InstallKey:     fmt.Sprintf("%s/%s:%s", owner, repo, res.Name),
-						TargetApps:     targetApps,
-						Content:        content,
-						ContentCachedAt: cachedAt,
-						ManifestPath:   res.ManifestRel,
+						Kind:         kind,
+						Name:         res.Name,
+						Description:  res.Description,
+						RepoOwner:    owner,
+						RepoName:     repo,
+						RepoBranch:   branch,
+						ItemPath:     itemPath,
+						InstallKey:   fmt.Sprintf("%s/%s:%s", owner, repo, res.Name),
+						TargetApps:   targetApps,
+						ManifestPath: res.ManifestRel,
 					})
 				}
+				if listing.Truncated && len(items) > 0 {
+					// Surface upstream tree truncation on the first item so the
+					// UI can render "≥N (truncated)" without a separate column.
+					items[0].MetadataJSON = `{"tree_truncated":true}`
+				}
 				out <- repoResult{items: items}
-				_ = os.RemoveAll(dest)
 			}
 		}()
 	}
@@ -460,102 +488,88 @@ func (svc *Service) fetchResourceContent(item Item) string {
 	return content
 }
 
-// fetchResourceExtraFiles downloads the resource's source repo and reads all
-// files in the resource directory (excluding the manifest file itself). Returns
-// a map of relative path → content for extra files like references/.
+// fetchResourceExtraFiles lists the resource directory via the browser and
+// fetches every non-manifest blob inside it. Returns repo-relative paths
+// (relative to ItemPath) → file content. Skills/agents only — plugins ship
+// their full payload via plugin.json itself.
 func (svc *Service) fetchResourceExtraFiles(item Item) map[string]string {
 	if item.RepoOwner == "" || item.RepoName == "" || item.ItemPath == "" {
 		return nil
 	}
-	// Only skills and agents have extra files
 	if item.Kind != "skill" && item.Kind != "agent" {
 		return nil
 	}
 
-	dest := filepath.Join(pathutil.CacheDir(), "metadata-install-extra", item.RepoOwner+"-"+item.RepoName+"-"+item.Name)
-	_ = os.RemoveAll(dest)
-	defer os.RemoveAll(dest)
+	ctx, cancel := contextWithTimeout(60 * time.Second)
+	defer cancel()
 
-	root, err := svc.fetcher.Fetch(item.RepoOwner, item.RepoName, item.RepoBranch, dest)
+	listing, err := svc.browser.ListTree(ctx, item.RepoOwner, item.RepoName, item.RepoBranch)
 	if err != nil {
 		return nil
 	}
-
-	target := filepath.Join(root, filepath.FromSlash(item.ItemPath))
-	info, err := os.Stat(target)
-	if err != nil || !info.IsDir() {
+	manifestName := defaultManifest(item.Kind)
+	dirPrefix := strings.TrimSuffix(item.ItemPath, "/") + "/"
+	// ItemPath may already be a manifest file (agents are single .md files);
+	// in that case there's no companion directory to walk and no extras exist.
+	if strings.HasSuffix(strings.ToLower(item.ItemPath), ".md") ||
+		strings.HasSuffix(strings.ToLower(item.ItemPath), ".json") {
 		return nil
 	}
-
-	manifestName := defaultManifest(item.Kind)
-	extraFiles := make(map[string]string)
-
-	err = filepath.Walk(target, func(path string, info os.FileInfo, err error) error {
+	extraFiles := map[string]string{}
+	for _, entry := range listing.Entries {
+		if !strings.HasPrefix(entry.Path, dirPrefix) {
+			continue
+		}
+		rel := strings.TrimPrefix(entry.Path, dirPrefix)
+		if rel == "" || strings.HasSuffix(rel, "/") {
+			continue
+		}
+		if path.Base(rel) == manifestName {
+			continue
+		}
+		data, err := svc.browser.FetchFile(ctx, item.RepoOwner, item.RepoName, item.RepoBranch, entry.Path)
 		if err != nil {
-			return nil // skip errors
+			continue
 		}
-		if info.IsDir() {
-			return nil
-		}
-		// Skip the manifest file itself
-		if info.Name() == manifestName {
-			return nil
-		}
-		// Read the file content
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil // skip unreadable files
-		}
-		// Compute relative path from the skill directory
-		relPath, err := filepath.Rel(target, path)
-		if err != nil {
-			return nil
-		}
-		// Use forward slashes for consistency
-		relPath = filepath.ToSlash(relPath)
-		extraFiles[relPath] = string(data)
-		return nil
-	})
-
-	if err != nil || len(extraFiles) == 0 {
+		extraFiles[rel] = string(data)
+	}
+	if len(extraFiles) == 0 {
 		return nil
 	}
 	return extraFiles
 }
 
-// fetchResourceManifest downloads the resource's source repo and reads its
-// manifest, returning both the content and the manifest path relative to the
-// repo root (e.g. "skills/foo/SKILL.md"). The relative path lets callers show
-// users where the content came from. Failures return empty strings so callers
-// degrade gracefully: install still creates the directory structure, and the
-// detail view still renders the indexed metadata without the manifest body.
+// fetchResourceManifest fetches the resource's manifest via the RepoBrowser
+// (raw.githubusercontent.com single-file GET — no clone). Returns the content
+// and the manifest path relative to the repo root. Failures degrade gracefully
+// to empty strings so the Detail view still renders metadata.
 func (svc *Service) fetchResourceManifest(item Item) (content, manifestRel string) {
 	if item.RepoOwner == "" || item.RepoName == "" || item.ItemPath == "" {
 		return "", ""
 	}
-	dest := filepath.Join(pathutil.CacheDir(), "metadata-install", item.RepoOwner+"-"+item.RepoName)
-	_ = os.RemoveAll(dest)
-	defer os.RemoveAll(dest)
-
-	root, err := svc.fetcher.Fetch(item.RepoOwner, item.RepoName, item.RepoBranch, dest)
+	// Prefer the indexed manifest path when present (set by the refresh path
+	// already). Otherwise infer the conventional manifest name inside ItemPath.
+	manifestRel = item.ManifestPath
+	if manifestRel == "" {
+		manifestRel = pathJoinClean(item.ItemPath, defaultManifest(item.Kind))
+	}
+	ctx, cancel := contextWithTimeout(30 * time.Second)
+	defer cancel()
+	data, err := svc.browser.FetchFile(ctx, item.RepoOwner, item.RepoName, item.RepoBranch, manifestRel)
 	if err != nil {
+		// Fall back to trying the conventional manifest name when the indexed
+		// path did not resolve — handles older index rows missing ManifestPath.
+		if item.ManifestPath != "" && item.ManifestPath != item.ItemPath {
+			alt := pathJoinClean(item.ItemPath, defaultManifest(item.Kind))
+			if alt != manifestRel {
+				if data2, err2 := svc.browser.FetchFile(ctx, item.RepoOwner, item.RepoName, item.RepoBranch, alt); err2 == nil {
+					return string(data2), alt
+				}
+			}
+		}
 		return "", ""
 	}
-
-	target := filepath.Join(root, filepath.FromSlash(item.ItemPath))
-	info, err := os.Stat(target)
-	if err != nil {
-		return "", ""
-	}
-	manifest := target
-	if info.IsDir() {
-		manifest = filepath.Join(target, defaultManifest(item.Kind))
-	}
-	data, err := os.ReadFile(manifest)
-	if err != nil {
-		return "", ""
-	}
-	return string(data), relPath(root, manifest)
+	return string(data), manifestRel
 }
 
 func defaultManifest(kind string) string {
