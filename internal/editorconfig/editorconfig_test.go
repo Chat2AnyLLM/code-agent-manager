@@ -125,7 +125,10 @@ func TestParseScalar(t *testing.T) {
 }
 
 func TestDefaultRegistryContainsThirteenEditors(t *testing.T) {
-	r := editorconfig.DefaultRegistry()
+	r, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		t.Fatalf("DefaultRegistry err = %v", err)
+	}
 	got := r.Names()
 	sort.Strings(got)
 	want := []string{
@@ -159,7 +162,11 @@ func TestJSONToolConfigRoundTrip(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
-	tool, _ := editorconfig.DefaultRegistry().Get("claude")
+	r, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		t.Fatalf("DefaultRegistry err = %v", err)
+	}
+	tool, _ := r.Get("claude")
 	savedPath, err := tool.Set(editorconfig.UserScope, "tipsHistory.config-thinking-mode", "off")
 	if err != nil {
 		t.Fatalf("Set err = %v", err)
@@ -195,7 +202,11 @@ func TestJSONToolConfigRoundTrip(t *testing.T) {
 func TestJSONToolConfigSetCoercedValuesPersistAsTyped(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	tool, _ := editorconfig.DefaultRegistry().Get("claude")
+	r, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		t.Fatalf("DefaultRegistry err = %v", err)
+	}
+	tool, _ := r.Get("claude")
 
 	if _, err := tool.Set(editorconfig.UserScope, "feature.enabled", true); err != nil {
 		t.Fatalf("Set bool err = %v", err)
@@ -224,7 +235,11 @@ func TestTOMLToolConfigRoundTripWithQuotedKey(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
-	tool, _ := editorconfig.DefaultRegistry().Get("codex")
+	r, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		t.Fatalf("DefaultRegistry err = %v", err)
+	}
+	tool, _ := r.Get("codex")
 	if _, err := tool.Set(editorconfig.UserScope, `profiles."alibaba/glm-4.5".model`, "alibaba-glm-4.5"); err != nil {
 		t.Fatalf("Set err = %v", err)
 	}
@@ -250,7 +265,11 @@ func TestTOMLToolConfigRoundTripWithQuotedKey(t *testing.T) {
 func TestProjectScopePath(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	tool, _ := editorconfig.DefaultRegistry().Get("claude")
+	r, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		t.Fatalf("DefaultRegistry err = %v", err)
+	}
+	tool, _ := r.Get("claude")
 	if got := tool.ProjectPath(); !strings.HasSuffix(got, filepath.Join(".claude", "settings.json")) {
 		t.Fatalf("ProjectPath = %q, want suffix .claude/settings.json", got)
 	}
@@ -259,7 +278,11 @@ func TestProjectScopePath(t *testing.T) {
 func TestUnsupportedScopeReturnsError(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	tool, _ := editorconfig.DefaultRegistry().Get("copilot")
+	r, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		t.Fatalf("DefaultRegistry err = %v", err)
+	}
+	tool, _ := r.Get("copilot")
 	if _, err := tool.Set(editorconfig.ProjectScope, "x.y", "z"); err == nil {
 		t.Fatal("Set with unsupported project scope should error")
 	}

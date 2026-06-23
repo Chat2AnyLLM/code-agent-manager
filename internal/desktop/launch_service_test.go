@@ -1,11 +1,43 @@
 package desktop
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestLaunchServiceDryRunDoesNotLeakEnvironment(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "sk-secret-openai")
+	t.Setenv("ANTHROPIC_API_KEY", "sk-secret-anthropic")
+
+	dbPath := filepath.Join(t.TempDir(), "cam.db")
+	providerService := NewProviderService(dbPath)
+	_, _ = providerService.Init()
+	enabled := true
+	_, err := providerService.Add(ProviderInput{
+		Name: "local", Endpoint: "http://localhost:4000/v1", Clients: []string{"claude"}, Models: []string{"demo-model"}, Enabled: &enabled,
+	})
+	if err != nil {
+		t.Fatalf("add provider: %v", err)
+	}
+
+	plan, err := NewLaunchService(dbPath).DryRun("claude", "local", "demo-model", nil)
+	if err != nil {
+		t.Fatalf("dry run: %v", err)
+	}
+	body, err := json.Marshal(plan)
+	if err != nil {
+		t.Fatalf("marshal plan: %v", err)
+	}
+	for _, secret := range [][]byte{[]byte("sk-secret-openai"), []byte("sk-secret-anthropic")} {
+		if bytes.Contains(body, secret) {
+			t.Fatalf("launch plan leaked secret in JSON: %s", body)
+		}
+	}
+}
 
 func TestLaunchServiceDryRun(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "cam.db")

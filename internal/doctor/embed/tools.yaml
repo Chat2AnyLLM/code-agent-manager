@@ -1,3 +1,8 @@
+# env.managed entries are applied unconditionally EXCEPT for
+# NODE_TLS_REJECT_UNAUTHORIZED=*** which is gated on endpoint locality
+# at runtime (see internal/tools/launch.go isLocalEndpoint). For public
+# endpoints the launch code strips it, so leaving the entry here does NOT
+# disable TLS verification for api.openai.com etc.
 tools:
   gemini-cli:
     enabled: true

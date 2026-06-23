@@ -135,12 +135,11 @@ type ToolOperationDTO struct {
 }
 
 type LaunchPlanDTO struct {
-	Tool        ToolDTO           `json:"tool"`
-	Provider    ProviderDTO       `json:"provider"`
-	Model       string            `json:"model"`
-	Command     string            `json:"command"`
-	Args        []string          `json:"args"`
-	Environment map[string]string `json:"environment"`
+	Tool     ToolDTO     `json:"tool"`
+	Provider ProviderDTO `json:"provider"`
+	Model    string      `json:"model"`
+	Command  string      `json:"command"`
+	Args     []string    `json:"args"`
 }
 
 // PlannedWriteDTO is one config key that ApplyConfig wrote (or would write).

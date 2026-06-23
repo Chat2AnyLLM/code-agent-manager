@@ -150,8 +150,10 @@ func TestResolveLaunchEnvSubstitutesPlaceholders(t *testing.T) {
 	if launch.Env["OPENAI_API_KEY"] != "sk-test" {
 		t.Fatalf("OPENAI_API_KEY = %q", launch.Env["OPENAI_API_KEY"])
 	}
-	if launch.Env["NODE_TLS_REJECT_UNAUTHORIZED"] != "0" {
-		t.Fatalf("managed value missing")
+	// Non-local endpoint must NOT have NODE_TLS_REJECT_UNAUTHORIZED=*** applied;
+	// see internal/tools/launch.go isLocalEndpoint().
+	if v, ok := launch.Env["NODE_TLS_REJECT_UNAUTHORIZED"]; ok {
+		t.Fatalf("NODE_TLS_REJECT_UNAUTHORIZED should be stripped for non-local endpoint, got %q", v)
 	}
 	if len(launch.Inject) != 3 {
 		t.Fatalf("inject = %v", launch.Inject)
@@ -161,6 +163,42 @@ func TestResolveLaunchEnvSubstitutesPlaceholders(t *testing.T) {
 	}
 	if launch.Inject[1] != "-c profiles.custom.model=gpt-4o-mini" {
 		t.Fatalf("inject[1] = %q", launch.Inject[1])
+	}
+}
+
+func TestResolveLaunchEnvKeepsTLSDisableForLocalEndpoint(t *testing.T) {
+	t.Setenv("OPENAI_KEY", "sk-test")
+	tool := Tool{
+		Name: "openai-codex",
+		Env: Env{
+			Managed: map[string]string{
+				"NODE_TLS_REJECT_UNAUTHORIZED": "0",
+			},
+		},
+	}
+	cases := []struct {
+		name     string
+		endpoint string
+		want     bool // true = TLS-disable should be applied
+	}{
+		{"localhost", "https://localhost:5000", true},
+		{"127.0.0.1", "https://127.0.0.1:5000", true},
+		{"ipv6 loopback", "https://[::1]:5000", true},
+		{"0.0.0.0", "https://0.0.0.0:5000", true},
+		{"empty endpoint", "", true},
+		{"public api", "https://api.openai.com", false},
+		{"public api with port", "https://api.openai.com:443", false},
+		{"private but not loopback", "https://10.0.0.1", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ep := providers.Endpoint{Endpoint: tc.endpoint, APIKeyEnv: "OPENAI_KEY"}
+			launch := ResolveLaunchEnv(tool, ep, "openai", "gpt-4o-mini")
+			_, ok := launch.Env["NODE_TLS_REJECT_UNAUTHORIZED"]
+			if ok != tc.want {
+				t.Fatalf("endpoint=%q: got TLS-disable present=%v, want %v (env=%v)", tc.endpoint, ok, tc.want, launch.Env["NODE_TLS_REJECT_UNAUTHORIZED"])
+			}
+		})
 	}
 }
 

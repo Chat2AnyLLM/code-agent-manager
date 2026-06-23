@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -48,6 +49,10 @@ func New(opts Options) *Server {
 
 // Handler returns the sidecar HTTP handler.
 func (s *Server) Handler() http.Handler {
+	return s.withMiddleware(s.routes())
+}
+
+func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/app/version", s.handleVersion)
 	mux.HandleFunc("/api/providers", s.handleProviders)
@@ -78,7 +83,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/prompts/search", s.handlePromptsSearch)
 	mux.HandleFunc("/api/prompts/sync", s.handlePromptsSync)
 	mux.HandleFunc("/api/prompts/sources", s.handlePromptsSources)
-	return s.withMiddleware(mux)
+	return mux
 }
 
 // ListenAndServe starts the HTTP server on host:port. Use port 0 for a random port.
@@ -92,22 +97,33 @@ func (s *Server) ListenAndServe(ctx context.Context, host string, port int) (Sta
 	}
 	actual := listener.Addr().(*net.TCPAddr)
 	startup := Startup{Host: host, Port: actual.Port, Token: s.token}
-	server := &http.Server{Handler: s.Handler()}
+	server := &http.Server{Handler: s.withMiddlewareForHost(s.routes(), actual.Port)}
 	go func() {
 		<-ctx.Done()
 		_ = server.Shutdown(context.Background())
 	}()
 	go func() {
 		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			panic(err)
+			log.Printf("sidecar: serve error: %v", err)
 		}
 	}()
 	return startup, nil
 }
 
 func (s *Server) withMiddleware(next http.Handler) http.Handler {
+	return s.withMiddlewareForHost(next, 0)
+}
+
+func (s *Server) withMiddlewareForHost(next http.Handler, port int) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if !isAllowedHost(r.Host, port) {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		origin := r.Header.Get("Origin")
+		if origin == "tauri://localhost" {
+			w.Header().Set("Access-Control-Allow-Origin", "tauri://localhost")
+		}
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		if r.Method == http.MethodOptions {
@@ -500,8 +516,28 @@ func queryDefault(r *http.Request, key, fallback string) string {
 }
 
 func decodeJSON(r *http.Request, out any) error {
+	r.Body = http.MaxBytesReader(nil, r.Body, 1<<20)
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(out)
+}
+
+func isAllowedHost(host string, port int) bool {
+	if host == "" {
+		return false
+	}
+	if port > 0 {
+		allowed := []string{fmt.Sprintf("127.0.0.1:%d", port), fmt.Sprintf("localhost:%d", port), fmt.Sprintf("[::1]:%d", port)}
+		for _, candidate := range allowed {
+			if host == candidate {
+				return true
+			}
+		}
+		return false
+	}
+	// port == 0: handler is being used outside ListenAndServe (e.g. tests or
+	// embedded use). Skip strict port-matching; accept any host. Production
+	// callers must use ListenAndServe so a real port is passed.
+	return true
 }
 
 func writeResult(w http.ResponseWriter, value any, err error) {

@@ -158,3 +158,43 @@ func TestSidecarMCPRegistry(t *testing.T) {
 		t.Fatalf("install status=%d body=%s, want 400", rec.Code, rec.Body.String())
 	}
 }
+
+func TestSidecarMiddlewareHostAndCORS(t *testing.T) {
+	server := New(Options{Version: "test", Token: "secret"})
+	handler := server.withMiddlewareForHost(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}), 5050)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/app/version", nil)
+	req.Host = "evil.com"
+	req.Header.Set("Authorization", "Bearer secret")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", rec.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/app/version", nil)
+	req.Host = "127.0.0.1:5050"
+	req.Header.Set("Authorization", "Bearer secret")
+	req.Header.Set("Origin", "tauri://localhost")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || rec.Body.String() != "ok" {
+		t.Fatalf("allowed host status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "tauri://localhost" {
+		t.Fatalf("acao = %q, want tauri://localhost", got)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/app/version", nil)
+	req.Host = "127.0.0.1:5050"
+	req.Header.Set("Authorization", "Bearer secret")
+	req.Header.Set("Origin", "https://example.com")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("acao = %q, want empty", got)
+	}
+}

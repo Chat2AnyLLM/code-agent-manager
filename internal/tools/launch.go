@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -41,6 +42,15 @@ func ResolveLaunchEnv(tool Tool, endpoint providers.Endpoint, endpointName, mode
 		env[k] = expandPlaceholders(v, endpoint, endpointName, model, apiKey)
 	}
 	for k, v := range tool.Env.Managed {
+		// NODE_TLS_REJECT_UNAUTHORIZED=*** disables TLS verification globally for
+		// the launched Node process. This is intended ONLY for self-signed
+		// local-proxy endpoints (CAM's primary use case: routing CLIs through
+		// the bundled OmniLLM proxy at https://localhost:<port>). For public
+		// endpoints (api.openai.com, etc.) leaving this on would be a real
+		// MITM hole, so we gate it on endpoint locality.
+		if k == "NODE_TLS_REJECT_UNAUTHORIZED" && v == "0" && !isLocalEndpoint(endpoint.Endpoint) {
+			continue
+		}
 		env[k] = v
 	}
 	for _, removed := range tool.Env.Removed {
@@ -112,4 +122,24 @@ func envMapToSlice(env map[string]string) []string {
 		out = append(out, k+"="+v)
 	}
 	return out
+}
+
+// isLocalEndpoint reports whether the resolved endpoint URL points at the
+// local machine. Empty endpoints are treated as local because they typically
+// indicate "no remote endpoint configured" (e.g. tools that pick up auth from
+// env vars only — copilot, gemini).
+func isLocalEndpoint(rawURL string) bool {
+	if rawURL == "" {
+		return true
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	switch strings.ToLower(host) {
+	case "localhost", "127.0.0.1", "::1", "0.0.0.0":
+		return true
+	}
+	return false
 }

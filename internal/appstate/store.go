@@ -184,10 +184,21 @@ func (s Store) RenameProvider(ctx context.Context, oldName, newName string) erro
 		return err
 	}
 	defer db.Close()
-	if _, err := db.ExecContext(ctx, `DELETE FROM providers WHERE name = ?`, oldName); err != nil {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("appstate: begin rename provider tx: %w", err)
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `DELETE FROM providers WHERE name = ?`, oldName); err != nil {
 		return fmt.Errorf("appstate: delete old provider name: %w", err)
 	}
-	return s.upsertProvider(ctx, newName, file.Endpoints[newName])
+	if err := upsertProviderTx(ctx, tx, newName, file.Endpoints[newName]); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("appstate: commit rename provider tx: %w", err)
+	}
+	return nil
 }
 
 // SetProviderEnabled toggles enabled state.
@@ -251,6 +262,17 @@ func (s Store) upsertProvider(ctx context.Context, name string, endpoint provide
 	if err := s.Init(ctx); err != nil {
 		return err
 	}
+	db, err := s.open()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	return upsertProviderTx(ctx, db, name, endpoint)
+}
+
+func upsertProviderTx(ctx context.Context, db interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}, name string, endpoint providers.Endpoint) error {
 	models, err := json.Marshal(endpoint.Models)
 	if err != nil {
 		return fmt.Errorf("appstate: marshal models: %w", err)
@@ -263,11 +285,6 @@ func (s Store) upsertProvider(ctx context.Context, name string, endpoint provide
 			enabled = 0
 		}
 	}
-	db, err := s.open()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
 	_, err = db.ExecContext(ctx, `INSERT INTO providers(name, endpoint, api_key, api_key_env, supported_client, list_models_cmd, models_json, keep_proxy_config, use_proxy, enabled, description, updated_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET endpoint = excluded.endpoint, api_key = excluded.api_key, api_key_env = excluded.api_key_env, supported_client = excluded.supported_client, list_models_cmd = excluded.list_models_cmd, models_json = excluded.models_json, keep_proxy_config = excluded.keep_proxy_config, use_proxy = excluded.use_proxy, enabled = excluded.enabled, description = excluded.description, updated_at = excluded.updated_at`, name, endpoint.Endpoint, endpoint.APIKey, endpoint.APIKeyEnv, endpoint.SupportedClient, endpoint.ListModelsCmd, string(models), endpoint.KeepProxyConfig, endpoint.UseProxy, enabled, endpoint.Description, time.Now().UTC().Format(time.RFC3339Nano))
 	if err != nil {
 		return fmt.Errorf("appstate: upsert provider %s: %w", name, err)

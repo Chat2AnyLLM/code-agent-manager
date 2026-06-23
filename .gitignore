@@ -31,3 +31,5 @@ src-tauri/binaries/
 bin/
 *.syso
 src-tauri/gen/
+cam-sidecar.exe
+src-tauri/binaries/cam-sidecar*.exe

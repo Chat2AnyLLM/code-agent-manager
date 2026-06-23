@@ -82,7 +82,7 @@ func (s *LaunchService) DryRun(toolName, providerName, model string, extraArgs [
 	args = append(args, extraArgs...)
 	return LaunchPlanDTO{
 		Tool: toolDTO(tool), Provider: providerDTO(providerName, ep), Model: model,
-		Command: tool.LaunchCommand(), Args: args, Environment: launch.Env,
+		Command: tool.LaunchCommand(), Args: args,
 	}, nil
 }
 

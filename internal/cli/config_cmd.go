@@ -57,7 +57,10 @@ func (a *App) configListCommand(state *globalState) *cobra.Command {
 				fmt.Fprintf(out, "  %s %s\n", marker, p)
 			}
 			fmt.Fprintln(out, "\nEditor configurations:")
-			registry := editorconfig.DefaultRegistry()
+			registry, err := editorconfig.DefaultRegistry()
+			if err != nil {
+				return err
+			}
 			for _, name := range registry.Names() {
 				tool, _ := registry.Get(name)
 				fmt.Fprintf(out, "\n  %s (%s):\n", tool.Description(), tool.Name())
@@ -130,7 +133,11 @@ func (a *App) configShowCommand(state *globalState) *cobra.Command {
 }
 
 func showEditorConfig(out interface{ Write(p []byte) (int, error) }, app string, scope string, args []string) error {
-	tool, ok := editorconfig.DefaultRegistry().Get(app)
+	registry, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		return err
+	}
+	tool, ok := registry.Get(app)
 	if !ok {
 		return fmt.Errorf("Unknown app: %s", app)
 	}
@@ -196,7 +203,11 @@ func (a *App) configSetCommand(state *globalState) *cobra.Command {
 			if editor == "" {
 				return fmt.Errorf("--app is required (no --config supplied)")
 			}
-			tool, ok := editorconfig.DefaultRegistry().Get(editor)
+			registry, err := editorconfig.DefaultRegistry()
+			if err != nil {
+				return err
+			}
+			tool, ok := registry.Get(editor)
 			if !ok {
 				return fmt.Errorf("Unknown app: %s", editor)
 			}
@@ -236,7 +247,11 @@ func (a *App) configUnsetCommand(state *globalState) *cobra.Command {
 			if editor == "" {
 				return fmt.Errorf("--app is required (no --config supplied)")
 			}
-			tool, ok := editorconfig.DefaultRegistry().Get(editor)
+			registry, err := editorconfig.DefaultRegistry()
+			if err != nil {
+				return err
+			}
+			tool, ok := registry.Get(editor)
 			if !ok {
 				return fmt.Errorf("Unknown app: %s", editor)
 			}

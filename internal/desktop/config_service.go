@@ -18,7 +18,10 @@ func (s *ConfigService) ListFiles() []ConfigFileDTO {
 		App: "cam", Scope: "user", Path: camconfig.DefaultPath(), Format: "yaml",
 		Description: "code-agent-manager configuration", Exists: pathutil.Exists(camconfig.DefaultPath()),
 	}}
-	registry := editorconfig.DefaultRegistry()
+	registry, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		return out
+	}
 	for _, name := range registry.Names() {
 		tool, ok := registry.Get(name)
 		if !ok {
@@ -97,7 +100,10 @@ func (s *ConfigService) ReadFile(path string) (string, error) {
 }
 
 func editorTool(app string) (editorconfig.ToolConfig, error) {
-	registry := editorconfig.DefaultRegistry()
+	registry, err := editorconfig.DefaultRegistry()
+	if err != nil {
+		return nil, wrapError("CONFIG_REGISTRY_INIT_FAILED", err)
+	}
 	tool, ok := registry.Get(app)
 	if !ok {
 		return nil, NewError("CONFIG_APP_NOT_FOUND", "unsupported config app", map[string]string{"app": app})

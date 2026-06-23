@@ -148,7 +148,7 @@ type Registry struct {
 }
 
 // DefaultRegistry builds a Registry containing every supported editor.
-func DefaultRegistry() *Registry {
+func DefaultRegistry() (*Registry, error) {
 	r := &Registry{tools: map[string]ToolConfig{}}
 	for _, s := range defaultSpecs {
 		var tool ToolConfig
@@ -158,12 +158,12 @@ func DefaultRegistry() *Registry {
 		case FormatTOML:
 			tool = newTOMLToolConfig(s)
 		default:
-			panic(fmt.Sprintf("editorconfig: unsupported format %q", s.format))
+			return nil, fmt.Errorf("editorconfig: unsupported format %q", s.format)
 		}
 		r.tools[s.name] = tool
 		r.order = append(r.order, s.name)
 	}
-	return r
+	return r, nil
 }
 
 // Get returns the ToolConfig for name, or false when unknown.

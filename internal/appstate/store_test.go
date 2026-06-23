@@ -131,3 +131,33 @@ func TestInitCreatesInstructionTablesWithoutLosingData(t *testing.T) {
 		t.Fatalf("app_state lost after upgrade: ok=%v err=%v value=%+v", ok, err, got)
 	}
 }
+
+func TestRenameProviderLeavesOnlyNewRow(t *testing.T) {
+	ctx := context.Background()
+	store := New(filepath.Join(t.TempDir(), "cam.db"))
+	enabled := true
+	if err := store.AddProvider(ctx, "alpha", providers.Endpoint{Endpoint: "https://alpha.example", Models: []string{"m1"}, Enabled: &enabled}); err != nil {
+		t.Fatalf("AddProvider: %v", err)
+	}
+	if err := store.RenameProvider(ctx, "alpha", "beta"); err != nil {
+		t.Fatalf("RenameProvider: %v", err)
+	}
+	db, err := sql.Open("sqlite", store.Path())
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer db.Close()
+	var oldCount, newCount, total int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM providers WHERE name = ?`, "alpha").Scan(&oldCount); err != nil {
+		t.Fatalf("count old: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM providers WHERE name = ?`, "beta").Scan(&newCount); err != nil {
+		t.Fatalf("count new: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM providers`).Scan(&total); err != nil {
+		t.Fatalf("count total: %v", err)
+	}
+	if oldCount != 0 || newCount != 1 || total != 1 {
+		t.Fatalf("provider rows old=%d new=%d total=%d", oldCount, newCount, total)
+	}
+}
