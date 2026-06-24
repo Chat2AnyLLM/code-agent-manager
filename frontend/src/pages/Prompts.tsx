@@ -3,6 +3,7 @@ import { api } from '../services/api'
 import type { Prompt, PromptSource } from '../services/types'
 import { Page } from './Page'
 import { ExpandableTable, type Column } from '../components/ExpandableTable'
+import { Pagination } from '../components/Pagination'
 import { useTranslation } from 'react-i18next'
 
 const PAGE_SIZE = 20
@@ -61,6 +62,7 @@ export function Prompts() {
 
   const paged = items.slice(offset, offset + PAGE_SIZE)
   const totalPages = Math.ceil(items.length / PAGE_SIZE)
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1
 
   const columns: Column<Prompt>[] = [
     { header: t('prompts.colSource'), cell: (p) => <span className="badge">{sourceLabel(p.source)}</span> },
@@ -125,17 +127,15 @@ export function Prompts() {
         </div>
       )}
     />
-    {totalPages > 1 && (
-      <div className="pagination">
-        <button onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))} disabled={offset === 0}>
-          {t('library.previous')}
-        </button>
-        <span>{t('library.pageOf', { page: Math.floor(offset / PAGE_SIZE) + 1, total: totalPages })}</span>
-        <button onClick={() => setOffset(Math.min(offset + PAGE_SIZE, items.length))} disabled={offset + PAGE_SIZE >= items.length}>
-          {t('library.next')}
-        </button>
-      </div>
-    )}
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+      disabled={loading}
+      previousLabel={t('library.previous')}
+      nextLabel={t('library.next')}
+      summaryLabel={t('library.pagination', { current: currentPage, total: totalPages, count: items.length })}
+      onPageChange={(page) => setOffset((page - 1) * PAGE_SIZE)}
+    />
   </Page>
 }
 

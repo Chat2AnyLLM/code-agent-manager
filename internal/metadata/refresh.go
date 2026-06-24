@@ -667,11 +667,6 @@ func (svc *Service) SearchPaged(ctx context.Context, q SearchQuery) (SearchRespo
 	if err != nil {
 		return SearchResponse{}, err
 	}
-	if catalogTotal, ok, err := svc.store.CatalogCount(ctx, q.Kind); err != nil {
-		return SearchResponse{}, err
-	} else if ok && strings.TrimSpace(q.Query) == "" {
-		total = catalogTotal
-	}
 	if q.Kind == "skill" && strings.TrimSpace(q.Query) != "" && total == 0 {
 		limit := q.Limit
 		if limit <= 0 {

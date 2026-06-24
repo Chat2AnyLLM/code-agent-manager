@@ -5,6 +5,7 @@ import type { Entity, MetadataItem, MetadataDetail } from '../services/types'
 import { Page } from './Page'
 import { ExpandableTable, type Column } from '../components/ExpandableTable'
 import { MultiSelect } from '../components/MultiSelect'
+import { Pagination } from '../components/Pagination'
 import { useTranslation } from 'react-i18next'
 
 // Build the GitHub URL for an indexed resource. The metadata index stores only
@@ -226,13 +227,15 @@ export function Library({ kind }: LibraryProps) {
         </div>
       )}
     />
-    {pageCount > 1 && (
-      <nav className="pagination" aria-label="pagination">
-        <button onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))} disabled={offset === 0 || loading}>{t('library.previous')}</button>
-        <span>{t('library.pagination', { current: currentPage, total: pageCount, count: total })}</span>
-        <button onClick={() => setOffset(offset + PAGE_SIZE)} disabled={offset + PAGE_SIZE >= total || loading}>{t('library.next')}</button>
-      </nav>
-    )}
+    <Pagination
+      currentPage={currentPage}
+      totalPages={pageCount}
+      disabled={loading}
+      previousLabel={t('library.previous')}
+      nextLabel={t('library.next')}
+      summaryLabel={t('library.pagination', { current: currentPage, total: pageCount, count: total })}
+      onPageChange={(page) => setOffset((page - 1) * PAGE_SIZE)}
+    />
   </Page>
 }
 

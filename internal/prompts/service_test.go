@@ -9,15 +9,9 @@ import (
 )
 
 func TestAwesomePromptsEmbedded_hasRequiredPromptFields(t *testing.T) {
-	// Given
-	svc := NewService()
-
-	// When
-	prompts, err := svc.FetchAwesomePrompts(context.Background())
-
-	// Then
+	prompts, err := parseAwesomePrompts(awesomePromptsJSON)
 	if err != nil {
-		t.Fatalf("FetchAwesomePrompts: %v", err)
+		t.Fatalf("parseAwesomePrompts: %v", err)
 	}
 	if len(prompts) < 3 {
 		t.Fatalf("expected at least 3 awesome prompts, got %d", len(prompts))
@@ -35,8 +29,84 @@ func TestAwesomePromptsEmbedded_hasRequiredPromptFields(t *testing.T) {
 	}
 }
 
+func TestFetchAwesomePromptsLoadsConfigSources(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	ctx := context.Background()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/config.yaml":
+			w.Header().Set("Content-Type", "text/yaml")
+			_, _ = w.Write([]byte(`sources:
+  - name: Local Prompts
+    type: local
+    path: prompts/
+  - name: Prompts Chat
+    type: github
+    url: https://github.com/f/prompts.chat
+    format: csv
+    file_path: prompts.csv
+`))
+		case "/repos/Chat2AnyLLM/awesome-prompts/git/trees/master":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"tree":[{"path":"prompts/local.yaml","type":"blob","size":80}],"truncated":false}`))
+		case "/Chat2AnyLLM/awesome-prompts/master/prompts/local.yaml":
+			_, _ = w.Write([]byte("slug: local\ntitle: Local Prompt\ndescription: Local description\nprompt: Use local prompt\ntags: [local]\ncategory: local-cat\nauthor: tester\n"))
+		case "/f/prompts.chat/main/prompts.csv":
+			_, _ = w.Write([]byte("title,prompt,description,category,tags,author\nCSV Prompt,Use csv prompt,CSV description,csv-cat,one;two,csv-author\n"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc := NewService()
+	svc.configURL = server.URL + "/config.yaml"
+	svc.repoRawBaseURL = server.URL
+	svc.githubAPIBaseURL = server.URL + "/repos"
+
+	got, err := svc.FetchAwesomePrompts(ctx)
+	if err != nil {
+		t.Fatalf("FetchAwesomePrompts: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 prompts, got %d: %#v", len(got), got)
+	}
+	if got[0].Title != "Local Prompt" || got[0].Prompt != "Use local prompt" {
+		t.Fatalf("unexpected local prompt: %#v", got[0])
+	}
+	if got[1].Title != "CSV Prompt" || got[1].Prompt != "Use csv prompt" || got[1].Author != "csv-author" {
+		t.Fatalf("unexpected csv prompt: %#v", got[1])
+	}
+}
+
+func TestFetchAwesomePromptsDoesNotUseDistFallback(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	ctx := context.Background()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/config.yaml":
+			_, _ = w.Write([]byte("output:\n  dir: dist\n  formats: [json]\nsources: []\n"))
+		case "/dist/prompts.json":
+			t.Fatalf("dist/prompts.json should not be fetched")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc := NewService()
+	svc.configURL = server.URL + "/config.yaml"
+	_, err := svc.FetchAwesomePrompts(ctx)
+	if err == nil || !strings.Contains(err.Error(), "no prompts loaded") {
+		t.Fatalf("expected no prompts loaded error, got %v", err)
+	}
+}
+
 func TestSyncAllUsesAwesomePromptsConfigYaml(t *testing.T) {
-	// Given
 	dir := t.TempDir()
 	t.Setenv("CAM_CONFIG_DIR", dir)
 	ctx := context.Background()
@@ -44,10 +114,18 @@ func TestSyncAllUsesAwesomePromptsConfigYaml(t *testing.T) {
 		switch r.URL.Path {
 		case "/config.yaml":
 			w.Header().Set("Content-Type", "text/yaml")
-			_, _ = w.Write([]byte("output:\n  dir: dist\n  formats: [json]\n"))
-		case "/dist/prompts.json":
+			_, _ = w.Write([]byte(`sources:
+  - name: Local Prompts
+    type: local
+    path: prompts/
+`))
+		case "/repos/Chat2AnyLLM/awesome-prompts/git/trees/master":
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"version":"1.0.0","prompts":[{"slug":"configured","title":"Configured Prompt","description":"Configured description","prompt":"Use configured source","tags":["configured"],"category":"repo-config","author":"tester","variables":[]}]}`))
+			_, _ = w.Write([]byte(`{"tree":[{"path":"prompts/configured.yaml","type":"blob","size":100}],"truncated":false}`))
+		case "/Chat2AnyLLM/awesome-prompts/master/prompts/configured.yaml":
+			_, _ = w.Write([]byte("slug: configured\ntitle: Configured Prompt\ndescription: Configured description\nprompt: Use configured source\ntags: [configured]\ncategory: repo-config\nauthor: tester\n"))
+		case "/dist/prompts.json":
+			t.Fatalf("dist/prompts.json should not be fetched")
 		default:
 			http.NotFound(w, r)
 		}
@@ -55,11 +133,10 @@ func TestSyncAllUsesAwesomePromptsConfigYaml(t *testing.T) {
 	defer server.Close()
 	svc := NewService()
 	svc.configURL = server.URL + "/config.yaml"
+	svc.repoRawBaseURL = server.URL
+	svc.githubAPIBaseURL = server.URL + "/repos"
 
-	// When
 	n, err := svc.SyncAll(ctx)
-
-	// Then
 	if err != nil {
 		t.Fatalf("SyncAll: %v", err)
 	}
@@ -76,7 +153,6 @@ func TestSyncAllUsesAwesomePromptsConfigYaml(t *testing.T) {
 }
 
 func TestSyncAllUsesExplicitAwesomePromptsURLOverride(t *testing.T) {
-	// Given
 	dir := t.TempDir()
 	t.Setenv("CAM_CONFIG_DIR", dir)
 	ctx := context.Background()
@@ -92,10 +168,7 @@ func TestSyncAllUsesExplicitAwesomePromptsURLOverride(t *testing.T) {
 	svc.sourceURL = server.URL + "/default/prompts.json"
 	svc.preferSourceURLDirect = true
 
-	// When
 	n, err := svc.SyncAll(ctx)
-
-	// Then
 	if err != nil {
 		t.Fatalf("SyncAll: %v", err)
 	}
@@ -111,37 +184,20 @@ func TestSyncAllUsesExplicitAwesomePromptsURLOverride(t *testing.T) {
 	}
 }
 
-func TestSyncAll_storesAwesomePrompts_whenRemoteUnavailable(t *testing.T) {
-	// Given
+func TestSyncAllReturnsErrorWhenConfigUnavailable(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CAM_CONFIG_DIR", dir)
 	ctx := context.Background()
 	svc := NewService()
-	svc.sourceURL = "http://127.0.0.1:1/prompts.json"
-	svc.preferSourceURLDirect = true
+	svc.configURL = "http://127.0.0.1:1/config.yaml"
 
-	// When
-	n, err := svc.SyncAll(ctx)
-
-	// Then
-	if err != nil {
-		t.Fatalf("SyncAll: %v", err)
-	}
-	if n != 3 {
-		t.Fatalf("expected 3 prompts synced, got %d", n)
-	}
-
-	count, err := svc.store.CountPrompts(ctx, "awesome_prompts", "")
-	if err != nil {
-		t.Fatalf("CountPrompts: %v", err)
-	}
-	if count != 3 {
-		t.Fatalf("expected 3 awesome prompts stored, got %d", count)
+	_, err := svc.SyncAll(ctx)
+	if err == nil {
+		t.Fatal("expected config fetch error")
 	}
 }
 
 func TestSyncAll_mapsRemoteAwesomePromptsFields(t *testing.T) {
-	// Given
 	dir := t.TempDir()
 	t.Setenv("CAM_CONFIG_DIR", dir)
 	ctx := context.Background()
@@ -154,10 +210,7 @@ func TestSyncAll_mapsRemoteAwesomePromptsFields(t *testing.T) {
 	svc.sourceURL = server.URL
 	svc.preferSourceURLDirect = true
 
-	// When
 	n, err := svc.SyncAll(ctx)
-
-	// Then
 	if err != nil {
 		t.Fatalf("SyncAll: %v", err)
 	}
@@ -181,12 +234,16 @@ func TestSyncAll_mapsRemoteAwesomePromptsFields(t *testing.T) {
 }
 
 func TestSyncAll_removesRetiredPromptSources(t *testing.T) {
-	// Given
 	dir := t.TempDir()
 	t.Setenv("CAM_CONFIG_DIR", dir)
 	ctx := context.Background()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"version":"1.0.0","prompts":[{"slug":"current","title":"Current Prompt","prompt":"Use current prompt"}]}`))
+	}))
+	defer server.Close()
 	svc := NewService()
-	svc.sourceURL = "http://127.0.0.1:1/prompts.json"
+	svc.sourceURL = server.URL
 	svc.preferSourceURLDirect = true
 	for _, source := range []string{"claude", "prompts_chat", "promptingguide"} {
 		if err := svc.store.UpsertPrompt(ctx, &Prompt{Source: source, SourceURL: source + "://old", Title: "old", Content: "old"}); err != nil {
@@ -194,10 +251,7 @@ func TestSyncAll_removesRetiredPromptSources(t *testing.T) {
 		}
 	}
 
-	// When
 	_, err := svc.SyncAll(ctx)
-
-	// Then
 	if err != nil {
 		t.Fatalf("SyncAll: %v", err)
 	}

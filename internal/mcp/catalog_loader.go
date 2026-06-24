@@ -42,11 +42,6 @@ func LoadRegistryFromConfig(cfg camconfig.CamConfig) (*Registry, error) {
 	for _, source := range sources {
 		entries, err := loadCatalogSource(source, cfg.Cache)
 		if err != nil {
-			if source.Type == "remote" {
-				if cached, cacheErr := newCatalogStore("").load(context.Background()); cacheErr == nil && len(cached) > 0 {
-					return registryFromEntries(cached), nil
-				}
-			}
 			return nil, err
 		}
 		for _, entry := range entries {
@@ -105,14 +100,10 @@ func loadLocalCatalog(path string) ([]ServerSchema, error) {
 }
 
 func loadRemoteCatalog(sourceURL string, cache camconfig.CacheConfig) ([]ServerSchema, error) {
-	url := sourceURL
 	if strings.HasSuffix(strings.ToLower(sourceURL), ".yaml") || strings.HasSuffix(strings.ToLower(sourceURL), ".yml") {
-		resolved, err := resolveCatalogConfigURL(sourceURL, "servers", cache)
-		if err != nil {
-			return nil, err
-		}
-		url = resolved
+		return loadCatalogConfigSources(context.Background(), sourceURL)
 	}
+	url := sourceURL
 	if cache.Enabled {
 		entries, err := loadCatalogFromCache(url, cache)
 		if err == nil {

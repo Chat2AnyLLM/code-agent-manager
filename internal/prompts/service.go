@@ -7,15 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
-	"path"
 	"strings"
 	"time"
-
-	"github.com/chat2anyllm/code-agent-manager/internal/catalogconfig"
-	"github.com/chat2anyllm/code-agent-manager/internal/entities"
-	"github.com/chat2anyllm/code-agent-manager/internal/repoconfig"
 )
 
 const (
@@ -42,6 +36,7 @@ type Service struct {
 	configURL             string
 	sourceURL             string
 	repoRawBaseURL        string
+	githubAPIBaseURL      string
 	preferSourceURLDirect bool
 }
 
@@ -56,9 +51,10 @@ func NewService() *Service {
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		configURL:      awesomePromptsConfigURL,
-		sourceURL:      sourceURL,
-		repoRawBaseURL: githubRawBaseURL,
+		configURL:        awesomePromptsConfigURL,
+		sourceURL:        sourceURL,
+		repoRawBaseURL:   githubRawBaseURL,
+		githubAPIBaseURL: "https://api.github.com/repos",
 	}
 }
 
@@ -91,13 +87,12 @@ func (s *Service) RefreshSource(ctx context.Context, source string) (int, error)
 	return s.SyncAll(ctx)
 }
 
-// FetchAwesomePrompts fetches the remote awesome-prompts JSON and falls back to
-// the bundled copy when the remote source is unavailable or malformed.
+// FetchAwesomePrompts fetches prompts from upstream config sources by default.
 func (s *Service) FetchAwesomePrompts(ctx context.Context) ([]AwesomePrompt, error) {
-	if prompts, err := s.fetchRemoteAwesomePrompts(ctx); err == nil {
-		return prompts, nil
+	if strings.TrimSpace(os.Getenv(awesomePromptsURLEnv)) != "" || s.preferSourceURLDirect {
+		return s.fetchRemoteAwesomePrompts(ctx)
 	}
-	return parseAwesomePrompts(awesomePromptsJSON)
+	return s.fetchConfigSources(ctx)
 }
 
 func (s *Service) fetchRemoteAwesomePrompts(ctx context.Context) ([]AwesomePrompt, error) {
@@ -121,60 +116,11 @@ func (s *Service) fetchRemoteAwesomePrompts(ctx context.Context) ([]AwesomePromp
 	return parseAwesomePrompts(body)
 }
 
-func (s *Service) resolveAwesomePromptsURL(ctx context.Context) string {
+func (s *Service) resolveAwesomePromptsURL(_ context.Context) string {
 	if strings.TrimSpace(os.Getenv(awesomePromptsURLEnv)) != "" || s.preferSourceURLDirect {
 		return s.sourceURL
 	}
-	if url, err := s.resolveConfigDataURL(ctx); err == nil {
-		return url
-	}
-	repos, err := repoconfig.LoadEnabled(entities.KindPrompt)
-	if err != nil {
-		return s.sourceURL
-	}
-	entry, ok := repos["Chat2AnyLLM/awesome-prompts"]
-	if !ok {
-		return s.sourceURL
-	}
-	catalogFile := strings.Trim(strings.TrimSpace(entry.CatalogFile), "/")
-	if catalogFile == "" {
-		catalogFile = "dist/prompts.json"
-	}
-	if url := entry.RawFileURL(s.repoRawBaseURL, catalogFile); url != "" {
-		return url
-	}
 	return s.sourceURL
-}
-
-func (s *Service) resolveConfigDataURL(ctx context.Context) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.configURL, nil)
-	if err != nil {
-		return "", err
-	}
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("awesome_prompts config: status %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	dataFile, err := catalogconfig.DataFile("prompts", body)
-	if err != nil {
-		return "", err
-	}
-	base, err := url.Parse(s.configURL)
-	if err != nil {
-		return "", err
-	}
-	base.Path = path.Join(path.Dir(base.Path), dataFile)
-	base.RawQuery = ""
-	base.Fragment = ""
-	return base.String(), nil
 }
 
 func (s *Service) syncAwesomePrompts(ctx context.Context, prompts []AwesomePrompt) (int, error) {
@@ -224,6 +170,7 @@ type AwesomePrompt struct {
 	Tags        []string `json:"tags"`
 	Category    string   `json:"category"`
 	Author      string   `json:"author"`
+	SourceURL   string   `json:"source_url,omitempty"`
 }
 
 func (p AwesomePrompt) ToPrompt() *Prompt {
@@ -235,7 +182,7 @@ func (p AwesomePrompt) ToPrompt() *Prompt {
 	}
 	return &Prompt{
 		Source:      awesomePromptsSource,
-		SourceURL:   fmt.Sprintf("%s/%s.yaml", awesomePromptsRepoURL, slug),
+		SourceURL:   promptSourceURL(p),
 		Category:    strings.TrimSpace(p.Category),
 		Title:       title,
 		Description: strings.TrimSpace(p.Description),
@@ -243,6 +190,13 @@ func (p AwesomePrompt) ToPrompt() *Prompt {
 		Author:      strings.TrimSpace(p.Author),
 		Tags:        strings.Join(p.Tags, ", "),
 	}
+}
+
+func promptSourceURL(p AwesomePrompt) string {
+	if strings.TrimSpace(p.SourceURL) != "" {
+		return strings.TrimSpace(p.SourceURL)
+	}
+	return fmt.Sprintf("%s/%s.yaml", awesomePromptsRepoURL, strings.TrimSpace(p.Slug))
 }
 
 type awesomePromptsLibrary struct {

@@ -165,16 +165,25 @@ func TestLoadRegistry_keepsLocalEntryWhenRemoteDuplicatesName(t *testing.T) {
 	}
 }
 
-func TestLoadRegistry_loadsRemoteConfigYamlCatalog(t *testing.T) {
+func TestLoadRegistry_loadsRemoteConfigYamlSources(t *testing.T) {
 	// Given
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/config.yaml":
 			w.Header().Set("Content-Type", "text/yaml")
-			_, _ = w.Write([]byte("output:\n  dir: dist\n  formats: [json]\n"))
-		case "/dist/servers.json":
+			_, _ = w.Write([]byte(`sources:
+  - name: Local Servers
+    type: local
+    path: servers/
+`))
+		case "/repos/Chat2AnyLLM/awesome-mcp-servers/git/trees/main":
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"servers": []mcp.ServerSchema{testSchema("config-mcp", "Loaded from config yaml")}})
+			_, _ = w.Write([]byte(`{"tree":[{"path":"servers/config-mcp.json","type":"blob","size":100}],"truncated":false}`))
+		case "/Chat2AnyLLM/awesome-mcp-servers/main/servers/config-mcp.json":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(testSchema("config-mcp", "Loaded from config yaml sources"))
+		case "/dist/servers.json":
+			t.Fatalf("dist/servers.json should not be fetched")
 		default:
 			http.NotFound(w, r)
 		}
@@ -184,7 +193,9 @@ func TestLoadRegistry_loadsRemoteConfigYamlCatalog(t *testing.T) {
 		Repositories: map[string]camconfig.RepoSources{
 			"mcpServers": {Sources: []camconfig.RepoSource{{Type: "remote", URL: server.URL + "/config.yaml"}}},
 		},
+		Cache: camconfig.CacheConfig{Enabled: false},
 	}
+	mcp.SetCatalogSourceTestBases(t, server.URL+"/repos", server.URL)
 
 	// When
 	registry, err := mcp.LoadRegistryFromConfig(cfg)
@@ -194,7 +205,49 @@ func TestLoadRegistry_loadsRemoteConfigYamlCatalog(t *testing.T) {
 		t.Fatalf("LoadRegistryFromConfig err = %v", err)
 	}
 	if _, ok := registry.Get("config-mcp"); !ok {
-		t.Fatal("expected config-mcp from config.yaml-derived dist/servers.json")
+		t.Fatal("expected config-mcp from config.yaml sources")
+	}
+}
+
+func TestLoadRegistry_loadsInstallableMarkdownEntriesOnly(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/config.yaml":
+			_, _ = w.Write([]byte(`sources:
+  - name: External Markdown
+    type: github
+    url: https://github.com/example/awesome-mcp
+    format: md
+    file_path: README.md
+`))
+		case "/example/awesome-mcp/main/README.md":
+			_, _ = w.Write([]byte(`| Name | Description | Install |
+| --- | --- | --- |
+| Installable MCP | Has command | npx -y installable-mcp |
+| Link Only MCP | No command | https://github.com/example/link-only |
+`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	cfg := camconfig.CamConfig{
+		Repositories: map[string]camconfig.RepoSources{
+			"mcpServers": {Sources: []camconfig.RepoSource{{Type: "remote", URL: server.URL + "/config.yaml"}}},
+		},
+		Cache: camconfig.CacheConfig{Enabled: false},
+	}
+	mcp.SetCatalogSourceTestBases(t, server.URL+"/repos", server.URL)
+
+	registry, err := mcp.LoadRegistryFromConfig(cfg)
+	if err != nil {
+		t.Fatalf("LoadRegistryFromConfig err = %v", err)
+	}
+	if _, ok := registry.Get("installable_mcp"); !ok {
+		t.Fatal("expected installable markdown MCP")
+	}
+	if _, ok := registry.Get("link_only_mcp"); ok {
+		t.Fatal("did not expect non-installable markdown MCP")
 	}
 }
 
