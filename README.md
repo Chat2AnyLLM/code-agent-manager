@@ -158,7 +158,7 @@ CAM uses these main configuration files:
 - Local JSON sources (`instruction_repos.json`, `skill_repos.json`, `agent_repos.json`, `plugin_repos.json`) are loaded first.
 - Remote sources are merged after local sources and do not override existing local keys.
 - Remote responses are cached in `~/.cache/code-agent-manager/repos` (TTL controlled by `config.yaml`).
-- MCP server catalog sources default to a local override at `~/.config/code-agent-manager/mcp_servers.json`, then the `Chat2AnyLLM/awesome-mcp-servers` remote dist artifact.
+- Prompt and MCP catalog sources default to their upstream `config.yaml` files; CAM reads the `sources:` entries and fetches the configured upstream files directly instead of consuming generated `dist/*.json` artifacts.
 
 ---
 

@@ -4,15 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/chat2anyllm/code-agent-manager/internal/camconfig"
-	"github.com/chat2anyllm/code-agent-manager/internal/catalogconfig"
 	"github.com/chat2anyllm/code-agent-manager/internal/fetching"
 	"github.com/chat2anyllm/code-agent-manager/internal/pathutil"
 )
@@ -42,11 +39,6 @@ func LoadRegistryFromConfig(cfg camconfig.CamConfig) (*Registry, error) {
 	for _, source := range sources {
 		entries, err := loadCatalogSource(source, cfg.Cache)
 		if err != nil {
-			if source.Type == "remote" {
-				if cached, cacheErr := newCatalogStore("").load(context.Background()); cacheErr == nil && len(cached) > 0 {
-					return registryFromEntries(cached), nil
-				}
-			}
 			return nil, err
 		}
 		for _, entry := range entries {
@@ -105,14 +97,10 @@ func loadLocalCatalog(path string) ([]ServerSchema, error) {
 }
 
 func loadRemoteCatalog(sourceURL string, cache camconfig.CacheConfig) ([]ServerSchema, error) {
-	url := sourceURL
 	if strings.HasSuffix(strings.ToLower(sourceURL), ".yaml") || strings.HasSuffix(strings.ToLower(sourceURL), ".yml") {
-		resolved, err := resolveCatalogConfigURL(sourceURL, "servers", cache)
-		if err != nil {
-			return nil, err
-		}
-		url = resolved
+		return loadCatalogConfigSources(context.Background(), sourceURL)
 	}
+	url := sourceURL
 	if cache.Enabled {
 		entries, err := loadCatalogFromCache(url, cache)
 		if err == nil {
@@ -148,38 +136,6 @@ func loadRemoteCatalog(sourceURL string, cache camconfig.CacheConfig) ([]ServerS
 		}
 	}
 	return entries, nil
-}
-
-func resolveCatalogConfigURL(configURL, dataName string, cache camconfig.CacheConfig) (string, error) {
-	client := fetching.New()
-	tmp, err := os.CreateTemp("", "cam-catalog-config-*.yaml")
-	if err != nil {
-		return "", fmt.Errorf("mcp: create temp catalog config: %w", err)
-	}
-	tmpPath := tmp.Name()
-	if err := tmp.Close(); err != nil {
-		return "", fmt.Errorf("mcp: close temp catalog config: %w", err)
-	}
-	defer os.Remove(tmpPath)
-	if err := client.FetchFile(configURL, tmpPath); err != nil {
-		return "", fmt.Errorf("mcp: fetch catalog config %s: %w", configURL, err)
-	}
-	data, err := os.ReadFile(tmpPath)
-	if err != nil {
-		return "", fmt.Errorf("mcp: read catalog config %s: %w", configURL, err)
-	}
-	dataFile, err := catalogconfig.DataFile(dataName, data)
-	if err != nil {
-		return "", fmt.Errorf("mcp: %w", err)
-	}
-	base, err := url.Parse(configURL)
-	if err != nil {
-		return "", fmt.Errorf("mcp: parse catalog config URL: %w", err)
-	}
-	base.Path = path.Join(path.Dir(base.Path), dataFile)
-	base.RawQuery = ""
-	base.Fragment = ""
-	return base.String(), nil
 }
 
 func parseCatalogJSON(data []byte) ([]ServerSchema, error) {

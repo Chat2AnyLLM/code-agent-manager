@@ -226,8 +226,10 @@ export const api = {
     const params = source ? `?source=${encodeURIComponent(source)}` : ''
     return (await request<Prompt[]>(`/api/prompts${params}`)) ?? []
   },
-  async searchPrompts(q: string): Promise<Prompt[]> {
-    return (await request<Prompt[]>(`/api/prompts/search?q=${encodeURIComponent(q)}`)) ?? []
+  async searchPrompts(q: string, source?: string): Promise<Prompt[]> {
+    const params = new URLSearchParams({ q })
+    if (source) params.set('source', source)
+    return (await request<Prompt[]>(`/api/prompts/search?${params.toString()}`)) ?? []
   },
   async syncPrompts(source?: string): Promise<{ synced: number }> {
     return (await request<{ synced: number }>('/api/prompts/sync', { method: 'POST', body: JSON.stringify({ source: source ?? '' }) })) ?? { synced: 0 }

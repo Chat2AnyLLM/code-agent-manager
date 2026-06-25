@@ -65,7 +65,8 @@ func (s *Server) handlePromptsSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	promptList, err := store.SearchPrompts(ctx, q)
+	source := r.URL.Query().Get("source")
+	promptList, err := store.SearchPrompts(ctx, q, source)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

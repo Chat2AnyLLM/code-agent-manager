@@ -128,6 +128,32 @@ describe('Library page', () => {
     vi.restoreAllMocks()
   })
 
+  it('resets pagination when filtering to installed-only resources', async () => {
+    const many = Array.from({ length: 20 }, (_, i) => metadataItem({
+      name: `page-one-${i}`,
+      kind: 'skill',
+      install_key: `o/r:page-one-${i}`,
+      installed_apps: i === 0 ? ['claude'] : [],
+    }))
+    const pageTwo = metadataItem({ name: 'page-two', kind: 'skill', install_key: 'o/r:page-two', installed_apps: [] })
+    vi.spyOn(api, 'searchMetadata')
+      .mockResolvedValueOnce({ items: many, total: 21, limit: 20, offset: 0 })
+      .mockResolvedValueOnce({ items: [pageTwo], total: 21, limit: 20, offset: 20 })
+      .mockResolvedValue({ items: many, total: 21, limit: 20, offset: 0 })
+    render(<Library kind="skill" />)
+
+    expect(await screen.findByText(/page-one-0/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /go to page 2/i }))
+    await waitFor(() => expect(screen.getByText(/page-two/i)).toBeInTheDocument())
+
+    fireEvent.click(screen.getByLabelText(/installed only/i))
+
+    await waitFor(() => expect(screen.getByText(/page-one-0/i)).toBeInTheDocument())
+    expect(screen.queryByText(/page-two/i)).not.toBeInTheDocument()
+    expect(api.searchMetadata).toHaveBeenLastCalledWith('skill', '', 20, 0)
+    vi.restoreAllMocks()
+  })
+
   describe('auto-refresh on stale or empty index', () => {
     afterEach(() => vi.restoreAllMocks())
 
@@ -147,7 +173,7 @@ describe('Library page', () => {
       await waitFor(() => expect(refreshSpy).toHaveBeenCalledOnce())
       // After the refresh the healthy, resource-level row is shown.
       expect(await screen.findByText(/code-reviewer/i)).toBeInTheDocument()
-      expect(searchSpy).toHaveBeenCalledTimes(2)
+      expect(searchSpy).toHaveBeenCalledWith('agent', '', 20, 0)
     })
 
     it('does not auto-refresh when rows are already resource-level', async () => {

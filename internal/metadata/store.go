@@ -195,7 +195,7 @@ func matchPredicate(kind string) string {
 	// DiscoverResources' underAgentsFolder at query time, so index entries left
 	// by an older binary (before that filter existed) can't leak through.
 	if kind == "agent" {
-		lead += "(item_path LIKE 'agents/%' OR item_path LIKE '%/agents/%') AND "
+		lead += "((item_path LIKE 'agents/%' OR item_path LIKE '%/agents/%') OR (item_path LIKE '%.md' AND item_path NOT LIKE 'docs/%' AND item_path NOT LIKE 'commands/%' AND item_path NOT IN ('', 'README.md', 'CLAUDE.md', 'AGENTS.md', 'GEMINI.md'))) AND "
 	}
 	return lead + pred
 }

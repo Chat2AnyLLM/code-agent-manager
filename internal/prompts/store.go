@@ -140,8 +140,8 @@ func (s *Store) ListPrompts(ctx context.Context, source, category string) ([]Pro
 	return prompts, rows.Err()
 }
 
-// SearchPrompts searches prompts by title, description, or content.
-func (s *Store) SearchPrompts(ctx context.Context, q string) ([]Prompt, error) {
+// SearchPrompts searches prompts by title, description, content, or tags.
+func (s *Store) SearchPrompts(ctx context.Context, q, source string) ([]Prompt, error) {
 	if err := s.Init(ctx); err != nil {
 		return nil, err
 	}
@@ -152,12 +152,18 @@ func (s *Store) SearchPrompts(ctx context.Context, q string) ([]Prompt, error) {
 	defer db.Close()
 
 	like := "%" + q + "%"
-	rows, err := db.QueryContext(ctx, `
+	query := `
 		SELECT id, source, source_url, category, title, description, content, author, tags, created_at, updated_at
 		FROM prompts
-		WHERE title LIKE ? OR description LIKE ? OR content LIKE ? OR tags LIKE ?
-		ORDER BY source, category, title
-	`, like, like, like, like)
+		WHERE (title LIKE ? OR description LIKE ? OR content LIKE ? OR tags LIKE ?)`
+	args := []any{like, like, like, like}
+	if source != "" {
+		query += ` AND source = ?`
+		args = append(args, source)
+	}
+	query += ` ORDER BY source, category, title`
+
+	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
