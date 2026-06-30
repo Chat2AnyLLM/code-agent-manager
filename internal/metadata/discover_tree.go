@@ -22,6 +22,7 @@ import (
 // "leave name as the dir/file basename and description blank".
 func DiscoverFromTree(paths []string, subPath string, kind entities.Kind) []DiscoveredResource {
 	scanPrefixes := resolveScanPrefixes(subPath)
+	allowLooseAgents := kind == entities.KindAgent && strings.TrimSpace(strings.Trim(subPath, "/")) == "."
 	seen := map[string]bool{}
 	var out []DiscoveredResource
 
@@ -37,7 +38,7 @@ func DiscoverFromTree(paths []string, subPath string, kind entities.Kind) []Disc
 		if !ok {
 			continue
 		}
-		if kind == entities.KindAgent && !pathUnderAgentsFolder(p) {
+		if kind == entities.KindAgent && !allowLooseAgents && !pathUnderAgentsFolder(p) {
 			continue
 		}
 		key := res.Name + "|" + res.RelPath
@@ -102,7 +103,7 @@ func resolveScanPrefixes(subPath string) []string {
 	var prefixes []string
 	for _, sp := range strings.Split(subPath, "|") {
 		sp = strings.TrimSpace(strings.Trim(sp, "/"))
-		if sp == "" {
+		if sp == "" || sp == "." {
 			return nil // an empty entry means "scan all"
 		}
 		prefixes = append(prefixes, sp+"/")

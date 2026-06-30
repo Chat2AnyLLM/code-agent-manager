@@ -74,7 +74,7 @@ func TestLoadDefaultIncludesCoreTools(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadDefault err = %v", err)
 	}
-	for _, name := range []string{"claude-code", "openai-codex", "gemini-cli", "qwen-code", "codebuddy", "copilot-api", "droid"} {
+	for _, name := range []string{"claude-code", "openai-codex", "gemini-cli", "qwen-code", "codebuddy", "github-copilot", "droid"} {
 		if _, ok := r.Get(name); !ok {
 			t.Fatalf("Get(%q) returned false", name)
 		}

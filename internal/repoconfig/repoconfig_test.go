@@ -10,59 +10,76 @@ import (
 	"github.com/chat2anyllm/code-agent-manager/internal/entities"
 )
 
-func TestBundledSkillRepos(t *testing.T) {
+func TestBundledSkillReposDoNotIncludeChat2AnyLLMCatalog(t *testing.T) {
 	repos, err := loadBundled(entities.KindSkill)
 	if err != nil {
 		t.Fatalf("loadBundled(skill): %v", err)
 	}
-	if len(repos) == 0 {
-		t.Fatal("expected at least one bundled skill repo")
-	}
-	if got := repos["Chat2AnyLLM/awesome-claude-skills"].CatalogFile; got != "FULL-SKILLS.md" {
-		t.Errorf("expected Chat2AnyLLM/awesome-claude-skills catalogFile FULL-SKILLS.md, got %q", got)
+	if _, ok := repos["Chat2AnyLLM/awesome-claude-skills"]; ok {
+		t.Fatal("bundled skill repos must not include the Chat2AnyLLM catalog; load awesome-repo-configs instead")
 	}
 }
 
-func TestBundledAgentRepos(t *testing.T) {
+func TestBundledAgentReposDoNotIncludeChat2AnyLLMCatalog(t *testing.T) {
 	repos, err := loadBundled(entities.KindAgent)
 	if err != nil {
 		t.Fatalf("loadBundled(agent): %v", err)
 	}
-	if len(repos) == 0 {
-		t.Fatal("expected at least one bundled agent repo")
-	}
-	if _, ok := repos["Chat2AnyLLM/awesome-claude-agents"]; !ok {
-		t.Error("expected Chat2AnyLLM/awesome-claude-agents in bundled agent repos")
+	if _, ok := repos["Chat2AnyLLM/awesome-claude-agents"]; ok {
+		t.Fatal("bundled agent repos must not include the Chat2AnyLLM catalog; load awesome-repo-configs instead")
 	}
 }
 
-func TestBundledPluginRepos(t *testing.T) {
+func TestBundledPluginReposDoNotIncludeChat2AnyLLMCatalog(t *testing.T) {
 	repos, err := loadBundled(entities.KindPlugin)
 	if err != nil {
 		t.Fatalf("loadBundled(plugin): %v", err)
 	}
-	if len(repos) == 0 {
-		t.Fatal("expected at least one bundled plugin repo")
-	}
-	if _, ok := repos["chat2anyllm-awesome-claude-plugins"]; !ok {
-		t.Error("expected chat2anyllm-awesome-claude-plugins in bundled plugin repos")
+	if _, ok := repos["chat2anyllm-awesome-claude-plugins"]; ok {
+		t.Fatal("bundled plugin repos must not include the Chat2AnyLLM catalog; load awesome-repo-configs instead")
 	}
 }
 
-func TestBundledPromptReposReturnsEmpty(t *testing.T) {
+func TestBundledPromptReposDoNotIncludeDirectAwesomePrompts(t *testing.T) {
 	repos, err := loadBundled(entities.KindPrompt)
 	if err != nil {
 		t.Fatalf("loadBundled(prompt): %v", err)
 	}
-	if repos == nil {
-		t.Fatal("expected non-nil map for prompt kind, got nil")
+	if _, ok := repos["Chat2AnyLLM/awesome-prompts"]; ok {
+		t.Fatal("bundled prompt repos must not include direct awesome-prompts; load awesome-repo-configs first")
 	}
-	if len(repos) == 0 {
-		t.Fatal("expected at least one bundled prompt repo")
+}
+
+func TestLoadEnabledUsesConfiguredSourcesWithoutBundledCatalogs(t *testing.T) {
+	cfgDir := t.TempDir()
+	reposPath := filepath.Join(cfgDir, "skill_repos.json")
+	if err := os.WriteFile(reposPath, []byte(`{"real/skill-repo":{"owner":"real","name":"skill-repo","branch":"main","enabled":true}}`), 0o644); err != nil {
+		t.Fatal(err)
 	}
-	// Check a known entry.
-	if _, ok := repos["Chat2AnyLLM/awesome-prompts"]; !ok {
-		t.Error("expected Chat2AnyLLM/awesome-prompts in bundled prompt repos")
+	config := "repositories:\n  skills:\n    sources:\n      - type: local\n        path: " + filepath.ToSlash(reposPath) + "\ncache:\n  enabled: false\n"
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CAM_CONFIG_DIR", cfgDir)
+
+	repos, err := LoadEnabled(entities.KindSkill)
+	if err != nil {
+		t.Fatalf("LoadEnabled(skill): %v", err)
+	}
+	if _, ok := repos["real/skill-repo"]; !ok {
+		t.Fatalf("expected configured repo in result: %+v", repos)
+	}
+	if _, ok := repos["Chat2AnyLLM/awesome-claude-skills"]; ok {
+		t.Fatal("did not expect Chat2AnyLLM catalog fallback when using configured sources")
+	}
+}
+
+func TestRepoEntryRawFileURL(t *testing.T) {
+	entry := RepoEntry{Owner: "Chat2AnyLLM", Name: "awesome-prompts", Branch: "master"}
+	got := entry.RawFileURL("https://raw.example", "dist/prompts.json")
+	want := "https://raw.example/Chat2AnyLLM/awesome-prompts/master/dist/prompts.json"
+	if got != want {
+		t.Fatalf("RawFileURL = %q, want %q", got, want)
 	}
 }
 

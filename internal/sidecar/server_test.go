@@ -188,6 +188,18 @@ func TestSidecarMiddlewareHostAndCORS(t *testing.T) {
 		t.Fatalf("acao = %q, want tauri://localhost", got)
 	}
 
+	req = httptest.NewRequest(http.MethodOptions, "/api/app/version", nil)
+	req.Host = "127.0.0.1:5050"
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("vite preflight status=%d, want 204", rec.Code)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "http://127.0.0.1:5173" {
+		t.Fatalf("vite preflight acao = %q, want http://127.0.0.1:5173", got)
+	}
+
 	req = httptest.NewRequest(http.MethodGet, "/api/app/version", nil)
 	req.Host = "127.0.0.1:5050"
 	req.Header.Set("Authorization", "Bearer secret")

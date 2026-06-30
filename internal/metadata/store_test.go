@@ -195,6 +195,32 @@ func TestSearchDeduplicatesByName(t *testing.T) {
 	}
 }
 
+func TestSearchPagedUsesIndexedCountForPagination(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore(filepath.Join(t.TempDir(), "cam.db"))
+	svc := NewService(s)
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := s.UpsertItem(ctx, Item{Kind: "agent", Name: "indexed-agent", InstallKey: "a/b:indexed-agent", ItemPath: "agents/indexed-agent.md"}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	if err := s.SetCatalogCount(ctx, "agent", 1785, "https://example.test/catalog"); err != nil {
+		t.Fatalf("SetCatalogCount: %v", err)
+	}
+
+	resp, err := svc.SearchPaged(ctx, SearchQuery{Kind: "agent", Limit: 20, Offset: 20})
+	if err != nil {
+		t.Fatalf("SearchPaged: %v", err)
+	}
+	if resp.Total != 1 {
+		t.Fatalf("total should count indexed searchable rows for pagination, got %d", resp.Total)
+	}
+	if len(resp.Items) != 0 {
+		t.Fatalf("offset past indexed rows should have no items, got %d", len(resp.Items))
+	}
+}
+
 func TestSearchPrefersOfficialOverCatalogRepo(t *testing.T) {
 	ctx := context.Background()
 	s := NewStore(filepath.Join(t.TempDir(), "cam.db"))
@@ -582,6 +608,140 @@ func TestRefreshAllPreservesInstalledStatus(t *testing.T) {
 	item, _ := s.GetItem(ctx, "skill", key)
 	if !item.Installed {
 		t.Fatal("expected installed flag to survive refresh")
+	}
+}
+
+type pathOnlyBrowser map[string][]string
+
+func (b pathOnlyBrowser) ListTree(_ context.Context, owner, repo, _ string) (TreeListing, error) {
+	key := owner + "/" + repo
+	paths := b[key]
+	entries := make([]TreeEntry, 0, len(paths))
+	for _, p := range paths {
+		entries = append(entries, TreeEntry{Path: p})
+	}
+	return TreeListing{Entries: entries}, nil
+}
+
+func (pathOnlyBrowser) FetchFile(context.Context, string, string, string, string) ([]byte, error) {
+	return nil, ErrFileNotFound
+}
+
+func TestRefreshAllIndexesRootPathAgentRepos(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	writeFile(t, filepath.Join(dir, "config.yaml"), "repositories:\n  agents:\n    sources:\n      - type: local\n        path: "+filepath.ToSlash(filepath.Join(dir, "agent_repos.json"))+"\ncache:\n  enabled: false\n")
+	writeFile(t, filepath.Join(dir, "agent_repos.json"), `{
+  "source/root-agents": {"owner":"source","name":"root-agents","branch":"main","enabled":true,"agentsPath":"."}
+}`)
+
+	s := NewStore(filepath.Join(dir, "cam.db"))
+	svc := NewService(s).WithBrowser(pathOnlyBrowser{
+		"source/root-agents": {
+			"alpha-agent.md",
+			"nested/beta-agent.md",
+			"README.md",
+			"docs/guide.md",
+		},
+	})
+
+	summary, err := svc.RefreshAll(ctx)
+	if err != nil {
+		t.Fatalf("RefreshAll: %v", err)
+	}
+	if len(summary.FailedSources) != 0 {
+		t.Fatalf("unexpected failed sources: %v", summary.FailedSources)
+	}
+	results, err := s.Search(ctx, SearchQuery{Kind: "agent"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	names := map[string]bool{}
+	for _, item := range results {
+		names[item.Name] = true
+	}
+	if !names["alpha-agent"] || !names["beta-agent"] || len(results) != 2 {
+		t.Fatalf("expected root-path markdown agents indexed, got %+v", results)
+	}
+}
+
+func TestRefreshAllIndexesAgentsUnderConfiguredPath(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	writeFile(t, filepath.Join(dir, "config.yaml"), "repositories:\n  agents:\n    sources:\n      - type: local\n        path: "+filepath.ToSlash(filepath.Join(dir, "agent_repos.json"))+"\ncache:\n  enabled: false\n")
+	writeFile(t, filepath.Join(dir, "agent_repos.json"), `{
+  "source/plugin-agents": {"owner":"source","name":"plugin-agents","branch":"main","enabled":true,"agentsPath":"plugins"}
+}`)
+
+	s := NewStore(filepath.Join(dir, "cam.db"))
+	svc := NewService(s).WithBrowser(pathOnlyBrowser{
+		"source/plugin-agents": {
+			"plugins/review-pack/agents/reviewer.md",
+			"plugins/review-pack/commands/review.md",
+			"plugins/review-pack/skills/review/SKILL.md",
+		},
+	})
+
+	if _, err := svc.RefreshAll(ctx); err != nil {
+		t.Fatalf("RefreshAll: %v", err)
+	}
+	results, err := s.Search(ctx, SearchQuery{Kind: "agent"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(results) != 1 || results[0].Name != "reviewer" {
+		t.Fatalf("expected only agent files below configured path, got %+v", results)
+	}
+}
+
+type failingBrowser struct{}
+
+func (failingBrowser) ListTree(context.Context, string, string, string) (TreeListing, error) {
+	return TreeListing{}, fmt.Errorf("rate limited")
+}
+
+func (failingBrowser) FetchFile(context.Context, string, string, string, string) ([]byte, error) {
+	return nil, fmt.Errorf("rate limited")
+}
+
+func TestRefreshAllDoesNotDeleteExistingRowsWhenKindRefreshFails(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	writeFile(t, filepath.Join(dir, "config.yaml"), `repositories:
+  skills:
+    sources:
+      - type: local
+        path: `+filepath.ToSlash(filepath.Join(dir, "skill_repos.json"))+`
+cache:
+  enabled: false
+`)
+	writeFile(t, filepath.Join(dir, "skill_repos.json"), `{"example/repo":{"owner":"example","name":"repo","branch":"main","enabled":true}}`)
+
+	s := NewStore(filepath.Join(dir, "cam.db"))
+	if err := s.UpsertItem(ctx, Item{Kind: "skill", Name: "existing", RepoOwner: "example", RepoName: "repo", RepoBranch: "main", ItemPath: "skills/existing", InstallKey: "example/repo:existing", TargetApps: "claude"}); err != nil {
+		t.Fatalf("UpsertItem: %v", err)
+	}
+	svc := NewService(s).WithBrowser(failingBrowser{})
+
+	summary, err := svc.RefreshAll(ctx)
+	if err != nil {
+		t.Fatalf("RefreshAll: %v", err)
+	}
+	if len(summary.FailedSources) == 0 {
+		t.Fatal("expected failed source")
+	}
+	items, err := s.Search(ctx, SearchQuery{Kind: "skill", Query: "existing"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected existing skill preserved after failed refresh, got %d", len(items))
 	}
 }
 

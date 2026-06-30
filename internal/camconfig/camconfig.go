@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/chat2anyllm/code-agent-manager/internal/pathutil"
 	"gopkg.in/yaml.v3"
@@ -93,5 +94,40 @@ func parse(data []byte) (CamConfig, error) {
 	if cfg.Repositories == nil {
 		cfg.Repositories = map[string]RepoSources{}
 	}
+	ensureCatalogConfigSources(&cfg)
 	return cfg, nil
+}
+
+const (
+	awesomePromptsConfigURL    = "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-prompts/master/config.yaml"
+	awesomeMCPServersConfigURL = "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/config.yaml"
+	legacyMCPServersDataURL    = "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/dist/servers.json"
+)
+
+func ensureCatalogConfigSources(cfg *CamConfig) {
+	ensureRemoteSource(cfg, "prompts", RepoSource{Type: "remote", URL: awesomePromptsConfigURL})
+	normalizeRemoteSourceURL(cfg, "mcpServers", legacyMCPServersDataURL, awesomeMCPServersConfigURL)
+	ensureRemoteSource(cfg, "mcpServers", RepoSource{Type: "remote", URL: awesomeMCPServersConfigURL})
+}
+
+func ensureRemoteSource(cfg *CamConfig, key string, source RepoSource) {
+	repoSources := cfg.Repositories[key]
+	for _, existing := range repoSources.Sources {
+		if existing.Type == source.Type && existing.URL == source.URL {
+			cfg.Repositories[key] = repoSources
+			return
+		}
+	}
+	repoSources.Sources = append(repoSources.Sources, source)
+	cfg.Repositories[key] = repoSources
+}
+
+func normalizeRemoteSourceURL(cfg *CamConfig, key, oldURL, newURL string) {
+	repoSources := cfg.Repositories[key]
+	for i := range repoSources.Sources {
+		if repoSources.Sources[i].Type == "remote" && strings.EqualFold(repoSources.Sources[i].URL, oldURL) {
+			repoSources.Sources[i].URL = newURL
+		}
+	}
+	cfg.Repositories[key] = repoSources
 }

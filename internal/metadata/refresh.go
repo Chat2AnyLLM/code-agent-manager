@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -171,6 +175,9 @@ func (svc *Service) RefreshAll(ctx context.Context) (RefreshSummary, error) {
 	startedAt := timeNow()
 
 	for _, k := range kinds {
+		if count, sourceURL, ok := fetchAwesomeCatalogCount(ctx, k.kind); ok {
+			_ = svc.store.SetCatalogCount(ctx, k.kind, count, sourceURL)
+		}
 		repos, err := repoconfig.LoadEnabled(k.entityKind)
 		if err != nil {
 			summary.FailedSources = append(summary.FailedSources, fmt.Sprintf("%s: %v", k.kind, err))
@@ -208,10 +215,16 @@ func (svc *Service) RefreshAll(ctx context.Context) (RefreshSummary, error) {
 		written, err := svc.store.UpsertItems(ctx, batch)
 		if err != nil {
 			summary.FailedSources = append(summary.FailedSources, fmt.Sprintf("%s: index: %v", k.kind, err))
+			continue
 		}
 		summary.ItemsAdded += written
 
-		// Prune resources of this kind that were not seen during this refresh.
+		// Prune resources of this kind only after at least one source produced
+		// indexable items. If every source failed (for example GitHub rate limits),
+		// pruning would turn a transient refresh outage into an empty UI.
+		if len(batch) == 0 {
+			continue
+		}
 		stale, err := svc.store.DeleteStale(ctx, k.kind, startedAt)
 		if err == nil {
 			summary.ItemsStale += stale
@@ -219,6 +232,47 @@ func (svc *Service) RefreshAll(ctx context.Context) (RefreshSummary, error) {
 	}
 
 	return summary, nil
+}
+
+var catalogCountPatterns = map[string]struct {
+	url     string
+	pattern *regexp.Regexp
+}{
+	"skill":  {"https://raw.githubusercontent.com/Chat2AnyLLM/awesome-claude-skills/main/README.md", regexp.MustCompile(`Discoverable skills:\s*\*\*([0-9,]+)\*\*`)},
+	"agent":  {"https://raw.githubusercontent.com/Chat2AnyLLM/awesome-claude-agents/main/README.md", regexp.MustCompile(`Discoverable agents:\s*\*\*([0-9,]+)\*\*`)},
+	"plugin": {"https://raw.githubusercontent.com/Chat2AnyLLM/awesome-claude-plugins/main/README.md", regexp.MustCompile(`Discoverable plugins:\s*\*\*([0-9,]+)\*\*`)},
+}
+
+func fetchAwesomeCatalogCount(ctx context.Context, kind string) (int, string, bool) {
+	cfg, ok := catalogCountPatterns[kind]
+	if !ok {
+		return 0, "", false
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.url, nil)
+	if err != nil {
+		return 0, "", false
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, "", false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, "", false
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return 0, "", false
+	}
+	match := cfg.pattern.FindSubmatch(body)
+	if len(match) != 2 {
+		return 0, "", false
+	}
+	n, err := strconv.Atoi(strings.ReplaceAll(string(match[1]), ",", ""))
+	if err != nil {
+		return 0, "", false
+	}
+	return n, cfg.url, true
 }
 
 // repoJob is one repository to download and scan during a refresh.

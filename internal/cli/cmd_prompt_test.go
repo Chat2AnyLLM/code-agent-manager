@@ -85,48 +85,48 @@ func TestInstructionInstallWithoutAppErrors(t *testing.T) {
 	}
 }
 
-// --- deprecated prompt/p commands -----------------------------------------
+// --- prompt/p compatibility aliases ----------------------------------------
 
-func TestPromptCommandFailsWithRenameGuidance(t *testing.T) {
+func TestPromptCommandShowsInstructionHelp(t *testing.T) {
 	isolatedHome(t)
-	_, stderr, code := execute(t, "prompt")
-	if code == 0 {
-		t.Fatal("expected non-zero exit for deprecated prompt command")
+	stdout, stderr, code := execute(t, "prompt", "--help")
+	if code != 0 {
+		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stderr, "renamed to cam instruction") {
-		t.Fatalf("stderr missing rename guidance: %s", stderr)
+	if !strings.Contains(stdout, "Manage instruction configurations") {
+		t.Fatalf("prompt help should show instruction help:\n%s", stdout)
 	}
 }
 
-func TestPromptAliasPFailsWithRenameGuidance(t *testing.T) {
+func TestPromptAliasPShowsInstructionHelp(t *testing.T) {
 	isolatedHome(t)
-	_, stderr, code := execute(t, "p")
-	if code == 0 {
-		t.Fatal("expected non-zero exit for deprecated p alias")
+	stdout, stderr, code := execute(t, "p", "--help")
+	if code != 0 {
+		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stderr, "renamed to cam instruction") {
-		t.Fatalf("stderr missing rename guidance: %s", stderr)
+	if !strings.Contains(stdout, "Manage instruction configurations") {
+		t.Fatalf("p help should show instruction help:\n%s", stdout)
 	}
 }
 
-func TestPromptSubcommandFailsWithRenameGuidance(t *testing.T) {
+func TestPromptSubcommandRunsInstructionSubcommand(t *testing.T) {
 	isolatedHome(t)
-	_, stderr, code := execute(t, "prompt", "list")
-	if code == 0 {
-		t.Fatal("expected non-zero exit for deprecated prompt subcommand")
+	stdout, stderr, code := execute(t, "prompt", "list")
+	if code != 0 {
+		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stderr, "renamed to cam instruction") {
-		t.Fatalf("stderr missing rename guidance: %s", stderr)
+	if !strings.Contains(stdout, "No instructions installed across agents") {
+		t.Fatalf("prompt list should run instruction list:\n%s", stdout)
 	}
 }
 
-func TestPromptAliasPSubcommandFailsWithRenameGuidance(t *testing.T) {
+func TestPromptAliasPSubcommandRunsInstructionSubcommand(t *testing.T) {
 	isolatedHome(t)
-	_, stderr, code := execute(t, "p", "install", "demo")
-	if code == 0 {
-		t.Fatal("expected non-zero exit for deprecated p subcommand")
+	stdout, stderr, code := execute(t, "p", "list")
+	if code != 0 {
+		t.Fatalf("exit = %d; stderr=%s", code, stderr)
 	}
-	if !strings.Contains(stderr, "renamed to cam instruction") {
-		t.Fatalf("stderr missing rename guidance: %s", stderr)
+	if !strings.Contains(stdout, "No instructions installed across agents") {
+		t.Fatalf("p list should run instruction list:\n%s", stdout)
 	}
 }

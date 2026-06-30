@@ -73,7 +73,7 @@ func (a *App) rootCommand() *cobra.Command {
 		Short: "Code Assistant Manager",
 		Long: "Code Assistant Manager (CAM) manages AI coding assistant configuration, instructions, " +
 			"skills, plugins, MCP servers, and launch commands.\n\n" +
-			"Aliases: launch/l, doctor/d, agent/ag, instruction, skill/s, plugin/pl, mcp/m, " +
+			"Aliases: launch/l, doctor/d, agent/ag, instruction/prompt/p, skill/s, plugin/pl, mcp/m, " +
 			"provider/pr, upgrade/u, install/i, uninstall/un, config/cf, completion/comp/c, version/v.",
 		Version: a.version,
 	}
@@ -98,9 +98,7 @@ func (a *App) rootCommand() *cobra.Command {
 	root.AddCommand(a.configCommand(state))
 	root.AddCommand(a.providerCommand(state))
 	root.AddCommand(a.managementCommand("agent", "ag", state))
-	root.AddCommand(a.managementCommand("instruction", "", state))
-	root.AddCommand(a.deprecatedPromptCommand("prompt"))
-	root.AddCommand(a.deprecatedPromptCommand("p"))
+	root.AddCommand(a.managementCommand("instruction", "prompt,p", state))
 	root.AddCommand(a.managementCommand("skill", "s", state))
 	root.AddCommand(a.managementCommand("plugin", "pl", state))
 	root.AddCommand(a.mcpCommand(state))

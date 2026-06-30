@@ -1,14 +1,29 @@
 package mcp_test
 
 import (
+	"database/sql"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/chat2anyllm/code-agent-manager/internal/camconfig"
 	"github.com/chat2anyllm/code-agent-manager/internal/mcp"
+	_ "modernc.org/sqlite"
 )
+
+func TestMain(m *testing.M) {
+	dir, err := os.MkdirTemp("", "cam-mcp-tests-*")
+	if err != nil {
+		panic(err)
+	}
+	_ = os.Setenv("CAM_DB_PATH", filepath.Join(dir, "cam.db"))
+	code := m.Run()
+	_ = os.RemoveAll(dir)
+	os.Exit(code)
+}
 
 func TestRegistrySearchByDescription(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mcp_servers.json")
@@ -85,6 +100,39 @@ func TestLoadRegistry_loadsWrappedCatalogFromLocalSource(t *testing.T) {
 	}
 }
 
+func TestLoadRegistry_loadsWrappedCatalogWhenOneAuthorIsString(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	path := filepath.Join(dir, "mcp_servers.json")
+	writeCatalog(t, path, map[string]any{
+		"version":      "1.0",
+		"generated_at": "2026-06-23T00:00:00Z",
+		"count":        1,
+		"servers": []map[string]any{
+			{
+				"name":        "string-author",
+				"description": "Catalog server with author encoded as a string",
+				"author":      "Catalog Maintainer",
+				"installations": map[string]any{
+					"npm": map[string]any{"type": "npm", "command": "npx", "args": []string{"-y", "string-author"}},
+				},
+			},
+		},
+	})
+	cfg := testCatalogConfig(path)
+
+	// When
+	registry, err := mcp.LoadRegistryFromConfig(cfg)
+
+	// Then
+	if err != nil {
+		t.Fatalf("LoadRegistryFromConfig err = %v", err)
+	}
+	if _, ok := registry.Get("string-author"); !ok {
+		t.Fatal("expected string-author in catalog registry")
+	}
+}
+
 func TestLoadRegistry_keepsLocalEntryWhenRemoteDuplicatesName(t *testing.T) {
 	// Given
 	dir := t.TempDir()
@@ -114,6 +162,127 @@ func TestLoadRegistry_keepsLocalEntryWhenRemoteDuplicatesName(t *testing.T) {
 	}
 	if got.Description != "Local description" {
 		t.Fatalf("description = %q, want local source priority", got.Description)
+	}
+}
+
+func TestLoadRegistry_loadsRemoteConfigYamlSources(t *testing.T) {
+	// Given
+	configServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/Chat2AnyLLM/awesome-mcp-servers/main/config.yaml" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/yaml")
+		_, _ = w.Write([]byte(`sources:
+  - name: Local Servers
+    type: local
+    path: servers/
+`))
+	}))
+	defer configServer.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/Chat2AnyLLM/awesome-mcp-servers/git/trees/main":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"tree":[{"path":"servers/config-mcp.json","type":"blob","size":100}],"truncated":false}`))
+		case "/Chat2AnyLLM/awesome-mcp-servers/main/servers/config-mcp.json":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(testSchema("config-mcp", "Loaded from config yaml sources"))
+		case "/dist/servers.json":
+			t.Fatalf("dist/servers.json should not be fetched")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	mcp.SetCatalogSourceTestBases(t, server.URL+"/repos", server.URL)
+	cfg := camconfig.CamConfig{
+		Repositories: map[string]camconfig.RepoSources{
+			"mcpServers": {Sources: []camconfig.RepoSource{{Type: "remote", URL: configServer.URL + "/Chat2AnyLLM/awesome-mcp-servers/main/config.yaml"}}},
+		},
+		Cache: camconfig.CacheConfig{Enabled: false},
+	}
+
+	// When
+	registry, err := mcp.LoadRegistryFromConfig(cfg)
+
+	// Then
+	if err != nil {
+		t.Fatalf("LoadRegistryFromConfig err = %v", err)
+	}
+	if _, ok := registry.Get("config-mcp"); !ok {
+		t.Fatalf("expected config-mcp from config.yaml sources, got names %v", registry.Names())
+	}
+}
+
+func TestLoadRegistry_loadsInstallableMarkdownEntriesOnly(t *testing.T) {
+	// Given
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/config.yaml":
+			_, _ = w.Write([]byte(`sources:
+  - name: External Markdown
+    type: github
+    url: https://github.com/example/awesome-mcp
+    format: md
+    file_path: README.md
+`))
+		case "/example/awesome-mcp/main/README.md":
+			_, _ = w.Write([]byte("| Name | Description | Install |\n| --- | --- | --- |\n| Installable MCP | Has command | npx -y installable-mcp |\n| Link Only MCP | No command | https://github.com/example/link-only |\n"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	mcp.SetCatalogSourceTestBases(t, server.URL+"/repos", server.URL)
+	cfg := camconfig.CamConfig{
+		Repositories: map[string]camconfig.RepoSources{
+			"mcpServers": {Sources: []camconfig.RepoSource{{Type: "remote", URL: server.URL + "/config.yaml"}}},
+		},
+		Cache: camconfig.CacheConfig{Enabled: false},
+	}
+
+	// When
+	registry, err := mcp.LoadRegistryFromConfig(cfg)
+
+	// Then
+	if err != nil {
+		t.Fatalf("LoadRegistryFromConfig err = %v", err)
+	}
+	if _, ok := registry.Get("installable_mcp"); !ok {
+		t.Fatal("expected installable markdown MCP")
+	}
+	if _, ok := registry.Get("link_only_mcp"); ok {
+		t.Fatal("did not expect non-installable markdown MCP")
+	}
+}
+
+func TestLoadRegistryStoresCatalogInDatabase(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	t.Setenv("CAM_DB_PATH", filepath.Join(dir, "cam.db"))
+	path := filepath.Join(dir, "mcp_servers.json")
+	writeCatalog(t, path, []mcp.ServerSchema{testSchema("db-mcp", "Stored in database")})
+	cfg := testCatalogConfig(path)
+
+	// When
+	_, err := mcp.LoadRegistryFromConfig(cfg)
+
+	// Then
+	if err != nil {
+		t.Fatalf("LoadRegistryFromConfig err = %v", err)
+	}
+	db, err := sql.Open("sqlite", filepath.Join(dir, "cam.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM mcp_catalog_items WHERE name = 'db-mcp'`).Scan(&count); err != nil {
+		t.Fatalf("query mcp_catalog_items: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected db-mcp stored in database, got count %d", count)
 	}
 }
 

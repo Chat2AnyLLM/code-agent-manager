@@ -57,10 +57,44 @@ func TestHelpSubcommandDelegatesToCommandHelp(t *testing.T) {
 	}
 }
 
+func TestRootTopLevelCommandsShowHelp(t *testing.T) {
+	commands := []string{
+		"agent",
+		"apply",
+		"completion",
+		"config",
+		"doctor",
+		"extension",
+		"install",
+		"instruction",
+		"launch",
+		"mcp",
+		"metadata",
+		"plugin",
+		"prompt",
+		"provider",
+		"skill",
+		"uninstall",
+		"upgrade",
+		"version",
+	}
+	for _, cmd := range commands {
+		t.Run(cmd, func(t *testing.T) {
+			stdout, stderr, code := execute(t, cmd, "--help")
+			if code != 0 {
+				t.Fatalf("exit = %d; stderr=%s", code, stderr)
+			}
+			if !strings.Contains(stdout, "Usage:") {
+				t.Fatalf("command %s help missing Usage section:\n%s", cmd, stdout)
+			}
+		})
+	}
+}
+
 // Every alias resolves to a real command (Cobra falls back to "unknown command"
 // otherwise).  Testing this prevents regressions when subcommands are renamed.
 func TestRootShortAliasesShowOwnHelp(t *testing.T) {
-	for _, alias := range []string{"l", "d", "ag", "s", "pl", "m", "pr", "u", "i", "un", "cf", "comp", "c", "v", "p"} {
+	for _, alias := range []string{"l", "d", "ag", "prompt", "p", "s", "pl", "m", "pr", "u", "i", "un", "cf", "comp", "c", "v"} {
 		t.Run(alias, func(t *testing.T) {
 			stdout, stderr, code := execute(t, alias, "--help")
 			if code != 0 {

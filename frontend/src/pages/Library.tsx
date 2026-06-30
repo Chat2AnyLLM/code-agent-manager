@@ -5,6 +5,7 @@ import type { Entity, MetadataItem, MetadataDetail } from '../services/types'
 import { Page } from './Page'
 import { ExpandableTable, type Column } from '../components/ExpandableTable'
 import { MultiSelect } from '../components/MultiSelect'
+import { Pagination } from '../components/Pagination'
 import { useTranslation } from 'react-i18next'
 
 // Build the GitHub URL for an indexed resource. The metadata index stores only
@@ -169,20 +170,23 @@ export function Library({ kind }: LibraryProps) {
     }
   }
 
-  const pageCount = Math.ceil(total / PAGE_SIZE)
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1
   // "Installed only" filters the loaded page so users can see, at a glance, what
   // they have installed and to which agents. It narrows the current view rather
   // than issuing a server-side query (the index has no installed filter yet).
   const visibleItems = installedOnly ? items.filter((item) => (item.installed_apps ?? []).length > 0) : items
+  const pageCount = installedOnly ? Math.ceil(visibleItems.length / PAGE_SIZE) : Math.ceil(total / PAGE_SIZE)
+  const currentPage = installedOnly ? 1 : Math.floor(offset / PAGE_SIZE) + 1
 
   const columns: Column<MetadataItem>[] = [
     { header: 'Name', cell: (item) => (
-      <h3 className="row-name">
-        <a className="source-link" href={sourceUrl(item)} target="_blank" rel="noopener noreferrer" title={`Open ${item.name} source on GitHub`}>
-          {item.name}
-        </a>
-      </h3>
+      <div>
+        <h3 className="row-name">
+          <a className="source-link" href={sourceUrl(item)} target="_blank" rel="noopener noreferrer" title={`Open ${item.name} source on GitHub`}>
+            {item.name}
+          </a>
+        </h3>
+        {item.description && <p className="row-description">{item.description}</p>}
+      </div>
     ) },
     { header: 'Repo', cell: (item) => (
       <a className="repo-link" href={repoUrl(item.repo_owner, item.repo_name, item.repo_branch)} target="_blank" rel="noopener noreferrer" title={`Open ${item.repo_owner}/${item.repo_name} on GitHub`}>
@@ -205,7 +209,7 @@ export function Library({ kind }: LibraryProps) {
       {(query || installedOnly) && <button onClick={() => { setQuery(''); setInstalledOnly(false); setOffset(0) }}>{t('library.reset')}</button>}
       <button onClick={refresh} disabled={refreshing}>{refreshing ? t('library.refreshing') : t('library.refresh')}</button>
       <label className="filter-toggle">
-        <input type="checkbox" checked={installedOnly} onChange={(event) => setInstalledOnly(event.target.checked)} />
+        <input type="checkbox" checked={installedOnly} onChange={(event) => { setInstalledOnly(event.target.checked); setOffset(0) }} />
         {t('library.installedOnly')}
       </label>
     </div>
@@ -223,13 +227,15 @@ export function Library({ kind }: LibraryProps) {
         </div>
       )}
     />
-    {pageCount > 1 && (
-      <nav className="pagination" aria-label="pagination">
-        <button onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))} disabled={offset === 0 || loading}>{t('library.previous')}</button>
-        <span>{t('library.pagination', { current: currentPage, total: pageCount, count: total })}</span>
-        <button onClick={() => setOffset(offset + PAGE_SIZE)} disabled={offset + PAGE_SIZE >= total || loading}>{t('library.next')}</button>
-      </nav>
-    )}
+    <Pagination
+      currentPage={currentPage}
+      totalPages={pageCount}
+      disabled={loading}
+      previousLabel={t('library.previous')}
+      nextLabel={t('library.next')}
+      summaryLabel={t('library.pagination', { current: currentPage, total: pageCount, count: installedOnly ? visibleItems.length : total })}
+      onPageChange={(page) => setOffset((page - 1) * PAGE_SIZE)}
+    />
   </Page>
 }
 

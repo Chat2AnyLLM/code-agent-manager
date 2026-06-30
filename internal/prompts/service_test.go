@@ -10,7 +10,14 @@ import (
 
 func TestAwesomePromptsEmbedded_hasRequiredPromptFields(t *testing.T) {
 	// Given
+	dir := t.TempDir()
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	server := promptSourceServer(t)
+	defer server.Close()
 	svc := NewService()
+	svc.configURL = server.URL + "/config.yaml"
+	svc.repoRawBaseURL = server.URL
+	svc.githubAPIBaseURL = server.URL + "/repos"
 
 	// When
 	prompts, err := svc.FetchAwesomePrompts(context.Background())
@@ -35,13 +42,97 @@ func TestAwesomePromptsEmbedded_hasRequiredPromptFields(t *testing.T) {
 	}
 }
 
-func TestSyncAll_storesAwesomePrompts_whenRemoteUnavailable(t *testing.T) {
+func TestFetchAwesomePromptsLoadsConfigSources(t *testing.T) {
 	// Given
 	dir := t.TempDir()
 	t.Setenv("CAM_CONFIG_DIR", dir)
 	ctx := context.Background()
+	server := promptSourceServer(t)
+	defer server.Close()
 	svc := NewService()
-	svc.sourceURL = "http://127.0.0.1:1/prompts.json"
+	svc.configURL = server.URL + "/config.yaml"
+	svc.repoRawBaseURL = server.URL
+	svc.githubAPIBaseURL = server.URL + "/repos"
+
+	// When
+	got, err := svc.FetchAwesomePrompts(ctx)
+
+	// Then
+	if err != nil {
+		t.Fatalf("FetchAwesomePrompts: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("expected 3 prompts, got %d: %#v", len(got), got)
+	}
+	if got[0].Title != "Local Prompt" || got[0].Prompt != "Use local prompt" {
+		t.Fatalf("unexpected local prompt: %#v", got[0])
+	}
+	if got[1].Title != "text" || got[1].Prompt != "Use txt prompt" {
+		t.Fatalf("unexpected txt prompt: %#v", got[1])
+	}
+	if got[2].Title != "CSV Prompt" || got[2].Prompt != "Use csv prompt" || got[2].Author != "csv-author" {
+		t.Fatalf("unexpected csv prompt: %#v", got[2])
+	}
+}
+
+func TestFetchAwesomePromptsDoesNotUseDistFallback(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	ctx := context.Background()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/config.yaml":
+			_, _ = w.Write([]byte("output:\n  dir: dist\n  formats: [json]\nsources: []\n"))
+		case "/dist/prompts.json":
+			t.Fatalf("dist/prompts.json should not be fetched")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	svc := NewService()
+	svc.configURL = server.URL + "/config.yaml"
+
+	// When
+	_, err := svc.FetchAwesomePrompts(ctx)
+
+	// Then
+	if err == nil || !strings.Contains(err.Error(), "no prompts loaded") {
+		t.Fatalf("expected no prompts loaded error, got %v", err)
+	}
+}
+
+func TestSyncAllUsesAwesomePromptsConfigYaml(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	ctx := context.Background()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/config.yaml":
+			w.Header().Set("Content-Type", "text/yaml")
+			_, _ = w.Write([]byte(`sources:
+  - name: Local Prompts
+    type: local
+    path: prompts/
+`))
+		case "/repos/Chat2AnyLLM/awesome-prompts/git/trees/master":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"tree":[{"path":"prompts/configured.yaml","type":"blob","size":100}],"truncated":false}`))
+		case "/Chat2AnyLLM/awesome-prompts/master/prompts/configured.yaml":
+			_, _ = w.Write([]byte("slug: configured\ntitle: Configured Prompt\ndescription: Configured description\nprompt: Use configured source\ntags: [configured]\ncategory: repo-config\nauthor: tester\n"))
+		case "/dist/prompts.json":
+			t.Fatalf("dist/prompts.json should not be fetched")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	svc := NewService()
+	svc.configURL = server.URL + "/config.yaml"
+	svc.repoRawBaseURL = server.URL
+	svc.githubAPIBaseURL = server.URL + "/repos"
 
 	// When
 	n, err := svc.SyncAll(ctx)
@@ -50,16 +141,68 @@ func TestSyncAll_storesAwesomePrompts_whenRemoteUnavailable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SyncAll: %v", err)
 	}
-	if n != 3 {
-		t.Fatalf("expected 3 prompts synced, got %d", n)
+	if n != 1 {
+		t.Fatalf("expected 1 prompt synced, got %d", n)
 	}
-
-	count, err := svc.store.CountPrompts(ctx, "awesome_prompts", "")
+	stored, err := svc.store.ListPrompts(ctx, "local_prompts", "")
 	if err != nil {
-		t.Fatalf("CountPrompts: %v", err)
+		t.Fatalf("ListPrompts: %v", err)
 	}
-	if count != 3 {
-		t.Fatalf("expected 3 awesome prompts stored, got %d", count)
+	if len(stored) != 1 || stored[0].Title != "Configured Prompt" {
+		t.Fatalf("expected configured prompt, got %+v", stored)
+	}
+}
+
+func TestSyncAllUsesExplicitAwesomePromptsURLOverride(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	ctx := context.Background()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/default/prompts.json" {
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"version":"1.0.0","prompts":[{"slug":"configured","title":"Configured Prompt","description":"Configured description","prompt":"Use configured source","tags":["configured"],"category":"repo-config","author":"tester","variables":[]}]}`))
+	}))
+	defer server.Close()
+	svc := NewService()
+	svc.sourceURL = server.URL + "/default/prompts.json"
+	svc.preferSourceURLDirect = true
+
+	// When
+	n, err := svc.SyncAll(ctx)
+
+	// Then
+	if err != nil {
+		t.Fatalf("SyncAll: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("expected 1 prompt synced, got %d", n)
+	}
+	stored, err := svc.store.ListPrompts(ctx, "awesome_prompts", "")
+	if err != nil {
+		t.Fatalf("ListPrompts: %v", err)
+	}
+	if len(stored) != 1 || stored[0].Title != "Configured Prompt" {
+		t.Fatalf("expected configured prompt, got %+v", stored)
+	}
+}
+
+func TestSyncAllReturnsErrorWhenConfigUnavailable(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	ctx := context.Background()
+	svc := NewService()
+	svc.configURL = "http://127.0.0.1:1/config.yaml"
+
+	// When
+	_, err := svc.SyncAll(ctx)
+
+	// Then
+	if err == nil {
+		t.Fatal("expected config fetch error")
 	}
 }
 
@@ -75,6 +218,7 @@ func TestSyncAll_mapsRemoteAwesomePromptsFields(t *testing.T) {
 	defer server.Close()
 	svc := NewService()
 	svc.sourceURL = server.URL
+	svc.preferSourceURLDirect = true
 
 	// When
 	n, err := svc.SyncAll(ctx)
@@ -107,8 +251,12 @@ func TestSyncAll_removesRetiredPromptSources(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CAM_CONFIG_DIR", dir)
 	ctx := context.Background()
+	server := promptSourceServer(t)
+	defer server.Close()
 	svc := NewService()
-	svc.sourceURL = "http://127.0.0.1:1/prompts.json"
+	svc.configURL = server.URL + "/config.yaml"
+	svc.repoRawBaseURL = server.URL
+	svc.githubAPIBaseURL = server.URL + "/repos"
 	for _, source := range []string{"claude", "prompts_chat", "promptingguide"} {
 		if err := svc.store.UpsertPrompt(ctx, &Prompt{Source: source, SourceURL: source + "://old", Title: "old", Content: "old"}); err != nil {
 			t.Fatalf("UpsertPrompt(%s): %v", source, err)
@@ -131,4 +279,63 @@ func TestSyncAll_removesRetiredPromptSources(t *testing.T) {
 			t.Fatalf("expected retired source %s removed, got %d", source, count)
 		}
 	}
+}
+
+func TestStoreSearchPromptsFiltersBySource(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	t.Setenv("CAM_CONFIG_DIR", dir)
+	ctx := context.Background()
+	store := NewStore()
+	prompts := []*Prompt{
+		{Source: "local_prompts", SourceURL: "local://deploy", Title: "Deploy Script", Content: "deploy app"},
+		{Source: "csv_prompts", SourceURL: "csv://deploy", Title: "Deploy Script", Content: "deploy database"},
+	}
+	for _, prompt := range prompts {
+		if err := store.UpsertPrompt(ctx, prompt); err != nil {
+			t.Fatalf("UpsertPrompt(%s): %v", prompt.Source, err)
+		}
+	}
+
+	// When
+	got, err := store.SearchPrompts(ctx, "deploy", "local_prompts")
+
+	// Then
+	if err != nil {
+		t.Fatalf("SearchPrompts: %v", err)
+	}
+	if len(got) != 1 || got[0].Source != "local_prompts" {
+		t.Fatalf("expected only local prompt, got %+v", got)
+	}
+}
+
+func promptSourceServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/config.yaml":
+			w.Header().Set("Content-Type", "text/yaml")
+			_, _ = w.Write([]byte(`sources:
+  - name: Local Prompts
+    type: local
+    path: prompts/
+  - name: Prompts Chat
+    type: github
+    url: https://github.com/f/prompts.chat
+    format: csv
+    file_path: prompts.csv
+`))
+		case "/repos/Chat2AnyLLM/awesome-prompts/git/trees/master":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"tree":[{"path":"prompts/local.yaml","type":"blob","size":80},{"path":"prompts/text.txt","type":"blob","size":40}],"truncated":false}`))
+		case "/Chat2AnyLLM/awesome-prompts/master/prompts/local.yaml":
+			_, _ = w.Write([]byte("slug: local\ntitle: Local Prompt\ndescription: Local description\nprompt: Use local prompt\ntags: [local]\ncategory: local-cat\nauthor: tester\n"))
+		case "/Chat2AnyLLM/awesome-prompts/master/prompts/text.txt":
+			_, _ = w.Write([]byte("Use txt prompt"))
+		case "/f/prompts.chat/main/prompts.csv":
+			_, _ = w.Write([]byte("title,prompt,description,category,tags,author\nCSV Prompt,Use csv prompt,CSV description,csv-cat,one;two,csv-author\n"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
 }

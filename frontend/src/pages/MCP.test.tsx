@@ -81,8 +81,32 @@ describe('MCP page', () => {
     expect(await findRow(/server-0/i)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /server-24/i })).not.toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: /pagination/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /go to page 2/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /go to page 2/i }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: /server-24/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /previous/i }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: /server-0/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /next/i }))
     await waitFor(() => expect(screen.getByRole('heading', { name: /server-24/i })).toBeInTheDocument())
+    vi.restoreAllMocks()
+  })
+
+  it('resets pagination when filtering to installed-only servers', async () => {
+    const many = Array.from({ length: 25 }, (_, i) => registryItem({
+      name: `server-${i}`,
+      installedClients: i === 0 ? ['claude'] : [],
+    }))
+    vi.spyOn(api, 'searchMCPRegistry').mockResolvedValue(many)
+    render(<MCP />)
+
+    expect(await findRow(/server-0/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /go to page 2/i }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: /server-24/i })).toBeInTheDocument())
+
+    fireEvent.click(screen.getByLabelText(/installed only/i))
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: /server-0/i })).toBeInTheDocument())
+    expect(screen.queryByRole('heading', { name: /server-24/i })).not.toBeInTheDocument()
     vi.restoreAllMocks()
   })
 })

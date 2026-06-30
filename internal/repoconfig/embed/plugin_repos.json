@@ -1,12 +1,1 @@
-{
-  "chat2anyllm-awesome-claude-plugins": {
-    "name": "awesome-claude-plugins",
-    "description": "Generated catalog of Claude plugins and marketplaces",
-    "enabled": true,
-    "type": "marketplace",
-    "repoOwner": "Chat2AnyLLM",
-    "repoName": "awesome-claude-plugins",
-    "repoBranch": "main",
-    "catalogFile": "README.md"
-  }
-}
+{}

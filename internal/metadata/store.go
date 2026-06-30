@@ -195,7 +195,7 @@ func matchPredicate(kind string) string {
 	// DiscoverResources' underAgentsFolder at query time, so index entries left
 	// by an older binary (before that filter existed) can't leak through.
 	if kind == "agent" {
-		lead += "(item_path LIKE 'agents/%' OR item_path LIKE '%/agents/%') AND "
+		lead += "((item_path LIKE 'agents/%' OR item_path LIKE '%/agents/%') OR (item_path LIKE '%.md' AND item_path NOT LIKE 'docs/%' AND item_path NOT LIKE 'commands/%' AND item_path NOT IN ('', 'README.md', 'CLAUDE.md', 'AGENTS.md', 'GEMINI.md'))) AND "
 	}
 	return lead + pred
 }
@@ -489,6 +489,44 @@ func (s *Store) migrateAddManifestPathColumn(ctx context.Context, db *sql.DB) er
 	return nil
 }
 
+// SetCatalogCount stores an upstream catalog total for a kind.
+func (s *Store) SetCatalogCount(ctx context.Context, kind string, count int, sourceURL string) error {
+	if err := s.Init(ctx); err != nil {
+		return err
+	}
+	db, err := s.open()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.ExecContext(ctx, `INSERT INTO metadata_catalog_counts(kind, count, source_url, updated_at) VALUES(?,?,?,?) ON CONFLICT(kind) DO UPDATE SET count=excluded.count, source_url=excluded.source_url, updated_at=excluded.updated_at`, kind, count, sourceURL, timeNow())
+	if err != nil {
+		return fmt.Errorf("metadata: set catalog count: %w", err)
+	}
+	return nil
+}
+
+// CatalogCount returns the upstream catalog total for a kind when available.
+func (s *Store) CatalogCount(ctx context.Context, kind string) (int, bool, error) {
+	if err := s.Init(ctx); err != nil {
+		return 0, false, err
+	}
+	db, err := s.open()
+	if err != nil {
+		return 0, false, err
+	}
+	defer db.Close()
+	var count int
+	err = db.QueryRowContext(ctx, `SELECT count FROM metadata_catalog_counts WHERE kind = ?`, kind).Scan(&count)
+	if err == sql.ErrNoRows {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, fmt.Errorf("metadata: catalog count: %w", err)
+	}
+	return count, true, nil
+}
+
 // SaveContent persists fetched manifest content and a timestamp for a single
 // metadata item. The content is the raw text of the manifest file (SKILL.md,
 // AGENT.md, etc.) and cachedAt is an RFC3339 timestamp of when it was fetched.
@@ -579,6 +617,13 @@ CREATE TABLE IF NOT EXISTS metadata_items (
   created_at TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL DEFAULT '',
   UNIQUE(kind, install_key)
+);
+
+CREATE TABLE IF NOT EXISTS metadata_catalog_counts (
+  kind TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  source_url TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_metadata_items_name ON metadata_items(name);

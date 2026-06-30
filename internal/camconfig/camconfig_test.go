@@ -20,16 +20,23 @@ func TestLoadFallsBackToBundledWhenMissing(t *testing.T) {
 	if len(got.Repositories) == 0 {
 		t.Fatal("bundled config should expose repository sources")
 	}
-	for _, key := range []string{"skills", "agents", "plugins", "mcpServers"} {
+	for _, key := range []string{"skills", "agents", "plugins", "prompts", "mcpServers"} {
 		if _, ok := got.Repositories[key]; !ok {
 			t.Fatalf("bundled config missing repository key %q", key)
 		}
+	}
+	promptSources := got.Repositories["prompts"].Sources
+	if len(promptSources) != 2 {
+		t.Fatalf("prompts source count = %d, want 2", len(promptSources))
+	}
+	if promptSources[1].URL != "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-prompts/master/config.yaml" {
+		t.Fatalf("prompts remote URL = %q", promptSources[1].URL)
 	}
 	mcpSources := got.Repositories["mcpServers"].Sources
 	if len(mcpSources) != 2 {
 		t.Fatalf("mcpServers source count = %d, want 2", len(mcpSources))
 	}
-	if mcpSources[1].URL != "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/dist/servers.json" {
+	if mcpSources[1].URL != "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/config.yaml" {
 		t.Fatalf("mcpServers remote URL = %q", mcpSources[1].URL)
 	}
 	if !got.Cache.Enabled {
@@ -78,6 +85,40 @@ repositories:
 	}
 	if got.Repositories["plugins"].Sources[0].URL != "https://example.com/plugin_repos.json" {
 		t.Fatalf("plugins source url = %q", got.Repositories["plugins"].Sources[0].URL)
+	}
+}
+
+func TestLoadNormalizesPromptAndMCPConfigSources(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := strings.TrimSpace(`
+repositories:
+  prompts:
+    sources:
+      - type: local
+        path: ~/.config/code-agent-manager/prompt_repos.json
+  mcpServers:
+    sources:
+      - type: remote
+        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/dist/servers.json
+cache:
+  enabled: false
+`)
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := camconfig.Load(path)
+	if err != nil {
+		t.Fatalf("Load err = %v", err)
+	}
+	promptSources := got.Repositories["prompts"].Sources
+	if promptSources[len(promptSources)-1].URL != "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-prompts/master/config.yaml" {
+		t.Fatalf("prompts sources = %+v", promptSources)
+	}
+	mcpSources := got.Repositories["mcpServers"].Sources
+	if len(mcpSources) != 1 || mcpSources[0].URL != "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/config.yaml" {
+		t.Fatalf("mcpServers sources = %+v", mcpSources)
 	}
 }
 

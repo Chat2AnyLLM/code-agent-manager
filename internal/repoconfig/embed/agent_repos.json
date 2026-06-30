@@ -1,9 +1,1 @@
-{
-  "Chat2AnyLLM/awesome-claude-agents": {
-    "owner": "Chat2AnyLLM",
-    "name": "awesome-claude-agents",
-    "branch": "main",
-    "enabled": true,
-    "catalogFile": "README.md"
-  }
-}
+{}

@@ -137,7 +137,7 @@ tools:
       touched:
         - "~/.config/amp/settings.json (Amp CLI configuration)"
 
-  copilot-api:
+  github-copilot:
     enabled: true
     install_cmd: npm install -g @github/copilot
     cli_command: copilot

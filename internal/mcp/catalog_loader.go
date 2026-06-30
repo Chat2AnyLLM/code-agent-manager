@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -47,7 +48,19 @@ func LoadRegistryFromConfig(cfg camconfig.CamConfig) (*Registry, error) {
 			merged[entry.Name] = entry
 		}
 	}
-	return &Registry{schemas: merged}, nil
+	registry := &Registry{schemas: merged}
+	_ = newCatalogStore("").save(context.Background(), registry.All())
+	return registry, nil
+}
+
+func registryFromEntries(entries []ServerSchema) *Registry {
+	merged := map[string]ServerSchema{}
+	for _, entry := range entries {
+		if entry.Name != "" {
+			merged[entry.Name] = entry
+		}
+	}
+	return &Registry{schemas: merged}
 }
 
 func loadCatalogSource(source camconfig.RepoSource, cache camconfig.CacheConfig) ([]ServerSchema, error) {
@@ -83,7 +96,11 @@ func loadLocalCatalog(path string) ([]ServerSchema, error) {
 	return entries, nil
 }
 
-func loadRemoteCatalog(url string, cache camconfig.CacheConfig) ([]ServerSchema, error) {
+func loadRemoteCatalog(sourceURL string, cache camconfig.CacheConfig) ([]ServerSchema, error) {
+	if strings.HasSuffix(strings.ToLower(sourceURL), ".yaml") || strings.HasSuffix(strings.ToLower(sourceURL), ".yml") {
+		return loadCatalogConfigSources(context.Background(), sourceURL)
+	}
+	url := sourceURL
 	if cache.Enabled {
 		entries, err := loadCatalogFromCache(url, cache)
 		if err == nil {

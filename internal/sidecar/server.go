@@ -121,8 +121,8 @@ func (s *Server) withMiddlewareForHost(next http.Handler, port int) http.Handler
 			return
 		}
 		origin := r.Header.Get("Origin")
-		if origin == "tauri://localhost" {
-			w.Header().Set("Access-Control-Allow-Origin", "tauri://localhost")
+		if origin == "tauri://localhost" || strings.HasPrefix(origin, "http://127.0.0.1:") || strings.HasPrefix(origin, "http://localhost:") {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")

@@ -32,7 +32,7 @@ func (a *App) managementCommand(group, alias string, state *globalState) *cobra.
 	kind := groupKind(group)
 	aliases := []string{}
 	if alias != "" {
-		aliases = []string{alias}
+		aliases = strings.Split(alias, ",")
 	}
 	cmd := &cobra.Command{
 		Use:     group,
@@ -1559,7 +1559,7 @@ func installFromLocal(kind entities.Kind, dirPath, skillName string, all, force 
 		return err
 	}
 
-		for _, app := range apps {
+	for _, app := range apps {
 		fmt.Fprintf(out, "\n%s:\n", app)
 		installed := 0
 		for _, item := range items {

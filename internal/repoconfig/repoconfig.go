@@ -18,7 +18,9 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -99,6 +101,22 @@ func (r RepoEntry) EffectiveBranch() string {
 		return r.Branch
 	}
 	return "main"
+}
+
+// RawFileURL builds a raw GitHub content URL for a repo entry and repo-relative file.
+func (r RepoEntry) RawFileURL(baseURL, filePath string) string {
+	owner := r.EffectiveOwner()
+	repo := r.EffectiveName()
+	if owner == "" || repo == "" {
+		return ""
+	}
+	branch := r.EffectiveBranch()
+	filePath = strings.Trim(strings.TrimSpace(filePath), "/")
+	if filePath == "" {
+		return ""
+	}
+	base := strings.TrimRight(baseURL, "/")
+	return fmt.Sprintf("%s/%s/%s/%s/%s", base, url.PathEscape(owner), url.PathEscape(repo), url.PathEscape(branch), path.Clean(filePath))
 }
 
 // SubPath returns the sub-directory inside the repo where entities live

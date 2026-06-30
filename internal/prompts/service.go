@@ -13,11 +13,13 @@ import (
 )
 
 const (
-	awesomePromptsSource  = "awesome_prompts"
-	awesomePromptsName    = "Awesome Prompts"
-	awesomePromptsURL     = "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-prompts/master/dist/prompts.json"
-	awesomePromptsRepoURL = "https://github.com/Chat2AnyLLM/awesome-prompts/blob/master/prompts"
-	awesomePromptsURLEnv  = "CAM_AWESOME_PROMPTS_URL"
+	awesomePromptsSource    = "awesome_prompts"
+	awesomePromptsName      = "Awesome Prompts"
+	awesomePromptsURL       = "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-prompts/master/dist/prompts.json"
+	awesomePromptsConfigURL = "https://raw.githubusercontent.com/Chat2AnyLLM/awesome-prompts/master/config.yaml"
+	awesomePromptsRepoURL   = "https://github.com/Chat2AnyLLM/awesome-prompts/blob/master/prompts"
+	awesomePromptsURLEnv    = "CAM_AWESOME_PROMPTS_URL"
+	githubRawBaseURL        = "https://raw.githubusercontent.com"
 )
 
 var retiredPromptSources = []string{"claude", "prompts_chat", "promptingguide"}
@@ -29,9 +31,13 @@ var awesomePromptsJSON []byte
 
 // Service handles fetching and syncing prompts from external sources.
 type Service struct {
-	store     *Store
-	client    *http.Client
-	sourceURL string
+	store                 *Store
+	client                *http.Client
+	configURL             string
+	sourceURL             string
+	repoRawBaseURL        string
+	githubAPIBaseURL      string
+	preferSourceURLDirect bool
 }
 
 // NewService creates a new prompts service.
@@ -45,7 +51,10 @@ func NewService() *Service {
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		sourceURL: sourceURL,
+		configURL:        awesomePromptsConfigURL,
+		sourceURL:        sourceURL,
+		repoRawBaseURL:   githubRawBaseURL,
+		githubAPIBaseURL: "https://api.github.com/repos",
 	}
 }
 
@@ -78,17 +87,18 @@ func (s *Service) RefreshSource(ctx context.Context, source string) (int, error)
 	return s.SyncAll(ctx)
 }
 
-// FetchAwesomePrompts fetches the remote awesome-prompts JSON and falls back to
-// the bundled copy when the remote source is unavailable or malformed.
+// FetchAwesomePrompts fetches prompts by reading the upstream catalog config sources.
+// Explicit direct JSON override remains available for tests and development.
 func (s *Service) FetchAwesomePrompts(ctx context.Context) ([]AwesomePrompt, error) {
-	if prompts, err := s.fetchRemoteAwesomePrompts(ctx); err == nil {
-		return prompts, nil
+	if strings.TrimSpace(os.Getenv(awesomePromptsURLEnv)) != "" || s.preferSourceURLDirect {
+		return s.fetchRemoteAwesomePrompts(ctx)
 	}
-	return parseAwesomePrompts(awesomePromptsJSON)
+	return s.fetchConfigSources(ctx)
 }
 
 func (s *Service) fetchRemoteAwesomePrompts(ctx context.Context) ([]AwesomePrompt, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.sourceURL, nil)
+	sourceURL := s.sourceURL
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +164,8 @@ type AwesomePrompt struct {
 	Tags        []string `json:"tags"`
 	Category    string   `json:"category"`
 	Author      string   `json:"author"`
+	Source      string   `json:"source,omitempty"`
+	SourceURL   string   `json:"source_url,omitempty"`
 }
 
 func (p AwesomePrompt) ToPrompt() *Prompt {
@@ -163,9 +175,17 @@ func (p AwesomePrompt) ToPrompt() *Prompt {
 	if slug == "" || title == "" || content == "" {
 		return nil
 	}
+	source := strings.TrimSpace(p.Source)
+	if source == "" {
+		source = awesomePromptsSource
+	}
+	sourceURL := strings.TrimSpace(p.SourceURL)
+	if sourceURL == "" {
+		sourceURL = fmt.Sprintf("%s/%s.yaml", awesomePromptsRepoURL, slug)
+	}
 	return &Prompt{
-		Source:      awesomePromptsSource,
-		SourceURL:   fmt.Sprintf("%s/%s.yaml", awesomePromptsRepoURL, slug),
+		Source:      source,
+		SourceURL:   sourceURL,
 		Category:    strings.TrimSpace(p.Category),
 		Title:       title,
 		Description: strings.TrimSpace(p.Description),

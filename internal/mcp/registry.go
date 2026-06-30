@@ -6,6 +6,7 @@
 package mcp
 
 import (
+	"encoding/json"
 	"sort"
 	"strings"
 )
@@ -32,6 +33,23 @@ type Repository struct {
 
 type Author struct {
 	Name string `json:"name"`
+}
+
+func (a *Author) UnmarshalJSON(data []byte) error {
+	var object struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(data, &object); err == nil {
+		a.Name = object.Name
+		return nil
+	}
+
+	var name string
+	if err := json.Unmarshal(data, &name); err != nil {
+		return err
+	}
+	a.Name = name
+	return nil
 }
 
 // InstallationEntry describes one way to run the server.

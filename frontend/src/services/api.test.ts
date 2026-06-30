@@ -38,16 +38,14 @@ describe('api sidecar transport', () => {
     expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer secret')
   })
 
-  it('posts provider input to sidecar', async () => {
-    const provider = { name: 'alpha', endpoint: 'https://alpha.example', apiKeyEnv: '', supportedClient: 'claude', clients: ['claude'], models: [], keepProxyConfig: false, useProxy: false, enabled: true, description: '' }
+  it('adds source filters to prompt search requests', async () => {
     window.__CAM_SIDECAR__ = { baseUrl: 'http://127.0.0.1:54321' }
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(provider), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } }))
 
-    await expect(api.addProvider({ name: 'alpha', endpoint: 'https://alpha.example' })).resolves.toEqual(provider)
+    await expect(api.searchPrompts('deploy script', 'local_prompts')).resolves.toEqual([])
 
-    const [, init] = fetchMock.mock.calls[0]
-    expect(init?.method).toBe('POST')
-    expect(init?.body).toContain('alpha')
-    expect(new Headers(init?.headers).get('Content-Type')).toBe('application/json')
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://127.0.0.1:54321/api/prompts/search?q=deploy+script&source=local_prompts')
   })
 })

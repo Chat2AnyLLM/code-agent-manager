@@ -46,6 +46,17 @@ repositories:
       - type: remote
         url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-repo-configs/main/plugin_repos.json
 
+  # Prompt repositories
+  prompts:
+    sources:
+      # Local user file (highest priority)
+      - type: local
+        path: ~/.config/code-agent-manager/prompt_repos.json
+
+      # Remote awesome prompts catalog config
+      - type: remote
+        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-prompts/master/config.yaml
+
   # MCP server catalog
   mcpServers:
     sources:
@@ -53,9 +64,9 @@ repositories:
       - type: local
         path: ~/.config/code-agent-manager/mcp_servers.json
 
-      # Remote awesome MCP server catalog
+      # Remote awesome MCP server catalog config
       - type: remote
-        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/dist/servers.json
+        url: https://raw.githubusercontent.com/Chat2AnyLLM/awesome-mcp-servers/main/config.yaml
 
 # Cache settings for remote sources
 cache:
